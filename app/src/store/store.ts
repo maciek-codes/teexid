@@ -1,10 +1,7 @@
-import { configureStore } from "@reduxjs/toolkit";
-import roomReducer from "../features/rooms/roomSlice"
+import { createStore } from "redux";
+import { roomReducer } from "../reducers/roomReducer";
 
-const store = configureStore({
-    reducer: {
-        room: roomReducer
-    }
-});
+
+export const store = createStore(roomReducer);
 
 export default store;

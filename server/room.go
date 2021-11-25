@@ -1,6 +1,10 @@
 package main
 
-import "github.com/google/uuid"
+import (
+	"log"
+
+	"github.com/google/uuid"
+)
 
 type RoomState int32
 
@@ -23,8 +27,7 @@ type Room struct {
 
 func NewRoom() *Room {
 	id := uuid.NewString()
-	r := Room{id: id, state: WaitingForPlayers, players: make([]Player, 0)}
-	return &r
+	return &Room{id: id, state: WaitingForPlayers, players: make([]Player, 0)}
 }
 
 func (r *Room) Id() string {
@@ -41,4 +44,9 @@ func (r *Room) Players() []Player {
 
 func (r *Room) AddPlayer(p *Player) {
 	r.players = append(r.players, *p)
+}
+
+func (r *Room) UpdateState(p *Player, payload []byte) {
+	log.Print(p.Name())
+	log.Println(payload)
 }

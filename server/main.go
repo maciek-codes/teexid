@@ -1,9 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -25,8 +29,12 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	log.Print("echo")
 
 	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Print("upgrade:", err)
+	_, ok := err.(websocket.HandshakeError)
+	if !ok {
+		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
+		return
+	} else if err != nil {
+		log.Println("Handshake error", err.Error())
 		return
 	}
 	defer conn.Close()
@@ -45,32 +53,56 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func createGame(writer http.ResponseWriter, req *http.Request) {
+var rooms []*Room = make([]*Room, 0)
 
+func handleRoom(w http.ResponseWriter, req *http.Request) {
+	if req.Method == http.MethodPost {
+		room := NewRoom()
+		rooms = append(rooms, room)
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(room)
+	} else if req.Method == http.MethodGet {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(rooms)
+	} else {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+	}
 }
 
-func listGames(writer http.ResponseWriter, req *http.Request) {
-
-}
-
-func joinGame(writer http.ResponseWriter, req *http.Request) {
-	log.Printf("Joining")
-	msg := make([]byte, 4)
-	msg[0] = 200
-	writer.Write(msg)
+func getRoom(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	log.Printf("Joining %s", vars["roomId"])
+	w.WriteHeader(http.StatusOK)
 }
 
 func start(staticDir string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/echo", echo)
-	r.HandleFunc("/createGame", createGame)
-	r.HandleFunc("/listGames", listGames)
-	r.HandleFunc("/joinGame", joinGame)
+	r.HandleFunc("/rooms", handleRoom)
+	r.HandleFunc("/rooms/{roomId}", getRoom)
 
 	// This will serve files under http://localhost:8080/static/<filename>
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+	cards := make([]string, 0)
+	err := filepath.Walk(staticDir+"/cards/", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		if !info.IsDir() {
+			cards = append(cards, path)
+		}
+		return nil
+	})
 
-	log.Printf(("Starting to listen"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, card := range cards {
+		log.Println("Card: " + card)
+	}
+
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
 	srv := &http.Server{
 		Handler: r,
@@ -80,6 +112,7 @@ func start(staticDir string) {
 		ReadTimeout:  15 * time.Second,
 	}
 
+	log.Printf(("Starting to listen"))
 	log.Fatal(srv.ListenAndServe())
 }
 

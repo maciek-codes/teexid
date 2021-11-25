@@ -4,7 +4,9 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
 
@@ -47,15 +49,44 @@ func createGame(writer http.ResponseWriter, req *http.Request) {
 
 }
 
-func start() {
-	http.HandleFunc("/echo", echo)
-	http.HandleFunc("/createGame", createGame)
+func listGames(writer http.ResponseWriter, req *http.Request) {
+
+}
+
+func joinGame(writer http.ResponseWriter, req *http.Request) {
+	log.Printf("Joining")
+	msg := make([]byte, 4)
+	msg[0] = 200
+	writer.Write(msg)
+}
+
+func start(staticDir string) {
+	r := mux.NewRouter()
+	r.HandleFunc("/echo", echo)
+	r.HandleFunc("/createGame", createGame)
+	r.HandleFunc("/listGames", listGames)
+	r.HandleFunc("/joinGame", joinGame)
+
+	// This will serve files under http://localhost:8080/static/<filename>
+	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+
 	log.Printf(("Starting to listen"))
-	log.Fatal(http.ListenAndServe(*addr, nil))
+
+	srv := &http.Server{
+		Handler: r,
+		Addr:    *addr,
+		// Good practice: enforce timeouts for servers you create!
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	log.Fatal(srv.ListenAndServe())
 }
 
 func main() {
+	var staticDir string
+	flag.StringVar(&staticDir, "dir", "./../app/public", "the directory to serve files from. Defaults to the current dir")
 	flag.Parse()
 	log.Printf("Starting...")
-	start()
+	start(staticDir)
 }

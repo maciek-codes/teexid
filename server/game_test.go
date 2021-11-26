@@ -4,7 +4,7 @@ import "testing"
 
 func TestCreateGameRoom(t *testing.T) {
 	room := NewRoom()
-	if room.id == "" {
+	if room.Id == "" {
 		t.Fatalf("Needs id")
 	}
 }

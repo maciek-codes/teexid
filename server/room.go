@@ -20,22 +20,18 @@ type GameRoom interface {
 }
 
 type Room struct {
-	id      string
-	state   RoomState
+	Id      string    `json:"id"`
+	State   RoomState `json:"state,omitempty"`
 	players []Player
 }
 
 func NewRoom() *Room {
 	id := uuid.NewString()
-	return &Room{id: id, state: WaitingForPlayers, players: make([]Player, 0)}
-}
-
-func (r *Room) Id() string {
-	return r.id
+	return &Room{Id: id, State: WaitingForPlayers, players: make([]Player, 0)}
 }
 
 func (r *Room) CanJoin() bool {
-	return r.state == WaitingForPlayers
+	return r.State == WaitingForPlayers
 }
 
 func (r *Room) Players() []Player {

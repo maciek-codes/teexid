@@ -56,6 +56,10 @@ func echo(w http.ResponseWriter, r *http.Request) {
 var rooms []*Room = make([]*Room, 0)
 
 func handleRoom(w http.ResponseWriter, req *http.Request) {
+
+	// To be removed in prod
+	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
+
 	if req.Method == http.MethodPost {
 		room := NewRoom()
 		rooms = append(rooms, room)
@@ -72,13 +76,14 @@ func handleRoom(w http.ResponseWriter, req *http.Request) {
 func getRoom(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	log.Printf("Joining %s", vars["roomId"])
+	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
 	w.WriteHeader(http.StatusOK)
 }
 
 func start(staticDir string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/echo", echo)
-	r.HandleFunc("/rooms", handleRoom)
+	r.HandleFunc("/rooms", handleRoom).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/rooms/{roomId}", getRoom)
 
 	// This will serve files under http://localhost:8080/static/<filename>

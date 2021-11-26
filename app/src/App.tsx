@@ -1,8 +1,8 @@
-import logo from './logo.svg';
 import './App.css';
 import { useDispatch, useSelector } from 'react-redux';
 import CreateRoomButton from './CreateRoomButton';
 import { RoomState } from './reducers/roomReducer';
+import { thunkCreateRoom } from './middleware/createRoomMiddleware'
 
 function App() {
 
@@ -17,16 +17,34 @@ function App() {
   );
 
   const onCreateRoom = () => {
-    console.log("oncreate")
-    dispatch({type: 'JOIN', payload: {id: 132}});
+    dispatch(thunkCreateRoom());
+  }
+
+  const onJoinRoom = (id: string) => {
+    dispatch({type: 'room/join', payload: id});
   }
 
   console.log(roomStatus, roomId);
 
+  let entrace ;
+  switch (roomStatus) {
+    case 'joined': {
+      entrace = <p>Room: {roomId}</p>;
+      break;
+    }
+    case 'not_joined': {
+      entrace = <CreateRoomButton createRoom={onCreateRoom} joinRoom={onJoinRoom}/>;
+      break;
+    }
+    case 'loading': {
+      entrace = <p>Loading...</p>
+    }
+  }
+
   return (
     <div className="App">
       <header className="App-header">
-        { roomStatus === 'not_joined' ? <CreateRoomButton createRoom={onCreateRoom}/> : <p>Room: {roomId}</p> }
+        { entrace }
       </header>
     </div>
   );

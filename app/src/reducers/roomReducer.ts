@@ -1,5 +1,5 @@
 export interface RoomState {
-    status: 'joined' | 'not_joined'
+    status: 'joined' | 'loading' | 'not_joined'
     id: string
 }
 
@@ -8,16 +8,25 @@ const initialState: RoomState = {
     id: ''
 }
 
-export type Action = {type: 'JOIN', payload: any }
+export type Action = {type: 'room/join' | 'room/create' | 'room/enter', payload: any }
 
 export const roomReducer = (
     state: RoomState = initialState,
     action: Action
 ): RoomState => {
   switch(action.type) {
-      case 'JOIN': {
-          const room = action.payload;
-          return {...state, id: room.id, status: 'joined'};
+      case 'room/join': {
+        const idToJoin = action.payload;
+        return {...state, status: 'loading'};
+      }
+      case 'room/create': {
+        const room = action.payload;
+        return {...state, status: 'loading'};
+      }
+
+      case 'room/enter': {
+        const room = action.payload;
+        return {...state, id: room.id, status: 'joined'};
       }
       default:
           return state;

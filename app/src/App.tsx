@@ -2,7 +2,7 @@ import './App.css';
 import { useDispatch, useSelector } from 'react-redux';
 import CreateRoomButton from './CreateRoomButton';
 import { RoomState } from './reducers/roomReducer';
-import { thunkCreateRoom } from './middleware/createRoomMiddleware'
+import { joinRoom, thunkCreateRoom } from './middleware/createRoomMiddleware'
 
 function App() {
 
@@ -21,7 +21,7 @@ function App() {
   }
 
   const onJoinRoom = (id: string) => {
-    dispatch({type: 'room/join', payload: id});
+    dispatch(joinRoom(id));
   }
 
   console.log(roomStatus, roomId);

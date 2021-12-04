@@ -1,6 +1,10 @@
 package main
 
-import "github.com/gorilla/websocket"
+import (
+	"log"
+
+	"github.com/gorilla/websocket"
+)
 
 type playerConn struct {
 	room   *Room
@@ -13,6 +17,7 @@ func (pc *playerConn) receiveMessages() {
 	for {
 		_, payload, err := pc.ws.ReadMessage()
 		if err != nil {
+			log.Printf("Error on ReadMessage: %s", err.Error())
 			break
 		}
 
@@ -24,5 +29,6 @@ func (pc *playerConn) receiveMessages() {
 
 func NewPlayerConn(ws *websocket.Conn, player *Player, room *Room) playerConn {
 	playerConn := playerConn{room, player, ws}
+	go playerConn.receiveMessages()
 	return playerConn
 }

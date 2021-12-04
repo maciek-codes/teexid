@@ -25,37 +25,9 @@ var upgrader = websocket.Upgrader{
 	},
 } // use mostly default options
 
-func echo(w http.ResponseWriter, r *http.Request) {
-	log.Print("echo")
-
-	conn, err := upgrader.Upgrade(w, r, nil)
-	_, ok := err.(websocket.HandshakeError)
-	if !ok {
-		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
-		return
-	} else if err != nil {
-		log.Println("Handshake error", err.Error())
-		return
-	}
-	defer conn.Close()
-	for {
-		mt, message, err := conn.ReadMessage()
-		if err != nil {
-			log.Println("read:", err)
-			break
-		}
-		log.Printf("recv: %s", message)
-		err = conn.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("write:", err)
-			break
-		}
-	}
-}
-
 var rooms []*Room = make([]*Room, 0)
 
-func handleRoom(w http.ResponseWriter, req *http.Request) {
+func handleRooms(w http.ResponseWriter, req *http.Request) {
 
 	// To be removed in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
@@ -73,18 +45,66 @@ func handleRoom(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getRoom(w http.ResponseWriter, req *http.Request) {
+func joinRoom(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
-	log.Printf("Joining %s", vars["roomId"])
+	roomId := vars["roomId"]
+	log.Printf("Joining %s", roomId)
+
+	// TODO: Remove in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
-	w.WriteHeader(http.StatusOK)
+
+	conn, err := upgrader.Upgrade(w, req, nil)
+
+	log.Println("Conn upgraded")
+
+	if _, ok := err.(websocket.HandshakeError); ok {
+		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
+		log.Printf("Not a websocket handshake: %d\n", err)
+		return
+	} else if err != nil {
+		log.Println("Handshake error", err.Error())
+		return
+	}
+
+	// Find the room
+	var room *Room
+	for _, r := range rooms {
+		if r.Id == roomId {
+			room = r
+			break
+		}
+	}
+
+	log.Println("Creating players")
+
+	if room == nil {
+		log.Println("Not found")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	// Create a player
+	player := NewPlayer("player")
+
+	// Write joined message
+	playerConn := NewPlayerConn(conn, player, room)
+	message := fmt.Sprintf("{\"type\": \"onjoined\", \"payload\":{\"joined\": true,\"roomId\":\"%s\",\"playerId\": \"%s\"}}",
+		roomId, player.id)
+
+	log.Printf("Writing %s\n", message)
+	err = conn.WriteMessage(websocket.TextMessage, []byte(message))
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	go playerConn.receiveMessages()
 }
 
 func start(staticDir string) {
 	r := mux.NewRouter()
-	r.HandleFunc("/echo", echo)
-	r.HandleFunc("/rooms", handleRoom).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/rooms/{roomId}", getRoom)
+	r.HandleFunc("/rooms", handleRooms).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/rooms/{roomId}", joinRoom)
 
 	// This will serve files under http://localhost:8080/static/<filename>
 	cards := make([]string, 0)

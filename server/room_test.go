@@ -30,8 +30,8 @@ func TestRoomHasPlayers(t *testing.T) {
 
 	p1 := NewPlayer("Alice")
 	p2 := NewPlayer("Bob")
-	room.AddPlayer(p1)
-	room.AddPlayer(p2)
+	room.AddPlayer(p1, nil)
+	room.AddPlayer(p2, nil)
 
 	assert.Len(room.Players(), 2)
 }

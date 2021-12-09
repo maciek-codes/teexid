@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+
 	"github.com/google/uuid"
 )
 
@@ -24,4 +26,8 @@ func (p *Player) SetName(newName string) {
 
 func (p *Player) Id() string {
 	return p.id.String()
+}
+
+func (p *Player) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.Name())
 }

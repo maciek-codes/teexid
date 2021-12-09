@@ -19,8 +19,8 @@ var addr = flag.String("addr", "localhost:8080", "http service address")
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		// TODO Check origin in prod
-		log.Println("Host" + r.Host)
-		log.Println(r.RemoteAddr)
+		log.Println("Host: " + r.Host)
+		log.Println("Remote address: " + r.RemoteAddr)
 		return r.Host == "localhost:8080"
 	},
 } // use mostly default options
@@ -87,7 +87,8 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	player := NewPlayer("player")
 
 	// Write joined message
-	playerConn := NewPlayerConn(conn, player, room)
+	playerConn := room.AddPlayer(player, conn)
+
 	message := fmt.Sprintf("{\"type\": \"onjoined\", \"payload\":{\"joined\": true,\"roomId\":\"%s\",\"playerId\": \"%s\"}}",
 		roomId, player.id)
 
@@ -127,7 +128,9 @@ func start(staticDir string) {
 		log.Println("Card: " + card)
 	}
 
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
+	r.PathPrefix("/static/").Handler(
+		http.StripPrefix("/static/", http.FileServer(
+			http.Dir(staticDir))))
 
 	srv := &http.Server{
 		Handler: r,

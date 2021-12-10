@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import CreateRoomButton from './CreateRoomButton';
 import GameRoom from './GameRoom';
+import PlayerName from './PlayerName';
 
 export interface RoomState {
   id: string,
@@ -120,6 +121,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
+        <PlayerName sendCommand={sendCommand} playerName={roomState.playerName} />
         {entrace}
       </header>
     </div>

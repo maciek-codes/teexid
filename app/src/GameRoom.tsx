@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Action, RoomState } from "./App";
+import PlayerList from "./PlayerList";
+import PlayerName from "./PlayerName";
 
 type GameRoomProps = {
   roomState: RoomState;
@@ -7,41 +9,18 @@ type GameRoomProps = {
 };
 
 const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
-  const [name, setName] = useState(roomState.playerName);
-  const [isEditingName, setIsEditingName] = useState(false);
-
-  const updateName = () => {
-    setIsEditingName(false);
-    sendCommand({ type: 'player/updateName', payload: name });
-  }
-
-  const nameComponent = isEditingName ?
-    <input value={name} onChange={(val) => setName(val.currentTarget.value)}
-      onBlur={updateName}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === "Escape") {
-          updateName();
-        }
-      }} /> :
-    <div>👋 Hello {name} <button onClick={() => setIsEditingName(true)}>✏️</button></div>;
-
-  // Create a list of players
-  const players: JSX.Element[] = roomState.players.map((player, idx) => {
-    console.log("Adding " + player);
-    const el = (<div key={idx} className="player">{player}</div>);
-    console.log(el);
-    return el;
-  });
-
+  
   return (
-    <div>
-      {nameComponent}
-      <h1>Room: {roomState.id}</h1>
-      <h1>Round: #0</h1>
-      <section>
-        <h1>Players: </h1>
-        { players }
-      </section>
+    <div id="room" className="">
+      <PlayerName sendCommand={sendCommand} playerName={roomState.playerName} />
+
+      <div className="mt-2 mb-1 grid grid-cols-1 h-16 items-center font-medium space-x-4 text-black shadow-lg rounded-xl bg-white">
+        Room: {roomState.id}
+      </div>
+
+      <div className="mt-2 mb-1 grid grid-cols-1 h-16 items-center font-medium space-x-4 text-black shadow-lg rounded-xl bg-white">Round: #0</div>
+
+      <PlayerList playersList={roomState.players} />
       <section>
         <p>Current prompt: "THIS IS FUNNY PROMPT"</p>
       </section>

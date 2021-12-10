@@ -65,9 +65,19 @@ func (r *Room) Players() []*Player {
 	return r.players[0:len(r.players)]
 }
 
+func (r *Room) BroadcastPlayers() {
+	b, _ := json.Marshal(r.players)
+	message := fmt.Sprintf("{\"type\": \"onplayersupdated\", \"payload\":{\"players\": %s}}", string(b))
+
+	for _, playerConn := range r.conns {
+		playerConn.ws.WriteMessage(websocket.TextMessage, []byte(message))
+	}
+}
+
 func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
 	r.players = append(r.players, p)
 	r.conns[p.Id()] = NewPlayerConn(conn, p, r)
+	r.BroadcastPlayers()
 	return r.conns[p.Id()]
 }
 
@@ -75,12 +85,6 @@ func (r *Room) UpdateState(p *Player, command Command) {
 	if command.Type == "player/updateName" {
 		var newName = command.Data
 		p.SetName(newName)
-
-		b, _ := json.Marshal(r.players)
-		message := fmt.Sprintf("{\"type\": \"onplayersupdated\", \"payload\":{\"players\": %s}}", string(b))
-
-		for _, playerConn := range r.conns {
-			playerConn.ws.WriteMessage(websocket.TextMessage, []byte(message))
-		}
+		r.BroadcastPlayers()
 	}
 }

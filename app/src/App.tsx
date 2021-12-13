@@ -12,8 +12,8 @@ export interface RoomState {
 
 const initialState: RoomState = {
   id: '',
-  playerName: "P#1",
-  players: ["P#1"]
+  playerName: "",
+  players: []
 };
 
 type JoinedStatus = 'joined' | 'loading' | 'not_joined';
@@ -46,7 +46,11 @@ function App() {
   useEffect(() => {
     try {
       if (!ws.current && roomState.id) {
-        ws.current = new WebSocket('ws://localhost:8080/rooms/' + roomState.id);
+        ws.current = new WebSocket(
+          'ws://localhost:8080/rooms/' 
+          + roomState.id 
+          + '?playerName=' + roomState.playerName );
+
         ws.current.onopen = (ev: Event) => {
           console.log("Connected to the room.");
         };
@@ -90,7 +94,9 @@ function App() {
   const onCreateRoom = async () => {
     setJoinStatus("loading");
     try {
-      const response = await (await fetch('http://localhost:8080/rooms', { method: "POST" })).json();
+      const response = await (await fetch('http://localhost:8080/rooms', { 
+        method: "POST",
+      })).json();
       setRoomState({ ...roomState, id: response.id });
     } catch (err) {
       setJoinStatus("not_joined");
@@ -103,25 +109,43 @@ function App() {
     setRoomState({ ...roomState, id: id });
   }
 
+  const onPlayerNameChanged = (name: string) => {
+    setRoomState({
+      ...roomState,
+      playerName: name
+    });
+  }
+
   let entrace;
-  switch (joinStatus) {
-    case 'joined': {
-      entrace = <GameRoom roomState={roomState} sendCommand={sendCommand} />;
-      break;
-    }
-    case 'not_joined': {
-      entrace = <CreateRoomButton createRoom={onCreateRoom} joinRoom={onJoinRoom} />;
-      break;
-    }
-    case 'loading': {
-      entrace = <p>Loading...</p>
+  if (roomState.playerName) {
+    switch (joinStatus) {
+      case 'joined': {
+        entrace = (
+          <div className="transition duration-150 ease-in-out">
+            <GameRoom roomState={roomState} sendCommand={sendCommand} />
+          </div>
+        );
+        break;
+      }
+      case 'not_joined': {
+        entrace = (
+          <div className="transition duration-150 ease-in-out">
+            <CreateRoomButton createRoom={onCreateRoom} joinRoom={onJoinRoom} />
+          </div>
+        );
+        break;
+      }
+      case 'loading': {
+        entrace = <p>Loading...</p>
+      }
     }
   }
 
   return (
     <div className="App">
       <header className="App-header">
-        <PlayerName sendCommand={sendCommand} playerName={roomState.playerName} />
+        <PlayerName sendCommand={sendCommand} playerName={roomState.playerName} 
+          onNameChanged={onPlayerNameChanged} />
         {entrace}
       </header>
     </div>

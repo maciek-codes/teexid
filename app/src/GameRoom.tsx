@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { Action, RoomState } from "./App";
 import PlayerList from "./PlayerList";
-import PlayerName from "./PlayerName";
 
 type GameRoomProps = {
   roomState: RoomState;
@@ -11,9 +9,7 @@ type GameRoomProps = {
 const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
   
   return (
-    <div id="room" className="">
-      <PlayerName sendCommand={sendCommand} playerName={roomState.playerName} />
-
+    <div id="room" className="room">
       <div className="mt-2 mb-1 grid grid-cols-1 h-16 items-center font-medium space-x-4 text-black shadow-lg rounded-xl bg-white">
         Room: {roomState.id}
       </div>

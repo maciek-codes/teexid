@@ -48,7 +48,9 @@ func handleRooms(w http.ResponseWriter, req *http.Request) {
 func joinRoom(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	roomId := vars["roomId"]
-	log.Printf("Joining %s", roomId)
+
+	params := req.URL.Query()
+	playerName := params.Get("playerName")
 
 	// TODO: Remove in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
@@ -84,7 +86,7 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Create a player
-	player := NewPlayer("player")
+	player := NewPlayer(playerName)
 
 	// Write joined message
 	playerConn := room.AddPlayer(player, conn)

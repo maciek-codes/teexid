@@ -44,5 +44,6 @@ func TestMarshalToJson(t *testing.T) {
 	b, err := json.Marshal(room)
 	assert.Nil(err)
 	assert.NotEmpty(b)
-	assert.Equal("{\"id\":\"bcd\"}", string(b))
+	assert.Contains(string(b), `"id":"bcd"`)
+	assert.Contains(string(b), `"ownerId"`)
 }

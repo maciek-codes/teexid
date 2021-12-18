@@ -14,7 +14,7 @@ const MinPlayers = 3
 var randGenSource = rand.NewSource(time.Now().UnixNano())
 var randGen = rand.New(randGenSource)
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+var letters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 func randSeq(n int) string {
 	b := make([]rune, n)
@@ -43,7 +43,7 @@ type ReponseMessage struct {
 }
 
 func NewRoom() *Room {
-	id := randSeq(10)
+	id := randSeq(6)
 	room := Room{Id: id,
 		State:   WaitingForPlayers,
 		players: make([]*Player, 0),

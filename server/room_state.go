@@ -16,7 +16,7 @@ var toString = map[RoomState]string{
 	Ended:             "ended",
 }
 
-func (rs RoomState) MarshallJson() ([]byte, error) {
+func (rs RoomState) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString(`"`)
 	buffer.WriteString(toString[rs])
 	buffer.WriteString(`"`)

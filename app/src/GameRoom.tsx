@@ -1,5 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Action, RoomState } from "./App";
+import { Action } from "./App";
+import RoomState from "./models/RoomState";
 import PlayerList from "./PlayerList";
 
 type GameRoomProps = {
@@ -22,7 +23,7 @@ const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
   const roomId = roomState.id;
 
   let gameEl = null;
-  if (roomState.state == 'playing') {
+  if (roomState.state === 'playing') {
     gameEl = (
       <section>
         <p>Current prompt: "THIS IS FUNNY PROMPT"</p>

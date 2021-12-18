@@ -5,6 +5,12 @@ import GameRoom from './GameRoom';
 import Player from './models/Player';
 import PlayerName from './PlayerName';
 
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { far } from '@fortawesome/free-regular-svg-icons'
+
+// Font awesome icons
+library.add(far);
+
 export interface RoomState {
   id: string,
   playerId: string,

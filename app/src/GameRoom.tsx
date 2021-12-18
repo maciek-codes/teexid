@@ -1,3 +1,4 @@
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Action, RoomState } from "./App";
 import PlayerList from "./PlayerList";
 
@@ -10,11 +11,12 @@ const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
   
   return (
     <div id="room" className="room">
-      <div className="mt-2 mb-1 grid grid-cols-1 h-16 items-center font-medium space-x-4 text-black shadow-lg rounded-xl bg-white">
+      <div className="mt-2 mb-2 px-2 py-3 grid grid-cols-1 h-auto items-center font-medium space-x-2 text-black shadow-lg  bg-white">
         Room: {roomState.id}
+        <button onClick={() => {
+          navigator.clipboard.writeText(roomState.id)
+        }}><FontAwesomeIcon icon={["far", "copy"]} /></button>
       </div>
-
-      <div className="mt-2 mb-1 grid grid-cols-1 h-16 items-center font-medium space-x-4 text-black shadow-lg rounded-xl bg-white">Round: #0</div>
 
       <PlayerList playersList={roomState.players} playerId={roomState.playerId} sendCommand={sendCommand} />
       <section>

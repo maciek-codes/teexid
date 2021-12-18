@@ -1,33 +1,45 @@
 package main
 
 import (
-	"encoding/json"
-
 	"github.com/google/uuid"
 )
 
+type PlayerReadyState int32
+
+const (
+	Waiting PlayerReadyState = iota
+	Ready
+)
+
 type Player struct {
-	id   uuid.UUID
-	name string
+	Id         uuid.UUID        `json:"id"`
+	Name       string           `json:"name"`
+	ReadyState PlayerReadyState `json:"-"`
+	Ready      bool             `json:"ready"`
+	Points     int32            `json:"points"`
 }
 
 func NewPlayer(name string) *Player {
-	player := Player{id: uuid.New(), name: name}
-	return &player
-}
-
-func (p *Player) Name() string {
-	return p.name
+	return &Player{
+		Id:         uuid.New(),
+		Name:       name,
+		ReadyState: Waiting,
+		Points:     0}
 }
 
 func (p *Player) SetName(newName string) {
-	p.name = newName
+	p.Name = newName
 }
 
-func (p *Player) Id() string {
-	return p.id.String()
+func (p *Player) SetReady() {
+	p.ReadyState = Ready
+	p.Ready = true
 }
 
-func (p *Player) MarshalJSON() ([]byte, error) {
-	return json.Marshal(p.Name())
+func (p *Player) IsReady() bool {
+	return p.ReadyState == Ready
+}
+
+func (p *Player) IdAsString() string {
+	return p.Id.String()
 }

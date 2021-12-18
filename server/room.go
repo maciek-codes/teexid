@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -11,6 +10,8 @@ import (
 )
 
 type RoomState int32
+
+const MinPlayers = 3
 
 var randGenSource = rand.NewSource(time.Now().UnixNano())
 var randGen = rand.New(randGenSource)
@@ -43,22 +44,23 @@ type Room struct {
 	conns   map[string]playerConn
 }
 
+type ReponseMessage struct {
+	Type    string           `json:"type"`
+	Payload *json.RawMessage `json:"payload"`
+}
+
 func NewRoom() *Room {
 	id := randSeq(10)
-	room := Room{Id: id, State: WaitingForPlayers,
+	room := Room{Id: id,
+		State:   WaitingForPlayers,
 		players: make([]*Player, 0),
 		conns:   make(map[string]playerConn, 0),
 	}
-	go room.run()
 	return &room
 }
 
 func (r *Room) CanJoin() bool {
 	return r.State == WaitingForPlayers
-}
-
-func (r *Room) run() {
-	log.Println("Running the room " + r.Id)
 }
 
 func (r *Room) Players() []*Player {
@@ -67,18 +69,64 @@ func (r *Room) Players() []*Player {
 
 func (r *Room) BroadcastPlayers() {
 	b, _ := json.Marshal(r.players)
-	message := fmt.Sprintf("{\"type\": \"onplayersupdated\", \"payload\":{\"players\": %s}}", string(b))
+	playersMessage := json.RawMessage(b)
+
+	b, _ = json.Marshal(struct {
+		Players *json.RawMessage `json:"players"`
+	}{Players: &playersMessage})
+
+	playersMessage = json.RawMessage(b)
+
+	message := ReponseMessage{
+		Type:    "onplayersupdated",
+		Payload: &playersMessage}
+
+	b, err := json.Marshal(&message)
+	if err != nil {
+		log.Println("Error marshalling", err)
+		return
+	}
+
+	log.Printf("Writing %s\n", string(b))
 
 	for _, playerConn := range r.conns {
-		playerConn.ws.WriteMessage(websocket.TextMessage, []byte(message))
+		if playerConn.ws != nil {
+			playerConn.ws.WriteMessage(websocket.TextMessage, b)
+		}
+	}
+}
+
+// Send room status change to all players
+func (r *Room) BroadcastRoomState() {
+	b, _ := json.Marshal(struct {
+		Id    string `json:"id"`
+		Ready bool   `json:"ready"`
+	}{Id: r.Id, Ready: r.State == PlayingGame})
+
+	payloadMessage := json.RawMessage(b)
+
+	message := ReponseMessage{
+		Type:    "onroomstateupdated",
+		Payload: &payloadMessage}
+
+	b, err := json.Marshal(&message)
+	if err != nil {
+		log.Println("Error marshalling", err)
+		return
+	}
+
+	log.Printf("Writing %s\n", string(b))
+
+	for _, playerConn := range r.conns {
+		playerConn.ws.WriteMessage(websocket.TextMessage, b)
 	}
 }
 
 func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
 	r.players = append(r.players, p)
-	r.conns[p.Id()] = NewPlayerConn(conn, p, r)
+	r.conns[p.IdAsString()] = NewPlayerConn(conn, p, r)
 	r.BroadcastPlayers()
-	return r.conns[p.Id()]
+	return r.conns[p.IdAsString()]
 }
 
 func (r *Room) UpdateState(p *Player, command Command) {
@@ -86,5 +134,16 @@ func (r *Room) UpdateState(p *Player, command Command) {
 		var newName = command.Data
 		p.SetName(newName)
 		r.BroadcastPlayers()
+	} else if command.Type == "player/ready" {
+		p.SetReady()
+		r.BroadcastPlayers()
+		var allReady = true
+		for _, player := range r.Players() {
+			allReady = allReady && player.IsReady()
+		}
+		if allReady && len(r.Players()) >= MinPlayers {
+			r.State = PlayingGame
+			r.BroadcastRoomState()
+		}
 	}
 }

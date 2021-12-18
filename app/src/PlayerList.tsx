@@ -1,14 +1,23 @@
+import { Action } from "./App";
+import Player from "./models/Player";
 
 interface PlayerListProps {
-  playersList: string[]
+  playersList: Player[]
+  playerId: string,
+  sendCommand: (action: Action) => void
 }
 
-const PlayerList = ({ playersList }: PlayerListProps) => {
+const PlayerList = ({ playersList, playerId, sendCommand }: PlayerListProps) => {
 
   // Create a list of players
-  const players: JSX.Element[] = playersList.map((player: string, idx: number) => {
-    return <div key={idx} className="player">
-      {player}
+  const players: JSX.Element[] = playersList.map((player: Player, idx: number) => {
+
+    const isSelf = player.id === playerId;
+    return <div key={idx} className="player flex items-center align-middle">
+      <div>{player.name}</div>
+      <input className="input checkbox" type="checkbox" disabled={!isSelf} checked={player.ready} onChange={() => {
+        sendCommand({ type: 'player/ready', payload: '' })
+      }}/>
     </div>
   });
 

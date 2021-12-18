@@ -91,11 +91,22 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	// Write joined message
 	playerConn := room.AddPlayer(player, conn)
 
-	message := fmt.Sprintf("{\"type\": \"onjoined\", \"payload\":{\"joined\": true,\"roomId\":\"%s\",\"playerId\": \"%s\"}}",
-		roomId, player.id)
+	b, _ := json.Marshal(struct {
+		Joined   bool   `json:"joined"`
+		RoomId   string `json:"roomId"`
+		PlayerId string `json:"playerId"`
+	}{Joined: true, RoomId: roomId, PlayerId: player.IdAsString()})
+	payload := json.RawMessage(b)
 
-	log.Printf("Writing %s\n", message)
-	err = conn.WriteMessage(websocket.TextMessage, []byte(message))
+	message := ReponseMessage{
+		Type:    "onjoined",
+		Payload: &payload,
+	}
+
+	b, _ = json.Marshal(message)
+
+	log.Printf("Writing %s\n", string(b))
+	err = conn.WriteMessage(websocket.TextMessage, []byte(b))
 
 	if err != nil {
 		fmt.Println(err)

@@ -14,8 +14,8 @@ type playerConn struct {
 }
 
 type Command struct {
-	Type string
-	Data string
+	Type string `json:"type"`
+	Data string `json:"data,omitempty"`
 }
 
 // Recieve messages from that player in a coroutine

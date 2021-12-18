@@ -2,17 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import './App.css';
 import CreateRoomButton from './CreateRoomButton';
 import GameRoom from './GameRoom';
+import Player from './models/Player';
 import PlayerName from './PlayerName';
 
 export interface RoomState {
   id: string,
+  playerId: string,
   playerName: string,
-  players: string[]
+  players: Player[]
 }
 
 const initialState: RoomState = {
   id: '',
-  playerName: "",
+  playerId: '',
+  playerName: '',
   players: []
 };
 
@@ -25,7 +28,8 @@ interface GameMessage {
 }
 
 export type Action = {
-  type: 'room/join' | 'room/create' | 'room/enter' | 'player/updateName',
+  type: 'room/join' | 'room/create' | 'room/enter' |
+    'player/updateName' | 'player/ready',
   payload: any
 };
 
@@ -40,7 +44,9 @@ function App() {
       type: action.type,
       data: action.payload
     };
-    ws.current?.send(JSON.stringify(cmd));
+    const commandStr = JSON.stringify(cmd);
+    console.log("Sending command", commandStr)
+    ws.current?.send(commandStr);
   }
 
   useEffect(() => {
@@ -64,7 +70,8 @@ function App() {
               setRoomState(prevState => {
                 return {
                   ...prevState,
-                  id: msg.payload.roomId, 
+                  id: msg.payload.roomId,
+                  playerId: msg.payload.playerId
                 }
               });
               break;

@@ -16,7 +16,7 @@ const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
 
       <div className="mt-2 mb-1 grid grid-cols-1 h-16 items-center font-medium space-x-4 text-black shadow-lg rounded-xl bg-white">Round: #0</div>
 
-      <PlayerList playersList={roomState.players} />
+      <PlayerList playersList={roomState.players} playerId={roomState.playerId} sendCommand={sendCommand} />
       <section>
         <p>Current prompt: "THIS IS FUNNY PROMPT"</p>
       </section>

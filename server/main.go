@@ -77,8 +77,6 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	log.Println("Creating players")
-
 	if room == nil {
 		log.Println("Not found")
 		w.WriteHeader(http.StatusNotFound)
@@ -88,14 +86,20 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	// Create a player
 	player := NewPlayer(playerName)
 
+	// Set the room owner
+	if len(room.OwnerId) == 0 {
+		room.OwnerId = player.IdAsString()
+	}
+
 	// Write joined message
 	playerConn := room.AddPlayer(player, conn)
 
 	b, _ := json.Marshal(struct {
 		Joined   bool   `json:"joined"`
 		RoomId   string `json:"roomId"`
+		OwnerId  string `json:"ownerId"`
 		PlayerId string `json:"playerId"`
-	}{Joined: true, RoomId: roomId, PlayerId: player.IdAsString()})
+	}{Joined: true, RoomId: roomId, OwnerId: room.OwnerId, PlayerId: player.IdAsString()})
 	payload := json.RawMessage(b)
 
 	message := ReponseMessage{

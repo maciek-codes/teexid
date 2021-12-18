@@ -9,8 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type RoomState int32
-
 const MinPlayers = 3
 
 var randGenSource = rand.NewSource(time.Now().UnixNano())
@@ -26,12 +24,6 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-const (
-	WaitingForPlayers RoomState = iota
-	PlayingGame
-	Ended
-)
-
 type GameRoom interface {
 	GetId() string
 	CanJoin() bool
@@ -40,6 +32,7 @@ type GameRoom interface {
 type Room struct {
 	Id      string    `json:"id"`
 	State   RoomState `json:"state,omitempty"`
+	OwnerId string    `json:"ownerId"`
 	players []*Player
 	conns   map[string]playerConn
 }
@@ -68,14 +61,11 @@ func (r *Room) Players() []*Player {
 }
 
 func (r *Room) BroadcastPlayers() {
-	b, _ := json.Marshal(r.players)
+	b, _ := json.Marshal(struct {
+		Players []*Player `json:"players"`
+	}{Players: r.players})
+
 	playersMessage := json.RawMessage(b)
-
-	b, _ = json.Marshal(struct {
-		Players *json.RawMessage `json:"players"`
-	}{Players: &playersMessage})
-
-	playersMessage = json.RawMessage(b)
 
 	message := ReponseMessage{
 		Type:    "onplayersupdated",
@@ -99,9 +89,9 @@ func (r *Room) BroadcastPlayers() {
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
 	b, _ := json.Marshal(struct {
-		Id    string `json:"id"`
-		Ready bool   `json:"ready"`
-	}{Id: r.Id, Ready: r.State == PlayingGame})
+		Id        string    `json:"id"`
+		RoomState RoomState `json:"state"`
+	}{Id: r.Id, RoomState: r.State})
 
 	payloadMessage := json.RawMessage(b)
 

@@ -11,25 +11,29 @@ import { far } from '@fortawesome/free-regular-svg-icons'
 // Font awesome icons
 library.add(far);
 
+type GameState = 'waiting' | 'playing' | 'ended';
+
 export interface RoomState {
   id: string,
   playerId: string,
   playerName: string,
   players: Player[]
+  state: GameState
 }
 
 const initialState: RoomState = {
   id: '',
   playerId: '',
   playerName: '',
-  players: []
+  players: [],
+  state: 'waiting'
 };
 
 type JoinedStatus = 'joined' | 'loading' | 'not_joined';
 
 interface GameMessage {
   type: 'onjoined' | 'onplayersupdated' |
-  'onturnaction'
+  'onturnaction' | 'onroomstateupdated'
   payload: any
 }
 
@@ -77,13 +81,18 @@ function App() {
                 return {
                   ...prevState,
                   id: msg.payload.roomId,
-                  playerId: msg.payload.playerId
+                  playerId: msg.payload.playerId,
+                  isOwner: msg.payload.ownerId === msg.payload.playerId
                 }
               });
               break;
             }
             case 'onplayersupdated': {
               setRoomState({ ...roomState, players: msg.payload.players });
+              break;
+            }
+            case 'onroomstateupdated': {
+              setRoomState({...roomState, state: msg.payload.state});
               break;
             }
             default:

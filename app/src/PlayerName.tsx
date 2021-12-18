@@ -31,7 +31,8 @@ const PlayerName = ({playerName, sendCommand, onNameChanged}: PlayerNameProps) =
           updateName();
         }
       }} /> :
-    <div className="h-6 w-100 px-4 py-1 items-center font-medium space-x-1 text-black shadow-lg bg-white">
+    <div className="h-auto w-100 px-2 py-3 items-center leading-tight focus:outline-none focus:shadow-outline
+        text-gray-800 bg-white">
       👋 Hello {name} <button onClick={() => setIsEditingName(true)}>✏️</button>
     </div>;
   }

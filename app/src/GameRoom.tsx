@@ -7,21 +7,45 @@ type GameRoomProps = {
   sendCommand: (action: Action) => void;
 };
 
-const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
-  
+type CopyButtonProps = {copyText: string};
+const CopyButton = ({copyText}: CopyButtonProps) => {
   return (
-    <div id="room" className="room">
-      <div className="mt-2 mb-2 px-2 py-3 grid grid-cols-1 h-auto items-center font-medium space-x-2 text-black shadow-lg  bg-white">
-        Room: {roomState.id}
-        <button onClick={() => {
-          navigator.clipboard.writeText(roomState.id)
-        }}><FontAwesomeIcon icon={["far", "copy"]} /></button>
-      </div>
+    <button onClick={() => {
+      navigator.clipboard.writeText(copyText)
+    }}>
+      <FontAwesomeIcon icon={["far", "copy"]} />
+    </button>
+  )
+}
 
-      <PlayerList playersList={roomState.players} playerId={roomState.playerId} sendCommand={sendCommand} />
+const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
+  const roomId = roomState.id;
+
+  let gameEl = null;
+  if (roomState.state == 'playing') {
+    gameEl = (
       <section>
         <p>Current prompt: "THIS IS FUNNY PROMPT"</p>
       </section>
+    )
+  } else {
+    gameEl = (
+      <section>
+        <p>Waiting to start</p>
+      </section>
+    )
+  }
+
+  return (
+    <div id="room" className="room">
+      <div className="mt-2 mb-2 px-2 py-3 flex flex-grow place-content-evenly align-middle items-center h-auto font-medium space-x-2 text-black shadow-lg  bg-white">
+        <div className="text-lg">Room: </div>
+        <div className="text-sm">{roomId}</div>
+        <CopyButton copyText={roomId} />
+      </div>
+
+      <PlayerList playersList={roomState.players} playerId={roomState.playerId} sendCommand={sendCommand} />
+      {gameEl}
       <section>
         <h2>Submitted cards</h2>
         <button>Vote</button>

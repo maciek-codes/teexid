@@ -2,6 +2,8 @@ import Player from "./Player";
 
 export type GameState = 'waiting' | 'playing' | 'ended';
 
+export type JoinedStatus = 'joined' | 'loading' | 'not_joined';
+
 export default interface RoomState {
   // Id of the room
   id: string,
@@ -12,5 +14,7 @@ export default interface RoomState {
   // All players (including current)
   players: Player[]
   // State of the game in this room
-  state: GameState
+  state: GameState,
+
+  joinedStatus: JoinedStatus
 }

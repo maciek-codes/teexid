@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import './App.css';
 import CreateRoomButton from './CreateRoomButton';
 import GameRoom from './GameRoom';
@@ -7,6 +7,7 @@ import PlayerName from './PlayerName';
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { far } from '@fortawesome/free-regular-svg-icons'
 import RoomState from './models/RoomState';
+import reducer, { GameMessage } from './RoomStateReducer';
 
 // Font awesome icons
 library.add(far);
@@ -16,16 +17,9 @@ const initialState: RoomState = {
   playerId: '',
   playerName: '',
   players: [],
-  state: 'waiting'
+  state: 'waiting',
+  joinedStatus: 'not_joined'
 };
-
-type JoinedStatus = 'joined' | 'loading' | 'not_joined';
-
-interface GameMessage {
-  type: 'onjoined' | 'onplayersupdated' |
-  'onturnaction' | 'onroomstateupdated'
-  payload: any
-}
 
 export type Action = {
   type: 'room/join' | 'room/create' | 'room/enter' |
@@ -35,6 +29,8 @@ export type Action = {
 
 const App = () => {
   const ws = useRef<WebSocket | null>(null);
+
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   const sendCommand = (action: Action) => {
     const cmd = {
@@ -46,43 +42,12 @@ const App = () => {
     ws.current?.send(commandStr);
   }
 
-  const [canConnect, setCanConnect] = useState<Boolean>(false);
-  const [roomState, setRoomState] = useState<RoomState>(initialState);
-  const [joinStatus, setJoinStatus] = useState<JoinedStatus>('not_joined');
-
-  const messageCallback = (msg: GameMessage) => {
-    switch (msg.type) {
-      case 'onjoined': {
-        setJoinStatus('joined');
-        setRoomState(prevState => {
-          return {
-            ...prevState,
-            id: msg.payload.roomId,
-            playerId: msg.payload.playerId,
-            isOwner: msg.payload.ownerId === msg.payload.playerId
-          }
-        });
-        break;
-      }
-      case 'onplayersupdated': {
-        setRoomState({ ...roomState, players: msg.payload.players });
-        break;
-      }
-      case 'onroomstateupdated': {
-        setRoomState({ ...roomState, state: msg.payload.state });
-        break;
-      }
-      default:
-        break;
-    }
-  };
-
   useEffect(() => {
-    if (!ws.current && roomState.id && canConnect) {
+    if (!ws.current && state.id) {
       ws.current = new WebSocket(
         'ws://localhost:8080/rooms/'
-        + roomState.id
-        + '?playerName=' + roomState.playerName);
+        + state.id
+        + '?playerName=' + state.playerName);
 
       ws.current.onopen = (ev: Event) => {
         console.log("Connected to the room.");
@@ -99,45 +64,41 @@ const App = () => {
       ws.current.onmessage = (ev: MessageEvent) => {
         console.log("Message: " + ev.data);
         const msg = JSON.parse(ev.data) as GameMessage;
-        messageCallback(msg);
+        dispatch(msg);
       }
     }
-  }, [canConnect, messageCallback, roomState.id, roomState.playerName]);
+  }, [state.id, state.playerName]);
 
   const onCreateRoom = async () => {
-    setJoinStatus("loading");
-    setCanConnect(true);
+    dispatch({type: 'joining', payload: null});
     try {
       const response = await (await fetch('http://localhost:8080/rooms', {
         method: "POST",
       })).json();
-      setRoomState({ ...roomState, id: response.id });
+      dispatch({type: 'connect', payload: {id: response.id}});
     } catch (err) {
-      setJoinStatus("not_joined");
-      setRoomState({ ...roomState, id: '' });
+      dispatch({type: 'onjoinerror', payload: null});
     }
   };
 
   const onJoinRoom = (id: string) => {
-    setJoinStatus("loading");
-    setCanConnect(true);
-    setRoomState({ ...roomState, id: id });
+    dispatch({type: 'joining', payload: null});
+    dispatch({type: 'connect', payload: {id: id}});
   }
 
   const onPlayerNameChanged = (name: string) => {
-    setRoomState({
-      ...roomState,
+    dispatch({type: 'playerName', payload: {
       playerName: name
-    });
+    }});
   }
 
   let entrace;
-  if (roomState.playerName) {
-    switch (joinStatus) {
+  if (state.playerName) {
+    switch (state.joinedStatus) {
       case 'joined': {
         entrace = (
           <div className="transition duration-150 ease-in-out">
-            <GameRoom roomState={roomState} sendCommand={sendCommand} />
+            <GameRoom roomState={state} sendCommand={sendCommand} />
           </div>
         );
         break;
@@ -159,7 +120,7 @@ const App = () => {
   return (
     <div className="App">
       <header className="App-header">
-        <PlayerName sendCommand={sendCommand} playerName={roomState.playerName}
+        <PlayerName sendCommand={sendCommand} playerName={state.playerName}
           onNameChanged={onPlayerNameChanged} />
         {entrace}
       </header>

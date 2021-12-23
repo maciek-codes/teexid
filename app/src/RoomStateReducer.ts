@@ -47,7 +47,7 @@ const reducer = (prevState: RoomState, msg: GameMessage): RoomState => {
     case 'onroomstateupdated': {
       return {
         ...prevState,
-        state: msg.payload.state
+        gameStatus: msg.payload.state
       }
     }
     case 'playerName': {

@@ -1,8 +1,24 @@
 import Player from "./Player";
 
-export type GameState = 'waiting' | 'playing' | 'ended';
+export type GameStatus = 'waiting' | 'playing' | 'ended';
 
 export type JoinedStatus = 'joined' | 'loading' | 'not_joined';
+
+export type TurnStatus = 'writingStory' | 'waitingForStory' |
+  'submittingCard' | 'waitingForOthers' | 'voting' | 'voted';
+
+export interface Card {
+  cardId: number
+}
+
+export interface TurnState {
+  storyPlayerId: string,
+  turnStatus: TurnStatus
+  storyPrompt: string,
+  storyCard: Card,
+  pickedCardId: string,
+  cardsToVote: string
+}
 
 export default interface RoomState {
   // Id of the room
@@ -14,7 +30,13 @@ export default interface RoomState {
   // All players (including current)
   players: Player[]
   // State of the game in this room
-  state: GameState,
+  gameStatus: GameStatus,
+
+  playerCards: Card[],
+
+  turn: number
+
+  turnState?: TurnState
 
   joinedStatus: JoinedStatus
 }

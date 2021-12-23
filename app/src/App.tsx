@@ -17,11 +17,13 @@ const initialState: RoomState = {
   playerId: '',
   playerName: '',
   players: [],
-  state: 'waiting',
+  playerCards: [],
+  turn: 0,
+  gameStatus: 'waiting',
   joinedStatus: 'not_joined'
 };
 
-export type Action = {
+export type ServerAction = {
   type: 'room/join' | 'room/create' | 'room/enter' |
   'player/updateName' | 'player/ready',
   payload: any
@@ -32,7 +34,7 @@ const App = () => {
 
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  const sendCommand = (action: Action) => {
+  const sendCommand = (action: ServerAction) => {
     const cmd = {
       type: action.type,
       data: action.payload

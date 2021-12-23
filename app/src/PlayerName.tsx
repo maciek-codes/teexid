@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Action } from "./App";
+import { ServerAction } from "./App";
 
 interface PlayerNameProps {
   playerName: string,
-  sendCommand: (action: Action) => void;
+  sendCommand: (action: ServerAction) => void;
   onNameChanged: (newName: string) => void
 }
 

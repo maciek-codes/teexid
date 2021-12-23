@@ -35,6 +35,8 @@ type Room struct {
 	OwnerId string    `json:"ownerId"`
 	players []*Player
 	conns   map[string]playerConn
+	cardIds []int
+	cardIdx int
 }
 
 type ReponseMessage struct {
@@ -42,12 +44,17 @@ type ReponseMessage struct {
 	Payload *json.RawMessage `json:"payload"`
 }
 
-func NewRoom() *Room {
+func NewRoom(cardIds []int) *Room {
 	id := randSeq(6)
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(cardIds), func(i, j int) {
+		cardIds[i], cardIds[j] = cardIds[j], cardIds[i]
+	})
 	room := Room{Id: id,
 		State:   WaitingForPlayers,
 		players: make([]*Player, 0),
 		conns:   make(map[string]playerConn, 0),
+		cardIds: cardIds,
 	}
 	return &room
 }
@@ -119,6 +126,39 @@ func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
 	return r.conns[p.IdAsString()]
 }
 
+func (r *Room) startGame() {
+	r.State = PlayingGame
+
+	// Deal cards to each player
+	r.sendCardsToEach(2)
+}
+
+func (r *Room) sendCardsToEach(cardCount int) {
+	for _, playerConn := range r.conns {
+
+		cardIds := make([]int, 0)
+		for cardCount > 0 {
+			cardCount -= 1
+			cardIds = append(cardIds, r.cardIds[r.cardIdx])
+			r.cardIdx++
+		}
+
+		b, _ := json.Marshal(struct {
+			CardIds []int `json:"cards"`
+		}{CardIds: cardIds})
+
+		payloadMessage := json.RawMessage(b)
+
+		message := ReponseMessage{
+			Type:    "oncards",
+			Payload: &payloadMessage}
+
+		b, _ = json.Marshal(message)
+
+		playerConn.ws.WriteMessage(websocket.TextMessage, b)
+	}
+}
+
 func (r *Room) UpdateState(p *Player, command Command) {
 	if command.Type == "player/updateName" {
 		var newName = command.Data
@@ -132,7 +172,7 @@ func (r *Room) UpdateState(p *Player, command Command) {
 			allReady = allReady && player.IsReady()
 		}
 		if allReady && len(r.Players()) >= MinPlayers {
-			r.State = PlayingGame
+			r.startGame()
 			r.BroadcastRoomState()
 		}
 	}

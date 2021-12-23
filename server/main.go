@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -26,20 +27,49 @@ var upgrader = websocket.Upgrader{
 } // use mostly default options
 
 var rooms []*Room = make([]*Room, 0)
+var cards []*Card = make([]*Card, 0)
 
 func handleRooms(w http.ResponseWriter, req *http.Request) {
 
 	// To be removed in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
 
+	cardIds := make([]int, 0)
+	for _, card := range cards {
+		cardIds = append(cardIds, card.Id)
+	}
+
 	if req.Method == http.MethodPost {
-		room := NewRoom()
+		room := NewRoom(cardIds)
 		rooms = append(rooms, room)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(room)
 	} else if req.Method == http.MethodGet {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(rooms)
+	} else {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+	}
+}
+
+func handleCards(w http.ResponseWriter, req *http.Request) {
+	// To be removed in prod
+	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
+
+	// Get card id
+	vars := mux.Vars(req)
+	cardId64, _ := strconv.ParseInt(vars["cardId"], 10, 32)
+	cardId := int(cardId64)
+
+	// Respond
+	if req.Method == http.MethodGet {
+		if len(cards) <= cardId || cardId < 0 {
+			log.Printf("Not found card id %d", cardId)
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			log.Printf("Redirecting to %s", cards[cardId].Url)
+			http.Redirect(w, req, cards[cardId].Url, http.StatusFound)
+		}
 	} else {
 		http.Error(w, "POST only", http.StatusMethodNotAllowed)
 	}
@@ -123,26 +153,13 @@ func start(staticDir string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/rooms", handleRooms).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/rooms/{roomId}", joinRoom)
+	r.HandleFunc("/cards/{cardId}", handleCards)
 
 	// This will serve files under http://localhost:8080/static/<filename>
-	cards := make([]string, 0)
-	err := filepath.Walk(staticDir+"/cards/", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			fmt.Println(err)
-			return err
-		}
-		if !info.IsDir() {
-			cards = append(cards, path)
-		}
-		return nil
-	})
+	err := buildCards(staticDir)
 
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	for _, card := range cards {
-		log.Println("Card: " + card)
 	}
 
 	r.PathPrefix("/static/").Handler(
@@ -159,6 +176,23 @@ func start(staticDir string) {
 
 	log.Printf(("Starting to listen"))
 	log.Fatal(srv.ListenAndServe())
+}
+
+func buildCards(staticDir string) error {
+	cardIdx := 0
+	err := filepath.Walk(staticDir+"/cards/", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			url := "http://" + *addr + "/static/cards/" + info.Name()
+			log.Printf("Adding card url: %s", url)
+			cards = append(cards, &Card{Id: cardIdx, Url: url})
+			cardIdx++
+		}
+		return nil
+	})
+	return err
 }
 
 func main() {

@@ -10,7 +10,7 @@ import (
 func TestCanJoin(t *testing.T) {
 	assert := assert.New(t)
 
-	room := NewRoom()
+	room := NewRoom(make([]int, 0))
 	assert.Equal(WaitingForPlayers, room.State)
 
 	// Start playing
@@ -25,7 +25,7 @@ func TestCanJoin(t *testing.T) {
 func TestRoomHasPlayers(t *testing.T) {
 	assert := assert.New(t)
 
-	room := NewRoom()
+	room := NewRoom(make([]int, 0))
 	assert.Len(room.Players(), 0)
 
 	p1 := NewPlayer("Alice")
@@ -39,7 +39,7 @@ func TestRoomHasPlayers(t *testing.T) {
 func TestMarshalToJson(t *testing.T) {
 	assert := assert.New(t)
 
-	room := NewRoom()
+	room := NewRoom(make([]int, 0))
 	room.Id = "bcd"
 	b, err := json.Marshal(room)
 	assert.Nil(err)

@@ -1,4 +1,4 @@
-import { Card } from "./models/RoomState";
+import Card from "./models/Card";
 
 interface CardViewProps {
     card: Card

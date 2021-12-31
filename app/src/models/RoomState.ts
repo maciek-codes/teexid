@@ -1,3 +1,4 @@
+import Card from "./Card";
 import Player from "./Player";
 
 export type GameStatus = 'waiting' | 'playing' | 'ended';
@@ -6,10 +7,6 @@ export type JoinedStatus = 'joined' | 'loading' | 'not_joined';
 
 export type TurnStatus = 'writingStory' | 'waitingForStory' |
   'submittingCard' | 'waitingForOthers' | 'voting' | 'voted';
-
-export interface Card {
-  cardId: number
-}
 
 export interface TurnState {
   storyPlayerId: string,

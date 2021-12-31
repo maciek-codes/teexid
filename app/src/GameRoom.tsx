@@ -93,7 +93,7 @@ const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
         sendCommand={sendCommand} />
       {promptEl}
       {gameEl}
-      <CardSelector cards={[{cardId: 1},{cardId: 2}, {cardId: 3}]} />
+      <CardSelector cards={roomState.playerCards} />
     </div>
   );
 };

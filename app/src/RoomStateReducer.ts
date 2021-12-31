@@ -1,10 +1,10 @@
 import RoomState from "./models/RoomState"
-
+import Card from "./models/Card"
 export interface GameMessage {
   type: 'joining' | 'onjoined' | 'onjoinerror' |
   'onplayersupdated' |
   'onturnaction' | 'onroomstateupdated' | 'connect' |
-  'playerName'
+  'playerName' | 'oncards'
   payload: any
 }
 
@@ -54,6 +54,15 @@ const reducer = (prevState: RoomState, msg: GameMessage): RoomState => {
       return {
         ...prevState,
         playerName: msg.payload.playerName
+      }
+    }
+    case 'oncards': {
+      console.log("oncards", msg.payload.cards.length);
+      return {
+        ...prevState,
+        playerCards: msg.payload.cards.map((cardId: number): Card => {
+          return {cardId: cardId}
+        })
       }
     }
     default:

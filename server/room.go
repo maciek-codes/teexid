@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"math/rand"
+	"strconv"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -37,6 +38,10 @@ type Room struct {
 	conns   map[string]playerConn
 	cardIds []int
 	cardIdx int
+
+	StoryPlayerIdx int    `json:"storyPlayerIndex"`
+	Story          string `json:"story"`
+	StoryCard      int    `json:"storyCardId"`
 }
 
 type ReponseMessage struct {
@@ -51,10 +56,13 @@ func NewRoom(cardIds []int) *Room {
 		cardIds[i], cardIds[j] = cardIds[j], cardIds[i]
 	})
 	room := Room{Id: id,
-		State:   WaitingForPlayers,
-		players: make([]*Player, 0),
-		conns:   make(map[string]playerConn, 0),
-		cardIds: cardIds,
+		State:          WaitingForPlayers,
+		players:        make([]*Player, 0),
+		conns:          make(map[string]playerConn, 0),
+		cardIds:        cardIds,
+		StoryPlayerIdx: -1,
+		Story:          "",
+		StoryCard:      -1,
 	}
 	return &room
 }
@@ -130,15 +138,32 @@ func (r *Room) startGame() {
 	r.State = PlayingGame
 
 	// Deal cards to each player
-	r.sendCardsToEach(2)
+	r.sendCardsToEach(5)
+
+	// Next player tells the story
+	r.nextPlayerToTellStory()
+
+	// Update the room
+	r.BroadcastPlayers()
+}
+
+func (r *Room) nextPlayerToTellStory() {
+	// Next player is telling story
+	playersCount := len(r.players)
+	nextStoryPlayerIdx := r.StoryPlayerIdx + 1
+	if nextStoryPlayerIdx >= playersCount {
+		nextStoryPlayerIdx = 0
+	}
+	r.StoryPlayerIdx = nextStoryPlayerIdx
 }
 
 func (r *Room) sendCardsToEach(cardCount int) {
 	for _, playerConn := range r.conns {
 
+		cardCountToPlayer := cardCount
 		cardIds := make([]int, 0)
-		for cardCount > 0 {
-			cardCount -= 1
+		for cardCountToPlayer > 0 {
+			cardCountToPlayer -= 1
 			cardIds = append(cardIds, r.cardIds[r.cardIdx])
 			r.cardIdx++
 		}
@@ -175,5 +200,23 @@ func (r *Room) UpdateState(p *Player, command Command) {
 			r.startGame()
 			r.BroadcastRoomState()
 		}
+	} else if command.Type == "player/story" {
+		story := struct {
+			Story string `json:"story"`
+			Card  int    `json:"cardId"`
+		}{}
+
+		err := json.Unmarshal([]byte(command.Data), &story)
+		if err != nil {
+			log.Print("Error unmarshalling story")
+			return
+		}
+
+		r.Story = story.Story
+		r.StoryCard = story.Card
+		r.BroadcastRoomState()
+	} else if command.Type == "player/storyCard" {
+		votedCard, _ := strconv.Atoi(command.Data)
+		log.Printf("Player %s voted for card %d", p.IdAsString(), votedCard)
 	}
 }

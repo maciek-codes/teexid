@@ -34,13 +34,23 @@ func handleRooms(w http.ResponseWriter, req *http.Request) {
 	// To be removed in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
 
+	params := req.URL.Query()
+	token := params.Get("token")
+	playerId, err := GetPlayerIdFromToken(token)
+
+	if err != nil {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
+
 	cardIds := make([]int, 0)
 	for _, card := range cards {
 		cardIds = append(cardIds, card.Id)
 	}
 
 	if req.Method == http.MethodPost {
-		room := NewRoom(cardIds)
+		room := NewRoom(cardIds, playerId)
 		rooms = append(rooms, room)
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(room)
@@ -48,7 +58,7 @@ func handleRooms(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(rooms)
 	} else {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		http.Error(w, "GET or POST only", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -81,13 +91,21 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 
 	params := req.URL.Query()
 	playerName := params.Get("playerName")
+	token := params.Get("token")
+	playerId, err := GetPlayerIdFromToken(token)
+
+	if err != nil {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		json.NewEncoder(w).Encode(err)
+		return
+	}
 
 	// TODO: Remove in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
 
 	conn, err := upgrader.Upgrade(w, req, nil)
 
-	log.Println("Conn upgraded")
+	log.Println("Joining player " + playerName + " with id " + playerId.String())
 
 	if _, ok := err.(websocket.HandshakeError); ok {
 		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
@@ -114,12 +132,7 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Create a player
-	player := NewPlayer(playerName)
-
-	// Set the room owner
-	if len(room.OwnerId) == 0 {
-		room.OwnerId = player.IdAsString()
-	}
+	player := NewPlayer(playerName, playerId)
 
 	// Write joined message
 	playerConn := room.AddPlayer(player, conn)
@@ -129,7 +142,7 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 		RoomId   string `json:"roomId"`
 		OwnerId  string `json:"ownerId"`
 		PlayerId string `json:"playerId"`
-	}{Joined: true, RoomId: roomId, OwnerId: room.OwnerId, PlayerId: player.IdAsString()})
+	}{Joined: true, RoomId: roomId, OwnerId: room.OwnerId.String(), PlayerId: player.IdAsString()})
 	payload := json.RawMessage(b)
 
 	message := ReponseMessage{
@@ -151,6 +164,7 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 
 func start(staticDir string) {
 	r := mux.NewRouter()
+	r.HandleFunc("/auth", handleAuth).Methods("POST")
 	r.HandleFunc("/rooms", handleRooms).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/rooms/{roomId}", joinRoom)
 	r.HandleFunc("/cards/{cardId}", handleCards)

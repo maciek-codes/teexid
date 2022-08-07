@@ -9,7 +9,6 @@ export interface GameMessage {
 }
 
 const reducer = (prevState: RoomState, msg: GameMessage): RoomState => {
-  console.log("Reducing", msg);
   switch (msg.type) {
     case 'joining': {
       return {

@@ -1,132 +1,43 @@
-import { useEffect, useReducer, useRef } from 'react';
 import './App.css';
-import CreateRoomButton from './CreateRoomButton';
-import GameRoom from './GameRoom';
-import PlayerName from './PlayerName';
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { far } from '@fortawesome/free-regular-svg-icons'
-import RoomState from './models/RoomState';
-import reducer, { GameMessage } from './RoomStateReducer';
+
+import { PlayerContextProvider } from './contexts/PlayerContext';
+import { RoomContextProvider } from './contexts/RoomContext';
+import { GameInit } from './GameInit';
+import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import GameRoom from './GameRoom';
 
 // Font awesome icons
 library.add(far);
 
-const initialState: RoomState = {
-  id: '',
-  playerId: '',
-  playerName: '',
-  players: [],
-  playerCards: [],
-  turn: 0,
-  gameStatus: 'waiting',
-  joinedStatus: 'not_joined'
-};
-
-export type ServerAction = {
-  type: 'room/join' | 'room/create' | 'room/enter' |
-  'player/updateName' | 'player/ready',
-  payload: any
-};
-
 const App = () => {
-  const ws = useRef<WebSocket | null>(null);
 
-  const [state, dispatch] = useReducer(reducer, initialState);
-
-  const sendCommand = (action: ServerAction) => {
-    const cmd = {
-      type: action.type,
-      data: action.payload
-    };
-    const commandStr = JSON.stringify(cmd);
-    console.log("Sending command", commandStr)
-    ws.current?.send(commandStr);
-  }
-
-  useEffect(() => {
-    if (!ws.current && state.id) {
-      ws.current = new WebSocket(
-        'ws://localhost:8080/rooms/'
-        + state.id
-        + '?playerName=' + state.playerName);
-
-      ws.current.onopen = (ev: Event) => {
-        console.log("Connected to the room.");
-      };
-
-      ws.current.onerror = (ev: Event) => {
-        console.error(ev);
-      }
-
-      ws.current.onclose = (ev: Event) => {
-        console.log("Closing");
-      }
-
-      ws.current.onmessage = (ev: MessageEvent) => {
-        console.log("Message: " + ev.data);
-        const msg = JSON.parse(ev.data) as GameMessage;
-        dispatch(msg);
-      }
-    }
-  }, [state.id, state.playerName]);
-
-  const onCreateRoom = async () => {
-    dispatch({type: 'joining', payload: null});
-    try {
-      const response = await (await fetch('http://localhost:8080/rooms', {
-        method: "POST",
-      })).json();
-      dispatch({type: 'connect', payload: {id: response.id}});
-    } catch (err) {
-      dispatch({type: 'onjoinerror', payload: null});
-    }
-  };
-
-  const onJoinRoom = (id: string) => {
-    dispatch({type: 'joining', payload: null});
-    dispatch({type: 'connect', payload: {id: id}});
-  }
-
-  const onPlayerNameChanged = (name: string) => {
-    dispatch({type: 'playerName', payload: {
-      playerName: name
-    }});
-  }
-
-  let entrace;
-  if (state.playerName) {
-    switch (state.joinedStatus) {
-      case 'joined': {
-        entrace = (
-          <div className="transition duration-150 ease-in-out">
-            <GameRoom roomState={state} sendCommand={sendCommand} />
-          </div>
-        );
-        break;
-      }
-      case 'not_joined': {
-        entrace = (
-          <div className="transition duration-150 ease-in-out">
-            <CreateRoomButton createRoom={onCreateRoom} joinRoom={onJoinRoom} />
-          </div>
-        );
-        break;
-      }
-      case 'loading': {
-        entrace = <p>Loading...</p>
-      }
-    }
-  }
+  const queryClient = new QueryClient()
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <PlayerName sendCommand={sendCommand} playerName={state.playerName}
-          onNameChanged={onPlayerNameChanged} />
-        {entrace}
-      </header>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+                <Routes>
+                  <Route path='/' element={
+                    <RoomContextProvider>
+                      <PlayerContextProvider>
+                        <GameInit />
+                      </PlayerContextProvider>
+                    </RoomContextProvider>
+                  } />
+                  <Route path='/room/:roomId' element={
+                    <RoomContextProvider>
+                      <PlayerContextProvider>
+                        <GameRoom/>
+                      </PlayerContextProvider>
+                    </RoomContextProvider>
+                    } />
+                </Routes>
+=      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 

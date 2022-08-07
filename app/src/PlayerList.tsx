@@ -1,26 +1,24 @@
-import { ServerAction } from "./App";
+import { usePlayer } from "./contexts/PlayerContext";
+import { useRoom } from "./contexts/RoomContext";
 import Player from "./models/Player";
-import { GameStatus } from "./models/RoomState";
 
-interface PlayerListProps {
-  playersList: Player[]
-  playerId: string,
-  gameStatus: GameStatus
-  sendCommand: (action: ServerAction) => void
-}
+const PlayerList = () => {
 
-const PlayerList = ({ playersList, playerId, gameStatus, sendCommand }: PlayerListProps) => {
+  const room = useRoom();
+  const {id} = usePlayer();
+  const playersList = room.players;
+  const gameStatus = room.gameStatus;
 
   // Create a list of players
   const players: JSX.Element[] = playersList.map((player: Player, idx: number) => {
 
-    const isSelf = player.id === playerId
+    const isSelf = player.id === id
     const canChange = isSelf && gameStatus === 'waiting'
     return <div key={idx} className="player flex items-center align-middle flex-row">
 
       <div>{player.name}</div>
       <input className="input checkbox" type="checkbox" disabled={!canChange} checked={player.ready} onChange={() => {
-        sendCommand({ type: 'player/ready', payload: '' })
+        console.log({ type: 'player/ready', payload: '' })
       }}/>
     </div>
   });

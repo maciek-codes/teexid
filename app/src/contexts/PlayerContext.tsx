@@ -1,5 +1,5 @@
-import React, { useContext, createContext, useState, useCallback } from "react";
-import Player from "../models/Player";
+import React, { useContext, createContext, useState } from "react";
+import { useAuth } from "../hooks/useAuth";
 
 interface PlayerData {
     id: string | null;
@@ -14,21 +14,17 @@ type Props = {
 }
 
 export const PlayerContextProvider: React.FC<Props> = ({children}: Props) => {
-    const [player, setPlayer] = useState<Player>({
-        id: "",
-        name: "", 
-        ready: false});
-    const setName = useCallback((name: string) => {
-        const newPlayer: Player = {
-            ...player ?? {},
-            name
-        };
-        setPlayer(newPlayer);
-    }, [player, setPlayer]);
+    
+    // Check local storage
+    const storedName = localStorage.getItem("playerName") ?? '';
+    const auth = useAuth();
+
+    const [name, setName] = useState<string>(storedName);
+
     return (
         <PlayerContext.Provider value={{
-            id: player?.id ?? null,
-            name: player?.name ?? null,
+            id: auth.data?.playerId ?? null,
+            name,
             setName,
         }}>
             {children}

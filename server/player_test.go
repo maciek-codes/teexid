@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestCanChangeName(t *testing.T) {
 	assert := assert.New(t)
 
-	player := NewPlayer("Jane")
+	player := NewPlayer("Jane", uuid.UUID{})
 	assert.Equal("Jane", player.Name)
 	id := player.Id
 	assert.NotEqual("00000000-0000-0000-0000-000000000000", player.Id)
@@ -22,7 +23,7 @@ func TestCanChangeName(t *testing.T) {
 
 func TestMarshalling(t *testing.T) {
 	assert := assert.New(t)
-	player := NewPlayer("Foo")
+	player := NewPlayer("Foo", uuid.UUID{})
 	player.SetReady()
 
 	arr := make([]*Player, 0)

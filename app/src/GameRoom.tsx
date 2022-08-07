@@ -1,14 +1,18 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ServerAction } from "./App";
-import CardSelector from "./CardSelector";
-import CardView from "./CardView";
-import RoomState from "./models/RoomState";
-import PlayerList from "./PlayerList";
 
-type GameRoomProps = {
-  roomState: RoomState;
-  sendCommand: (action: ServerAction) => void;
-};
+import React, { useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Box, Text } from "@chakra-ui/react";
+
+import CardView from "./CardView";
+import PlayerList from "./PlayerList";
+import { TurnState } from "./models/RoomState";
+
+import { Container } from "@chakra-ui/react";
+import { useRoom } from "./contexts/RoomContext";
+import { usePlayer } from "./contexts/PlayerContext";
+import Card from "./models/Card";
+import { useJoinRoom } from "./hooks/useJoinRoom";
+import PlayerName from "./PlayerName";
 
 type CopyButtonProps = {copyText: string};
 const CopyButton = ({copyText}: CopyButtonProps) => {
@@ -21,23 +25,28 @@ const CopyButton = ({copyText}: CopyButtonProps) => {
   )
 }
 
-const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
-  const roomId = roomState.id;
+const GameRoom: React.FC = () => {
 
+  const { roomId, gameStatus } = useRoom();
+  const { name } = usePlayer();
+  const [ turnState ] = useState<TurnState | null>(null);
+  const playerCards: Card[] = [];
+  const { isLoading, error } = useJoinRoom();
+  
   let gameEl = null;
   let promptEl = null;
-  if (roomState.gameStatus === 'playing') {
+  if (gameStatus === 'playing') {
 
-    if (roomState.turnState?.storyPrompt !== '') {
+    if (turnState?.storyPrompt !== '') {
       promptEl = (
-        <div>{roomState.turnState?.storyPrompt}</div>
+        <div>{turnState?.storyPrompt}</div>
       )
     }
 
-    if (roomState.turnState?.turnStatus) {
-      switch(roomState.turnState?.turnStatus ) {
+    if (turnState?.turnStatus) {
+      switch(turnState?.turnStatus ) {
         case 'writingStory': {
-          let cards = roomState.playerCards.map(card =>
+          let cards = playerCards.map(card =>
             <CardView key={card.cardId} card={card} />
           );
           gameEl = (
@@ -80,21 +89,20 @@ const GameRoom = ({ roomState, sendCommand }: GameRoomProps) => {
   }
 
   return (
-    <div id="room" className="room">
-      <div className="mt-2 mb-2 px-2 py-3 flex flex-grow place-content-evenly align-middle items-center h-auto font-medium space-x-2 text-black shadow-lg  bg-white">
-        <div className="text-lg">Room: </div>
-        <div className="text-sm">{roomId}</div>
+    <Container>
+      { name === '' ? (<PlayerName />) : null }
+      {isLoading && error === null ? (<Text>LOADING</Text>) : null}
+      {error ? (<Text>{error.message}</Text>) : null}
+      <Box>
+        <Text>Player: {name}</Text>
+        <Text>Room: {roomId}</Text>
         <CopyButton copyText={roomId} />
-      </div>
+      </Box>
 
-      <PlayerList playersList={roomState.players} 
-        playerId={roomState.playerId} 
-        gameStatus={roomState.gameStatus} 
-        sendCommand={sendCommand} />
+      <PlayerList />
       {promptEl}
       {gameEl}
-      <CardSelector cards={roomState.playerCards} />
-    </div>
+    </Container>
   );
 };
 

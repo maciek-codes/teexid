@@ -1,40 +1,36 @@
-import { useState } from "react";
-import { ServerAction } from "./App";
+import React, { useState } from "react";
+import { Box, Button, Input, Stack, Text } from "@chakra-ui/react"
 
-interface PlayerNameProps {
-  playerName: string,
-  sendCommand: (action: ServerAction) => void;
-  onNameChanged: (newName: string) => void
-}
+import { usePlayer } from "./contexts/PlayerContext";
 
-const PlayerName = ({playerName, sendCommand, onNameChanged}: PlayerNameProps) => {
+const PlayerName: React.FC = () => {
 
-  const [name, setName] = useState(playerName);
-  const [isEditingName, setIsEditingName] = useState(name.trim() === '');
+  const { name, setName } = usePlayer();
+
+  const [value, setValue] = useState<string>(name ?? '');
+
+  const [isEditingName, setIsEditingName] = useState(name === '' || name === null);
 
   const updateName = () => {
-    if (name.trim() !== '') {
+    if (value?.trim() !== '') {
       setIsEditingName(false);
-      sendCommand({ type: 'player/updateName', payload: name });
-      onNameChanged(name);
+      setName(value);
     }
-  }
+  };
 
   return isEditingName ?
-    <input 
-      className="shadow appearance-none border rounded w-100 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-      value={name} onChange={(val) => setName(val.currentTarget.value)}
-      placeholder="Enter your name"
-      onBlur={updateName}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === "Escape") {
-          updateName();
-        }
-      }} /> :
-    <div className="h-auto w-100 px-2 py-3 items-center leading-tight focus:outline-none focus:shadow-outline
-        text-gray-800 bg-white">
+    (
+      <Stack>
+        <Text>Name: {value}</Text>
+        <Input
+          value={value} onChange={(e) => setValue(e.currentTarget.value)}
+          placeholder="Enter your name" />
+        <Button onClick={updateName}>Apply</Button>
+      </Stack>
+    ) :
+    <Box>
       👋 Hello {name} <button onClick={() => setIsEditingName(true)}>✏️</button>
-    </div>;
-  }
+    </Box>;
+}
 
 export default PlayerName;

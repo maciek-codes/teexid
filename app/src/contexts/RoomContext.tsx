@@ -1,4 +1,5 @@
-import React, { createContext, PropsWithChildren, ReactNode, useContext, useState } from "react";
+import React, { createContext, ReactNode, useContext, useState } from "react";
+import { useParams } from "react-router-dom";
 import Player from "../models/Player";
 import { GameStatus, JoinedStatus } from "../models/RoomState";
 
@@ -12,7 +13,6 @@ interface RoomData {
 
     joinedStatus: JoinedStatus;
 
-    setRoomId: (val: string) => void;
     setPlayers: (val: Player[]) => void;
     setGameStatus: (_: GameStatus) => void;
     setJoinedStatus: (_: JoinedStatus) => void;
@@ -25,7 +25,6 @@ const defaultRoom: RoomData = {
     players: [],
     gameStatus: "waiting",
     joinedStatus: "not_joined",
-    setRoomId: noop,
     setGameStatus: noop,
     setPlayers: noop,
     setJoinedStatus: noop,
@@ -36,17 +35,17 @@ const RoomContext = createContext<RoomData>(defaultRoom);
 type Props = { children: ReactNode };
 
 export const RoomContextProvider: React.FC<Props> = ({children}: Props) => {
-    const [roomId, setRoomId] = useState<string>("");
+    const params = useParams();
+
     const [players, setPlayers] = useState<Player[]>([]);
     const [gameStatus, setGameStatus] = useState<GameStatus>("waiting");
     const [joinedStatus, setJoinedStatus] = useState<JoinedStatus>("not_joined");
     return (
         <RoomContext.Provider value={{
-            roomId,
+            roomId: params?.roomId ?? '',
             players,
             gameStatus,
             joinedStatus,
-            setRoomId,
             setPlayers,
             setGameStatus,
             setJoinedStatus,

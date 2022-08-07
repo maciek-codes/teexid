@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -33,7 +34,7 @@ type GameRoom interface {
 type Room struct {
 	Id      string    `json:"id"`
 	State   RoomState `json:"state,omitempty"`
-	OwnerId string    `json:"ownerId"`
+	OwnerId uuid.UUID `json:"ownerId"`
 	players []*Player
 	conns   map[string]playerConn
 	cardIds []int
@@ -49,7 +50,7 @@ type ReponseMessage struct {
 	Payload *json.RawMessage `json:"payload"`
 }
 
-func NewRoom(cardIds []int) *Room {
+func NewRoom(cardIds []int, playerId uuid.UUID) *Room {
 	id := randSeq(6)
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(cardIds), func(i, j int) {
@@ -60,6 +61,7 @@ func NewRoom(cardIds []int) *Room {
 		players:        make([]*Player, 0),
 		conns:          make(map[string]playerConn, 0),
 		cardIds:        cardIds,
+		OwnerId:        playerId,
 		StoryPlayerIdx: -1,
 		Story:          "",
 		StoryCard:      -1,
@@ -144,7 +146,7 @@ func (r *Room) startGame() {
 	r.nextPlayerToTellStory()
 
 	// Update the room
-	r.BroadcastPlayers()
+	r.BroadcastRoomState()
 }
 
 func (r *Room) nextPlayerToTellStory() {

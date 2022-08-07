@@ -19,9 +19,9 @@ type Player struct {
 	Points     int32            `json:"points"`
 }
 
-func NewPlayer(name string) *Player {
+func NewPlayer(name string, playerId uuid.UUID) *Player {
 	return &Player{
-		Id:         uuid.New(),
+		Id:         playerId,
 		Name:       name,
 		ReadyState: Waiting,
 		Points:     0}

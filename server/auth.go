@@ -69,6 +69,6 @@ func GetPlayerIdFromToken(tokenString string) (uuid.UUID, error) {
 		}
 		return playerId, nil
 	} else {
-		return uuid.Nil, errors.New("Unknow error")
+		return uuid.Nil, errors.New("unknow error")
 	}
 }

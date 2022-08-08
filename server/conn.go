@@ -26,8 +26,14 @@ func (pc *playerConn) receiveMessages() {
 		}
 		_, payload, err := pc.ws.ReadMessage()
 		if err != nil {
-			log.Printf("Error on ReadMessage: %s", err.Error())
-			break
+			// TODO use ping/pong to detect real disconnect
+			log.Printf("Disconnected: %s", pc.player.Name)
+			if pc.ws != nil {
+				pc.ws.Close()
+			}
+			// We may want to mark as inactive
+			pc.room.RemovePlayer(pc.player)
+			return
 		}
 
 		var command Command
@@ -46,9 +52,5 @@ func (pc *playerConn) receiveMessages() {
 }
 
 func NewPlayerConn(ws *websocket.Conn, player *Player, room *Room) playerConn {
-	playerConn := playerConn{room, player, ws}
-
-	// Add player to the room
-	go playerConn.receiveMessages()
-	return playerConn
+	return playerConn{room, player, ws}
 }

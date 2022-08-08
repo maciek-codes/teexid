@@ -1,65 +1,97 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {useRoom} from '../contexts/RoomContext';
 import {usePlayer} from '../contexts/PlayerContext';
-import { ServerAction } from "../GameInit";
 import { isJoinResponse, isPlayerUpatedResponse, SocketResponse } from "../models/SocketResponse";
 import { useAuth } from "./useAuth";
+import { useSocket } from "../contexts/WebsocketContext";
 
-export const useJoinRoom = () => {
+interface JoinRoomAction {
+  connect: (roomId: string) => void;
+  isConnecting: boolean;
+  isJoined: boolean;
+  error: Error | null;
+}
+
+export const useJoinRoom = (): JoinRoomAction => {
     const room = useRoom();
     const player = usePlayer();
+    const { connect, ws } = useSocket();
     const auth = useAuth();
     const token = auth.data?.token;
     const [error, setError] = useState<Error | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const wsRef = useRef<WebSocket | null>(null);
-    const sendAction = useCallback((data: ServerAction) => {
-      if (!wsRef || !wsRef.current) {
+    const [isConnecting, setIsConnecting] = useState<boolean>(false);
+    const [isJoined, setIsJoined] = useState<boolean>(false);
+
+    const onOpen = () => {
+      setIsConnecting(false);
+      setIsJoined(true);
+    }
+
+    const onMessage = useCallback((event: MessageEvent<string>) => {
+      const msg = JSON.parse(event.data) as SocketResponse<unknown>;
+      if (isPlayerUpatedResponse(msg)) {
+        const payload = msg.payload;
+        room.setPlayers(payload.players)
+      }
+      else if (isJoinResponse(msg)) {
+        const payload = msg.payload;
+        if (payload.joined) {
+          room.setJoinedStatus("joined")
+        }
+      }
+    }, [room]);
+
+    const onError = useCallback((ev: Event) => {
+      if (ev instanceof ErrorEvent) {
+        const errorEv = ev as ErrorEvent;
+        setError(new Error(errorEv.message));
+      } else {
+        setError(new Error("Connection error."));
+      }
+      setIsJoined(false);
+      setIsConnecting(false);
+      
+    }, [setError]);
+
+    const onClose = useCallback((evt: CloseEvent) => {
+      if (evt.code !== 1000) {
+        setError(new Error("Couldn't join the room"));
+        setIsJoined(false);
+        setIsConnecting(false);
+      }
+    }, [setError]);
+   
+    // Connect if needed
+    const connectToRoom = useCallback((roomId: string) => {
+      if (roomId.trim() === "" || !token || !player.name) {
         return;
       }
-      wsRef.current.send(JSON.stringify(data));
-    }, [wsRef]);
-    
+      setIsConnecting(true);
+      connect(roomId, player.name, token);
+    }, [connect, player, token]);
+
     useEffect(() => {
-      if (!room || room.roomId === "" || !token || !player.name || wsRef.current !== null) {
+      if (ws == null) {
         return;
-      }
-      setIsLoading(true);
-      wsRef.current = new WebSocket(
-        "ws://localhost:8080/rooms/" + room.roomId + "?token=" + token + "&playerName=" + player.name);
-      wsRef.current.onopen = () => {
-        console.log("On open");
-        setIsLoading(false);
-      }
-      wsRef.current.onmessage = (event: MessageEvent<string>) => {
-        const msg = JSON.parse(event.data) as SocketResponse<unknown>;
-        if (isPlayerUpatedResponse(msg)) {
-          const payload = msg.payload;
-          room.setPlayers(payload.players)
-        }
-        else if (isJoinResponse(msg)) {
-          const payload = msg.payload;
-          if (payload.joined) {
-            room.setJoinedStatus("joined")
-          }
-        }
-      }
-      wsRef.current.onerror = (ev: Event) => {
-        if (ev instanceof ErrorEvent) {
-          const errorEv = ev as ErrorEvent;
-          setError(new Error(errorEv.message));
-        } else {
-          setError(new Error("Unknown error: " + ev.currentTarget));
-        }
-      }
+      }      
+      ws?.addEventListener("open", onOpen);
+      ws?.addEventListener("message", onMessage);
+      ws?.addEventListener("error", onError);
+      ws?.addEventListener("close", onClose);
   
-      const ws = wsRef.current;
       return () => {
-        ws.close();
+        ws?.removeEventListener("open", onOpen);
+        ws?.removeEventListener("message", onMessage);
+        ws?.removeEventListener("error", onError);
+        ws?.removeEventListener("close", onClose);
       }
-    }, [room, player]);
+    }, [ws, onMessage, onError, onClose]);
   
-    return {roomId: room.roomId, error, isLoading, sendAction};
+    return {
+      connect: connectToRoom, 
+      error, 
+      isJoined,
+      isConnecting} as JoinRoomAction;
   };
   

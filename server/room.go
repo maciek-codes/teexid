@@ -32,13 +32,13 @@ type GameRoom interface {
 }
 
 type Room struct {
-	Id      string    `json:"id"`
-	State   RoomState `json:"state,omitempty"`
-	OwnerId uuid.UUID `json:"ownerId"`
-	players []*Player
-	conns   map[string]playerConn
-	cardIds []int
-	cardIdx int
+	Id        string    `json:"id"`
+	State     RoomState `json:"state,omitempty"`
+	OwnerId   uuid.UUID `json:"ownerId"`
+	playerMap map[string]*Player
+	conns     map[string]playerConn
+	cardIds   []int
+	cardIdx   int
 
 	StoryPlayerIdx int    `json:"storyPlayerIndex"`
 	Story          string `json:"story"`
@@ -58,7 +58,7 @@ func NewRoom(cardIds []int, playerId uuid.UUID) *Room {
 	})
 	room := Room{Id: id,
 		State:          WaitingForPlayers,
-		players:        make([]*Player, 0),
+		playerMap:      make(map[string]*Player, 0),
 		conns:          make(map[string]playerConn, 0),
 		cardIds:        cardIds,
 		OwnerId:        playerId,
@@ -74,13 +74,17 @@ func (r *Room) CanJoin() bool {
 }
 
 func (r *Room) Players() []*Player {
-	return r.players[0:len(r.players)]
+	var players = make([]*Player, 0, len(r.playerMap))
+	for _, val := range r.playerMap {
+		players = append(players, val)
+	}
+	return players
 }
 
 func (r *Room) BroadcastPlayers() {
 	b, _ := json.Marshal(struct {
 		Players []*Player `json:"players"`
-	}{Players: r.players})
+	}{Players: r.Players()})
 
 	playersMessage := json.RawMessage(b)
 
@@ -130,10 +134,15 @@ func (r *Room) BroadcastRoomState() {
 }
 
 func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
-	r.players = append(r.players, p)
+	r.playerMap[p.Id.String()] = p
 	r.conns[p.IdAsString()] = NewPlayerConn(conn, p, r)
 	r.BroadcastPlayers()
 	return r.conns[p.IdAsString()]
+}
+
+func (r *Room) RemovePlayer(p *Player) {
+	delete(r.playerMap, p.Id.String())
+	r.BroadcastPlayers()
 }
 
 func (r *Room) startGame() {
@@ -151,7 +160,7 @@ func (r *Room) startGame() {
 
 func (r *Room) nextPlayerToTellStory() {
 	// Next player is telling story
-	playersCount := len(r.players)
+	playersCount := len(r.playerMap)
 	nextStoryPlayerIdx := r.StoryPlayerIdx + 1
 	if nextStoryPlayerIdx >= playersCount {
 		nextStoryPlayerIdx = 0
@@ -195,10 +204,10 @@ func (r *Room) UpdateState(p *Player, command Command) {
 		p.SetReady()
 		r.BroadcastPlayers()
 		var allReady = true
-		for _, player := range r.Players() {
+		for _, player := range r.playerMap {
 			allReady = allReady && player.IsReady()
 		}
-		if allReady && len(r.Players()) >= MinPlayers {
+		if allReady && len(r.playerMap) >= MinPlayers {
 			r.startGame()
 			r.BroadcastRoomState()
 		}

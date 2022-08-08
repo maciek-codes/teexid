@@ -1,10 +1,10 @@
-import { Button, Input, Stack, Text } from "@chakra-ui/react";
+import { Alert, AlertIcon, AlertTitle, Button, Input, Stack, Text } from "@chakra-ui/react";
 import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
+import { useJoinRoom } from "./hooks/useJoinRoom";
 
 interface CreateRoomButtonProps {}
 
@@ -20,8 +20,8 @@ const createRoom = async (token: string): Promise<JoinData> => {
 
 const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   const [roomIdText, setRoomIdText] = useState("");
-  const player = usePlayer();
   let navigate = useNavigate();
+
 
   const auth = useAuth();
   const token = auth.data?.token;
@@ -31,18 +31,25 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
     }
   });
 
+  const {connect, isConnecting, isJoined, error} = useJoinRoom();
+
   const createRoomClick = () => {
     createRoomMutation.mutate();
   };
 
   const joinRoomClick = () => {
-    console.log("join as " + player.name);
-    navigate("room/" + roomIdText);
+    connect(roomIdText);
   };
+
+  if (isJoined) {
+    navigate("/room/" + roomIdText);
+    return (
+    );
+  }
 
   return (
     <Stack>
-      <Button isDisabled={auth.isLoading} onClick={createRoomClick} my={5}>
+      <Button isDisabled={auth.isLoading || isConnecting} onClick={createRoomClick} my={5}>
         Start a new room
       </Button>
 
@@ -51,12 +58,20 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
             placeholder="Room name" 
             onChange={(e) => setRoomIdText(e.target.value)} />
         <Button
+          isLoading={isConnecting}
           className="rounded-full bg-purple-700 text-white"
-          isDisabled={auth.isLoading}
+          isDisabled={roomIdText.trim() === "" || auth.isLoading || isConnecting}
           onClick={joinRoomClick}
         >
           Join
         </Button>
+        {isConnecting ? <Text>Connecting...</Text> : null}
+        {error ? (
+          <Alert status='error'>
+            <AlertIcon />
+            <AlertTitle>{error.message}</AlertTitle>
+          </Alert>
+        ) : null}
       </>
     </Stack>
   );

@@ -103,19 +103,6 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	// TODO: Remove in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
 
-	conn, err := upgrader.Upgrade(w, req, nil)
-
-	log.Println("Joining player " + playerName + " with id " + playerId.String())
-
-	if _, ok := err.(websocket.HandshakeError); ok {
-		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
-		log.Printf("Not a websocket handshake: %d\n", err)
-		return
-	} else if err != nil {
-		log.Println("Handshake error", err.Error())
-		return
-	}
-
 	// Find the room
 	var room *Room
 	for _, r := range rooms {
@@ -128,6 +115,19 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	if room == nil {
 		log.Println("Not found")
 		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	conn, err := upgrader.Upgrade(w, req, nil)
+
+	log.Println("Joining player " + playerName + " with id " + playerId.String())
+
+	if _, ok := err.(websocket.HandshakeError); ok {
+		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
+		log.Printf("Not a websocket handshake: %d\n", err)
+		return
+	} else if err != nil {
+		log.Println("Handshake error", err.Error())
 		return
 	}
 

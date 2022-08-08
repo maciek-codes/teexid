@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { Alert, AlertIcon, AlertTitle, Heading, Stack, Text } from "@chakra-ui/react";
+import { Heading, Stack } from "@chakra-ui/react";
 
 import { Game } from "./Game";
 

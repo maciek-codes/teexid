@@ -22,7 +22,6 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   const [roomIdText, setRoomIdText] = useState("");
   let navigate = useNavigate();
 
-
   const auth = useAuth();
   const token = auth.data?.token;
   const createRoomMutation = useMutation(() => createRoom(token ?? ''), {
@@ -43,8 +42,7 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
 
   if (isJoined) {
     navigate("/room/" + roomIdText);
-    return (
-    );
+    return (<></>)
   }
 
   return (

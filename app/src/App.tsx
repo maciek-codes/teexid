@@ -18,8 +18,8 @@ const App = () => {
   const queryClient = new QueryClient();
 
   return (
-    <WebSocketContextProvider>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <WebSocketContextProvider>
         <BrowserRouter>
           <Routes>
             <Route
@@ -44,8 +44,8 @@ const App = () => {
             />
           </Routes>
         </BrowserRouter>
-      </QueryClientProvider>
-    </WebSocketContextProvider>
+      </WebSocketContextProvider>
+    </QueryClientProvider>
   );
 };
 

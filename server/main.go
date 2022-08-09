@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 )
@@ -26,42 +27,17 @@ var upgrader = websocket.Upgrader{
 	},
 } // use mostly default options
 
+// ALl the rooms in the game
 var rooms []*Room = make([]*Room, 0)
+
+// All the cards available
 var cards []*Card = make([]*Card, 0)
 
-func handleRooms(w http.ResponseWriter, req *http.Request) {
+var roomByPlayerId map[string]*Room = make(map[string]*Room, 0)
 
-	// To be removed in prod
-	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
+var playerByPlayerId map[string]*Player = make(map[string]*Player, 0)
 
-	params := req.URL.Query()
-	token := params.Get("token")
-	playerId, err := GetPlayerIdFromToken(token)
-
-	if err != nil {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(err)
-		return
-	}
-
-	cardIds := make([]int, 0)
-	for _, card := range cards {
-		cardIds = append(cardIds, card.Id)
-	}
-
-	if req.Method == http.MethodPost {
-		room := NewRoom(cardIds, playerId)
-		rooms = append(rooms, room)
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(room)
-	} else if req.Method == http.MethodGet {
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(rooms)
-	} else {
-		http.Error(w, "GET or POST only", http.StatusMethodNotAllowed)
-	}
-}
-
+/// Respond with a card
 func handleCards(w http.ResponseWriter, req *http.Request) {
 	// To be removed in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
@@ -85,72 +61,127 @@ func handleCards(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func joinRoom(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	roomId := vars["roomId"]
+func startSocket(w http.ResponseWriter, req *http.Request) {
+	// To be removed in prod
+	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
 
-	params := req.URL.Query()
-	playerName := params.Get("playerName")
-	token := params.Get("token")
-	playerId, err := GetPlayerIdFromToken(token)
+	conn, err := upgrader.Upgrade(w, req, nil)
 
-	if err != nil {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		json.NewEncoder(w).Encode(err)
+	if _, ok := err.(websocket.HandshakeError); ok {
+		log.Println("Not a websocket handshake")
+		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
+		return
+	} else if err != nil {
+		log.Println("Not a websocket handshake: " + err.Error())
+		http.Error(w, "Unknown socket error: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: Remove in prod
-	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
+	go receiveMessages(conn)
+}
+
+func receiveMessages(conn *websocket.Conn) {
+	// Recieve messages from that connection in a coroutine
+	for {
+		if conn == nil {
+			break
+		}
+		_, payload, err := conn.ReadMessage()
+		if err != nil {
+			// TODO use ping/pong to detect real disconnect
+			log.Printf("Disconnected")
+			if conn != nil {
+				conn.Close()
+			}
+			return
+		}
+
+		var command Command
+		err = json.Unmarshal(payload, &command)
+		if err != nil {
+			log.Printf("Unknown message: %s", err.Error())
+			continue
+		}
+		handleCommandFromClient(conn, &command)
+	}
+
+	if conn != nil {
+		conn.Close()
+	}
+}
+
+func handleCommandFromClient(conn *websocket.Conn, command *Command) {
+	playerId, err := GetPlayerIdFromToken(command.Token)
+	if err != nil {
+		log.Println("Invalid token: " + command.Token + ". Error:" + err.Error())
+		return
+	}
+
+	log.Println("Got command " + command.Type + " from " + playerId.String())
+
+	if command.Type == "join_room" {
+		handleJoinRoom(conn, &playerId, command.Data)
+	} else if command.Type == "create_room" {
+		handleCreateRoom(conn, &playerId, command.Data)
+	} else {
+
+		// Find player/room
+		room := roomByPlayerId[playerId.String()]
+		player := playerByPlayerId[playerId.String()]
+		if room == nil {
+			log.Println("Need room to handle " + command.Type)
+			return
+		}
+		room.HandleRoomCommand(player, *command)
+	}
+
+}
+
+func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) *Room {
+	joinCommand := struct {
+		RoomId     string `json:"roomId"`
+		PlayerName string `json:"playerName"`
+	}{}
+
+	err := json.Unmarshal([]byte(message), &joinCommand)
+	if err != nil {
+		log.Print("Error unmarshalling story")
+		return nil
+	}
 
 	// Find the room
+	// TODO: Make it a look up
 	var room *Room
 	for _, r := range rooms {
-		if r.Id == roomId {
+		if r.Id == joinCommand.RoomId {
 			room = r
 			break
 		}
 	}
 
 	if room == nil {
-		log.Println("Not found")
-		w.WriteHeader(http.StatusNotFound)
-		return
+		sendError(conn, "room_not_found", "Room not found")
+		return nil
 	}
 
-	conn, err := upgrader.Upgrade(w, req, nil)
+	player := NewPlayer(joinCommand.PlayerName, *playerId)
+	playerByPlayerId[playerId.String()] = player
 
-	log.Println("Joining player " + playerName + " with id " + playerId.String())
-
-	if _, ok := err.(websocket.HandshakeError); ok {
-		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
-		log.Printf("Not a websocket handshake: %d\n", err)
-		return
-	} else if err != nil {
-		log.Println("Handshake error", err.Error())
-		return
-	}
-
-	// Create a player
-	player := NewPlayer(playerName, playerId)
-
-	// Write joined message
-	playerConn := room.AddPlayer(player, conn)
+	room.AddPlayer(player, conn)
+	roomByPlayerId[player.IdAsString()] = room
 
 	b, _ := json.Marshal(struct {
-		Joined   bool   `json:"joined"`
 		RoomId   string `json:"roomId"`
 		OwnerId  string `json:"ownerId"`
 		PlayerId string `json:"playerId"`
-	}{Joined: true, RoomId: roomId, OwnerId: room.OwnerId.String(), PlayerId: player.IdAsString()})
+	}{RoomId: room.Id, OwnerId: room.OwnerId.String(), PlayerId: player.IdAsString()})
 	payload := json.RawMessage(b)
 
-	message := ReponseMessage{
-		Type:    "onjoined",
-		Payload: &payload,
-	}
+	resposneMsg := ReponseMessage{
+		Type:    "on_joined",
+		Payload: &payload}
 
-	b, _ = json.Marshal(message)
+	b, _ = json.Marshal(resposneMsg)
 
 	log.Printf("Writing %s\n", string(b))
 	err = conn.WriteMessage(websocket.TextMessage, []byte(b))
@@ -158,15 +189,73 @@ func joinRoom(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	return room
+}
 
-	go playerConn.receiveMessages()
+func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) *Room {
+	createRoomCommand := struct {
+		PlayerName string `json:"playerName"`
+	}{}
+
+	err := json.Unmarshal([]byte(message), &createRoomCommand)
+	if err != nil {
+		log.Print("Error unmarshalling story")
+		return nil
+	}
+
+	// cards for the room
+	cardIds := make([]int, 0)
+	for _, card := range cards {
+		cardIds = append(cardIds, card.Id)
+	}
+
+	room := NewRoom(cardIds, *playerId)
+	rooms = append(rooms, room)
+
+	b, _ := json.Marshal(struct {
+		RoomId string `json:"roomId"`
+	}{RoomId: room.Id})
+	payload := json.RawMessage(b)
+
+	resposneMsg := ReponseMessage{
+		Type:    "on_room_created",
+		Payload: &payload}
+
+	b, _ = json.Marshal(resposneMsg)
+
+	log.Printf("Writing %s\n", string(b))
+	conn.WriteMessage(websocket.TextMessage, []byte(b))
+
+	return room
+}
+
+func sendError(conn *websocket.Conn, errorType string, errorMsg string) {
+	b, _ := json.Marshal(struct {
+		Type string `json:"type"`
+		Msg  string `json:"message"`
+	}{Type: errorType, Msg: errorMsg})
+
+	errorMessageJson := json.RawMessage(b)
+
+	message := ReponseMessage{
+		Type:    "error",
+		Payload: &errorMessageJson}
+
+	b, err := json.Marshal(&message)
+	if err != nil {
+		log.Println("Error marshalling", err)
+		return
+	}
+
+	log.Printf("Writing %s\n", string(b))
+
+	conn.WriteMessage(websocket.TextMessage, b)
 }
 
 func start(staticDir string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/auth", handleAuth).Methods("POST")
-	r.HandleFunc("/rooms", handleRooms).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/rooms/{roomId}", joinRoom)
+	r.HandleFunc("/ws", startSocket).Methods("GET")
 	r.HandleFunc("/cards/{cardId}", handleCards)
 
 	// This will serve files under http://localhost:8080/static/<filename>

@@ -1,3 +1,4 @@
+import { Box, Image } from "@chakra-ui/react";
 import Card from "./models/Card";
 
 interface CardViewProps {
@@ -8,10 +9,6 @@ interface CardViewProps {
 
 const CardView = ({card, selected, onClick}: CardViewProps) => {
     const imageUrl = "http://localhost:8080/cards/" + card.cardId;
-    let className = "max-w-sm m-2";
-    if (selected) {
-        className += " selected border-2 border-green-900"
-    }
 
     const handleClick = () => {
         if (onClick) {
@@ -20,9 +17,9 @@ const CardView = ({card, selected, onClick}: CardViewProps) => {
     }
 
     return (
-        <div className={className} onClick={handleClick}>
-            <img className="object-cover h-96 w-56" src={imageUrl} alt="Card" />
-        </div>
+        <Box boxSize="md" onClick={handleClick}>
+            <Image src={imageUrl} alt="Card"  border={selected ?? false ? "0px" : "4px"} />
+        </Box>
     )
 };
 

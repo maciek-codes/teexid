@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"math/rand"
+	"sort"
 	"strconv"
 	"time"
 
@@ -40,9 +41,9 @@ type Room struct {
 	cardIds   []int
 	cardIdx   int
 
-	StoryPlayerIdx int    `json:"storyPlayerIndex"`
-	Story          string `json:"story"`
-	StoryCard      int    `json:"storyCardId"`
+	StoryPlayerId string `json:"storyPlayerId"`
+	Story         string `json:"story"`
+	StoryCard     int    `json:"storyCardId"`
 }
 
 type ReponseMessage struct {
@@ -57,14 +58,14 @@ func NewRoom(cardIds []int, playerId uuid.UUID) *Room {
 		cardIds[i], cardIds[j] = cardIds[j], cardIds[i]
 	})
 	room := Room{Id: id,
-		State:          WaitingForPlayers,
-		playerMap:      make(map[string]*Player, 0),
-		conns:          make(map[string]playerConn, 0),
-		cardIds:        cardIds,
-		OwnerId:        playerId,
-		StoryPlayerIdx: -1,
-		Story:          "",
-		StoryCard:      -1,
+		State:         WaitingForPlayers,
+		playerMap:     make(map[string]*Player, 0),
+		conns:         make(map[string]playerConn, 0),
+		cardIds:       cardIds,
+		OwnerId:       playerId,
+		StoryPlayerId: "",
+		Story:         "",
+		StoryCard:     -1,
 	}
 	return &room
 }
@@ -110,9 +111,18 @@ func (r *Room) BroadcastPlayers() {
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
 	b, _ := json.Marshal(struct {
-		Id        string    `json:"id"`
-		RoomState RoomState `json:"state"`
-	}{Id: r.Id, RoomState: r.State})
+		Id            string    `json:"id"`
+		RoomState     RoomState `json:"state"`
+		StoryPlayerId string    `json:"storyPlayerId"`
+		Story         string    `json:"story"`
+		StoryCardId   int       `json:"storyCardId"`
+	}{
+		Id:            r.Id,
+		RoomState:     r.State,
+		StoryPlayerId: r.StoryPlayerId,
+		Story:         r.Story,
+		StoryCardId:   r.StoryCard,
+	})
 
 	payloadMessage := json.RawMessage(b)
 
@@ -159,13 +169,39 @@ func (r *Room) startGame() {
 }
 
 func (r *Room) nextPlayerToTellStory() {
-	// Next player is telling story
-	playersCount := len(r.playerMap)
-	nextStoryPlayerIdx := r.StoryPlayerIdx + 1
-	if nextStoryPlayerIdx >= playersCount {
-		nextStoryPlayerIdx = 0
+	// Sort players by key
+	playerIds := make([]string, 0, len(r.playerMap))
+	currentPlayer := r.StoryPlayerId
+
+	for playerId := range r.playerMap {
+		playerIds = append(playerIds, playerId)
 	}
-	r.StoryPlayerIdx = nextStoryPlayerIdx
+
+	sort.Strings(playerIds)
+	if currentPlayer == "" {
+		r.StoryPlayerId = playerIds[0]
+		return
+	}
+
+	for idx, key := range playerIds {
+		if currentPlayer == key {
+			if idx == len(playerIds)-1 {
+				idx = 0
+			}
+			r.StoryPlayerId = playerIds[idx]
+			return
+		}
+	}
+}
+
+func (r *Room) findConn(p *Player) *websocket.Conn {
+	for _, playerConn := range r.conns {
+		if p == playerConn.player {
+			return playerConn.ws
+		}
+	}
+	log.Panic("Can't find the connection")
+	return &websocket.Conn{}
 }
 
 func (r *Room) sendCardsToEach(cardCount int) {
@@ -175,8 +211,15 @@ func (r *Room) sendCardsToEach(cardCount int) {
 		cardIds := make([]int, 0)
 		for cardCountToPlayer > 0 {
 			cardCountToPlayer -= 1
+			if r.cardIdx > len(r.cardIds) {
+				break
+			}
 			cardIds = append(cardIds, r.cardIds[r.cardIdx])
 			r.cardIdx++
+		}
+
+		if len(cardIds) == 0 {
+			return
 		}
 
 		b, _ := json.Marshal(struct {
@@ -186,7 +229,7 @@ func (r *Room) sendCardsToEach(cardCount int) {
 		payloadMessage := json.RawMessage(b)
 
 		message := ReponseMessage{
-			Type:    "oncards",
+			Type:    "on_cards",
 			Payload: &payloadMessage}
 
 		b, _ = json.Marshal(message)
@@ -195,23 +238,33 @@ func (r *Room) sendCardsToEach(cardCount int) {
 	}
 }
 
-func (r *Room) UpdateState(p *Player, command Command) {
+func (r *Room) HandleRoomCommand(p *Player, command Command) {
 	if command.Type == "player/updateName" {
 		var newName = command.Data
 		p.SetName(newName)
 		r.BroadcastPlayers()
+	} else if command.Type == "get_players" {
+		r.BroadcastPlayers()
 	} else if command.Type == "player/ready" {
 		p.SetReady()
 		r.BroadcastPlayers()
+	} else if command.Type == "game/start" {
+		if p.Id != r.OwnerId {
+			return
+		}
 		var allReady = true
 		for _, player := range r.playerMap {
 			allReady = allReady && player.IsReady()
 		}
 		if allReady && len(r.playerMap) >= MinPlayers {
 			r.startGame()
-			r.BroadcastRoomState()
 		}
 	} else if command.Type == "player/story" {
+		conn := r.findConn(p)
+		if p.Id.String() != r.StoryPlayerId {
+			sendError(conn, "story_error", "Can't tell story now.")
+			return
+		}
 		story := struct {
 			Story string `json:"story"`
 			Card  int    `json:"cardId"`
@@ -219,7 +272,7 @@ func (r *Room) UpdateState(p *Player, command Command) {
 
 		err := json.Unmarshal([]byte(command.Data), &story)
 		if err != nil {
-			log.Print("Error unmarshalling story")
+			sendError(conn, "story_error", "Bad story: "+command.Data)
 			return
 		}
 

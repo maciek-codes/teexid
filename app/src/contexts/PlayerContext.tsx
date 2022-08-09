@@ -21,7 +21,7 @@ export const PlayerContextProvider: React.FC<Props> = ({children}: Props) => {
     const storedName = useMemo(() => {
         return window.localStorage.getItem(NAME_KEY) ?? ''
     }, []);
-    
+
     const auth = useAuth();
     const [name, setName] = useState<string>(storedName);
 

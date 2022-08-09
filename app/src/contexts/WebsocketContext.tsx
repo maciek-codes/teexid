@@ -1,74 +1,49 @@
-import React, {createContext, useCallback, useContext, useEffect, useState} from "react";
+import React, {createContext, useCallback, useContext} from "react";
+import { useAuth } from "../hooks/useAuth";
 
-interface WsContextData {
-    ws: WebSocket | null;
-    connect: (roomId: string, playerName: string, token: string) => void;
+const ws = new WebSocket("ws://localhost:8080/ws");
+
+type CommandType = "join_room" |
+    "create_room" |
+    "get_players" |
+    "player/ready" |
+    "player/story" |
+    "game/start"
+    ;
+
+interface SocketContextData {
+    ws: WebSocket;
+    sendCommand: (type: CommandType, data: any) => void;
 }
-class SocketWrapper {
-    _ws: WebSocket|null;
-    constructor() {
-        this._ws = null;
-    }
-    get ws() {
-        return this._ws;
-    }
-    set ws(value) {
-        this._ws = value;
-    }
-}
+const WebSocketContext = createContext<SocketContextData | null>(null);
 
-const wsWrapper = new SocketWrapper();
-
-enum SocketState {
-    CONNECTING = 0,
-    OPEN = 1,
-    CLOSING = 2,
-    CLOSED = 3
-};
-
-const defaultData: WsContextData = {
-    ws: wsWrapper.ws,
-    connect: (): void => {}
-}
-
-const WebSocketContext = createContext<WsContextData>(defaultData);
 interface WebSocketContextProviderProps {
     children: React.ReactNode;
 }
 
 export const WebSocketContextProvider: React.FC<WebSocketContextProviderProps> 
     = ({children}: WebSocketContextProviderProps) => {
-    const [isConnected, setIsConnected] = useState<boolean>(false);
 
-    const connect = useCallback((roomId: string, playerName: string, token: string) => {
-        if (wsWrapper.ws != null && wsWrapper.ws.readyState !== SocketState.CLOSED) {
-            console.log("Already connected: " + wsWrapper.ws.readyState);
+    const auth = useAuth();
+    const sendCommand = useCallback((type: CommandType, data: any) => {
+        if (ws.readyState !== ws.OPEN) {
             return;
         }
-        console.log("Connecting to room " + roomId + " as " + playerName);
-        wsWrapper.ws = new WebSocket(
-            "ws://localhost:8080/rooms/" + roomId + "?token=" + token + "&playerName=" + playerName);
-        setIsConnected(true);
-         
-    }, [setIsConnected]);
-
-    useEffect(() => {
-        return () => {
-            console.log("Provider closing socket");
-            if (isConnected && wsWrapper.ws) {
-                wsWrapper.ws.close();
-            }
-        }
-    }, [isConnected]);
+        ws.send(JSON.stringify({
+            token: auth.data?.token,
+            type: type,
+            data: JSON.stringify(data)
+        }));
+    }, [auth]);
     
     return (
-        <WebSocketContext.Provider value={{ws: wsWrapper.ws, connect: connect}}>
+        <WebSocketContext.Provider value={{ws, sendCommand}}>
             {children}
         </WebSocketContext.Provider>
     );
 };
 
-export const useSocket = (): WsContextData => {
+export const useSocket = (): SocketContextData => {
     const ctx = useContext(WebSocketContext);
     if (!ctx) throw new Error("Must be used in WebSocketContextProvider");
     return ctx;

@@ -1,21 +1,15 @@
 import { Alert, AlertIcon, AlertTitle, Button, Input, Stack, Text } from "@chakra-ui/react";
-import React, { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import Player from "./models/Player";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
-import { useJoinRoom } from "./hooks/useJoinRoom";
+import { useSocket } from "./contexts/WebsocketContext";
+import { usePlayer } from "./contexts/PlayerContext";
+import { ErrorPayload, ResponseMsg } from "./types";
 
 interface CreateRoomButtonProps {}
 
-type JoinData = {id: string, players: Player[]};
-
-const createRoom = async (token: string): Promise<JoinData> => {
-  return await (
-    await fetch("http://localhost:8080/rooms?token=" + token, {
-      method: "POST",
-    })
-  ).json();
+type OnRoomCreatedPayload = {
+  roomId: string
 };
 
 const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
@@ -23,54 +17,74 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   let navigate = useNavigate();
 
   const auth = useAuth();
-  const token = auth.data?.token;
-  const createRoomMutation = useMutation(() => createRoom(token ?? ''), {
-    onSuccess: (data) => {
-      navigate("room/" + data.id);
+  const player = usePlayer();
+  const [isJoining, setIsJoining] = useState<boolean>(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
+
+  const {ws, sendCommand} = useSocket();
+
+  const createRoomClick = useCallback(() => {
+    // Create room
+    if (player?.name === null || player.name.trim() === '') {
+      return;
+    }
+    sendCommand("create_room", {
+        playerName: player.name
+    });
+    setIsJoining(true);
+  }, [sendCommand, player]);
+
+  const joinRoomClick = () => {
+    navigate("room/" + roomIdText);
+  };
+
+
+  const onMessage = (evt: MessageEvent<any>) => {
+    const msg = JSON.parse(evt.data) as ResponseMsg<unknown>;
+    if (msg.type === "on_room_created") {
+      const payload = msg.payload as OnRoomCreatedPayload;
+      navigate("room/" + payload.roomId);
+    }
+    if (msg.type === "error") {
+      const payload = msg.payload as ErrorPayload;
+      if (payload.type === "room_not_found") {
+        setJoinError(payload.message);
+      }
+    }
+  }
+
+  useEffect(() => {
+    ws.addEventListener("message", onMessage);
+    return () => {
+      ws.removeEventListener("message", onMessage);
     }
   });
 
-  const {connect, isConnecting, isJoined, error} = useJoinRoom();
-
-  const createRoomClick = () => {
-    createRoomMutation.mutate();
-  };
-
-  const joinRoomClick = () => {
-    connect(roomIdText);
-  };
-
-  if (isJoined) {
-    navigate("/room/" + roomIdText);
-    return (<></>)
-  }
-
   return (
     <Stack>
-      <Button isDisabled={auth.isLoading || isConnecting} onClick={createRoomClick} my={5}>
+      <Button isDisabled={auth.isLoading || isJoining || player?.name === null || player.name.trim() === ''} onClick={createRoomClick} my={5}>
         Start a new room
       </Button>
 
-      <Text fontSize="sm">- or -</Text>      <>
+      <Text fontSize="sm">- or -</Text>
         <Input type="text" 
             placeholder="Room name" 
             onChange={(e) => setRoomIdText(e.target.value)} />
         <Button
-          isLoading={isConnecting}
+          isLoading={isJoining}
           className="rounded-full bg-purple-700 text-white"
-          isDisabled={roomIdText.trim() === "" || auth.isLoading || isConnecting}
+          isDisabled={roomIdText.trim() === "" || auth.isLoading || isJoining}
           onClick={joinRoomClick}
         >
           Join
         </Button>
-        {isConnecting ? <Text>Connecting...</Text> : null}
-        {error ? (
+        {isJoining ? <Text>Connecting...</Text> : null}
+        {joinError !== null ? (
           <Alert status='error'>
             <AlertIcon />
-            <AlertTitle>{error.message}</AlertTitle>
+            <AlertTitle>{joinError}</AlertTitle>
           </Alert>
         ) : null}
-      </>
     </Stack>
   );
 };

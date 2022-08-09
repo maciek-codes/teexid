@@ -18,7 +18,7 @@ const CardView = ({card, selected, onClick}: CardViewProps) => {
 
     return (
         <Box boxSize="md" onClick={handleClick}>
-            <Image src={imageUrl} alt="Card"  border={selected ?? false ? "0px" : "4px"} />
+            <Image src={imageUrl} alt="Card"  border={selected ?? false ? "4px" : "0px"} />
         </Box>
     )
 };

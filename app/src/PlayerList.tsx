@@ -4,7 +4,7 @@ import { Avatar, Button, HStack, List, ListItem, Text } from "@chakra-ui/react";
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
 import { useSocket } from "./contexts/WebsocketContext";
-import { ResponseMsg } from "./types";
+import { ErrorPayload, ResponseMsg } from "./types";
 
 type OnPlayersUpdatedPayload = {
   players: Player[];
@@ -37,6 +37,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
 };
 export const PlayerList: React.FC = () => {
   const [playersList, setPlayersList] = useState<Player[]>([]);
+  const [hasError, setHasError] = useState<boolean>(false);
   const { id } = usePlayer();
   const { ws, sendCommand } = useSocket();
 
@@ -46,6 +47,10 @@ export const PlayerList: React.FC = () => {
       if (data.type === "onplayersupdated") {
         const payload = data.payload as OnPlayersUpdatedPayload;
         setPlayersList(payload.players);
+      } if (data.type === "error") {
+        const payload = data.payload as ErrorPayload;
+        if (payload.type === "room_not_found")
+          setHasError(true)
       }
     },
     [setPlayersList]
@@ -58,12 +63,14 @@ export const PlayerList: React.FC = () => {
   ws.addEventListener("message", onMessage);
 
   useEffect(() => {
-    sendCommand("get_players", null);
+    if (!hasError) {
+      sendCommand("get_players", null);
+    }
 
     return () => {
       ws.removeEventListener("message", onMessage);
     };
-  }, [ws, sendCommand, onMessage]);
+  }, [ws, sendCommand, onMessage, hasError]);
 
   const allReady = useMemo(() => {
     return playersList.reduce((acc: number, curr: Player) => {

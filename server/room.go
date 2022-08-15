@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -40,10 +41,13 @@ type Room struct {
 	conns     map[string]playerConn
 	cardIds   []int
 	cardIdx   int
+	mu        sync.Mutex
 
-	StoryPlayerId string `json:"storyPlayerId"`
-	Story         string `json:"story"`
-	StoryCard     int    `json:"storyCardId"`
+	TurnState     TurnState `json:"turnState"`
+	StoryPlayerId string    `json:"storyPlayerId"`
+	Story         string    `json:"story"`
+	StoryCard     int       `json:"storyCardId"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type ReponseMessage struct {
@@ -61,6 +65,7 @@ func NewRoom(cardIds []int, playerId uuid.UUID) *Room {
 		State:         WaitingForPlayers,
 		playerMap:     make(map[string]*Player, 0),
 		conns:         make(map[string]playerConn, 0),
+		TurnState:     NotStarted,
 		cardIds:       cardIds,
 		OwnerId:       playerId,
 		StoryPlayerId: "",
@@ -113,15 +118,15 @@ func (r *Room) BroadcastRoomState() {
 	b, _ := json.Marshal(struct {
 		Id            string    `json:"id"`
 		RoomState     RoomState `json:"state"`
+		TurnState     TurnState `json:"turnState"`
 		StoryPlayerId string    `json:"storyPlayerId"`
 		Story         string    `json:"story"`
-		StoryCardId   int       `json:"storyCardId"`
 	}{
 		Id:            r.Id,
 		RoomState:     r.State,
+		TurnState:     r.TurnState,
 		StoryPlayerId: r.StoryPlayerId,
 		Story:         r.Story,
-		StoryCardId:   r.StoryCard,
 	})
 
 	payloadMessage := json.RawMessage(b)
@@ -138,21 +143,27 @@ func (r *Room) BroadcastRoomState() {
 
 	log.Printf("Writing %s\n", string(b))
 
+	r.mu.Lock()
 	for _, playerConn := range r.conns {
 		playerConn.ws.WriteMessage(websocket.TextMessage, b)
 	}
+	r.mu.Unlock()
 }
 
 func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.playerMap[p.Id.String()] = p
-	r.conns[p.IdAsString()] = NewPlayerConn(conn, p, r)
+	r.conns[p.Id.String()] = NewPlayerConn(conn, p, r)
 	r.BroadcastPlayers()
-	return r.conns[p.IdAsString()]
+	return r.conns[p.Id.String()]
 }
 
 func (r *Room) RemovePlayer(p *Player) {
+	r.mu.Lock()
 	delete(r.playerMap, p.Id.String())
 	r.BroadcastPlayers()
+	r.mu.Unlock()
 }
 
 func (r *Room) startGame() {
@@ -205,6 +216,7 @@ func (r *Room) findConn(p *Player) *websocket.Conn {
 }
 
 func (r *Room) sendCardsToEach(cardCount int) {
+	r.mu.Lock()
 	for _, playerConn := range r.conns {
 
 		cardCountToPlayer := cardCount
@@ -236,9 +248,12 @@ func (r *Room) sendCardsToEach(cardCount int) {
 
 		playerConn.ws.WriteMessage(websocket.TextMessage, b)
 	}
+	r.mu.Unlock()
 }
 
 func (r *Room) HandleRoomCommand(p *Player, command Command) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if command.Type == "player/updateName" {
 		var newName = command.Data
 		p.SetName(newName)
@@ -278,9 +293,10 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 
 		r.Story = story.Story
 		r.StoryCard = story.Card
+		r.TurnState = Voting
 		r.BroadcastRoomState()
-	} else if command.Type == "player/storyCard" {
+	} else if command.Type == "player/vote" {
 		votedCard, _ := strconv.Atoi(command.Data)
-		log.Printf("Player %s voted for card %d", p.IdAsString(), votedCard)
+		log.Printf("Player %s voted for card %d", p.Id.String(), votedCard)
 	}
 }

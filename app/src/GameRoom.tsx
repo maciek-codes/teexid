@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Heading, Stack, Text, Alert, AlertIcon, AlertTitle } from "@chakra-ui/react";
 
-import { Game } from "./Game";
+import { GameFeed } from "./GameFeed";
 import { useSocket } from "./contexts/WebsocketContext";
 import { useAuth } from "./hooks/useAuth";
 import { usePlayer } from "./contexts/PlayerContext";
@@ -14,7 +14,6 @@ type OnJoinedPayload = {
   ownerId: string,
   playerId: string,
 };
-
 
 const GameRoom: React.FC = () => {
   const {ws, sendCommand} = useSocket();
@@ -71,7 +70,7 @@ const GameRoom: React.FC = () => {
       {isJoining ? (
         <Text>Joining the room {roomId}</Text>
       ) : 
-      <Game />
+      <GameFeed />
       }
     </Stack>
   );

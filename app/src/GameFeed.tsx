@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 import {
   Box,
@@ -40,6 +40,7 @@ const CopyButton: React.FC<CopyButtonProps> = ({
 };
 
 type RoomState = "waiting" | "playing" | "ended";
+type TurnState = "not_started" | "waiting_for_story" | "voting" | "scoring";
 
 // Room state updated
 type RoomStateUpdatedPayload = {
@@ -48,6 +49,7 @@ type RoomStateUpdatedPayload = {
   storyPlayerId: string;
   story: string;
   storyCardId: number;
+  turnState: TurnState;
 };
 
 // New cards dealt
@@ -93,11 +95,12 @@ const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
   );
 };
 
-export const Game: React.FC = () => {
+export const GameFeed: React.FC = () => {
   const player = usePlayer();
   const roomId = useRoom();
-  const { ws } = useSocket();
+  const { ws, sendCommand } = useSocket();
   const [roomState, setRoomState] = useState<RoomState>("waiting");
+  const [turnState, setTurnState] = useState<TurnState>("not_started");
   const [storyPlayerId, setStoryPlayerId] = useState<string>("");
   const [cards, setCards] = useState<Card[]>([]);
   const [story, setStory] = useState<string>("");
@@ -112,6 +115,7 @@ export const Game: React.FC = () => {
         setRoomState(payload.state);
         setStoryPlayerId(payload.storyPlayerId);
         setStory(payload.story);
+        setTurnState(payload.turnState);
         if (payload.storyCardId > 0)
           setStoryCard({ cardId: payload.storyCardId } as Card);
       } else if (msg.type === "on_cards") {
@@ -123,6 +127,26 @@ export const Game: React.FC = () => {
   );
 
   ws.addEventListener("message", onMessage);
+
+  useEffect(() => {
+    const onMessageHandler = onMessage;
+    const wsRef = ws;
+    return () => {
+      wsRef.removeEventListener("message", onMessageHandler);
+    }
+  }, [ws, onMessage]);
+
+  const voteForStory = useCallback(() => {
+    if (selectedCard !== null)
+      sendCommand("player/vote", {
+        cardId: selectedCard.cardId,
+      });
+  }, [sendCommand, selectedCard]);
+
+  const storyUx = roomState === "playing" && turnState === "waiting_for_story" && 
+    storyPlayerId === player.id ? 
+    (<StoryPromptInput selectedCard={selectedCard} />) :
+    (<Text>Waiting for a story</Text>);
   return (
     <Box>
       <Grid templateColumns="repeat(5, 1fr)" templateRows="repeat(4, 2fr)">
@@ -146,23 +170,46 @@ export const Game: React.FC = () => {
         </GridItem>
 
         <GridItem colStart={0} colSpan={3} rowStart={1} rowSpan={4}>
-          {roomState === "waiting" && <Text> Wait for players...</Text>}
-          {roomState === "playing" && <Text>Playing...</Text>}
+          {roomState === "waiting" && <Text> Wait for players to join...</Text>}
+          {roomState === "playing" && turnState === "waiting_for_story" ? 
+            storyUx : null
+          }
+          {roomState === "playing" && turnState === "voting" ? 
+              <Stack>
+                <Text>Submit a card for this story</Text>
+                <CardSelector
+                  cards={cards}
+                  onSelected={(selectedCard) => {
+                    setSelectedCard(selectedCard);
+                  }}
+                />
+                 <Button
+                    isActive={selectedCard !== null}
+                    isDisabled={selectedCard === null}
+                    onClick={() => voteForStory()}
+                  >
+                    Vote
+                  </Button>
+              </Stack> : null
+          }
+          {roomState === "playing" && turnState === "voting" ? 
+              <Stack>
+                <Text>Submit a card for this story</Text>
+                <CardSelector
+                cards={cards}
+                onSelected={(selectedCard) => {
+                  setSelectedCard(selectedCard);
+                }}
+              />
+              </Stack> : null
+          }
           {roomState === "ended" && <Text>Ended!</Text>}
           {story !== "" ? <Text>Story: {story}</Text> : null}
-
-          {storyCard !== null ? <CardView card={storyCard} /> : null}
-
-          {storyPlayerId === player.id ? (
-            <StoryPromptInput selectedCard={selectedCard} />
-          ) : null}
-
-          <CardSelector
-            cards={cards}
-            onSelected={(selectedCard) => {
-              setSelectedCard(selectedCard);
-            }}
-          />
+          {storyCard !== null ? (
+          <>
+            <Text>Story card was:</Text>
+            <CardView card={storyCard} />
+          </>): null}
         </GridItem>
       </Grid>
     </Box>

@@ -17,6 +17,7 @@ import (
 )
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
+var roomMaxDurationMin = flag.Int("room-timeout", 5, "max room duration")
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -27,15 +28,11 @@ var upgrader = websocket.Upgrader{
 	},
 } // use mostly default options
 
-// ALl the rooms in the game
-var rooms []*Room = make([]*Room, 0)
+// All the rooms in the game
+var roomById map[string]*Room = make(map[string]*Room, 0)
 
 // All the cards available
 var cards []*Card = make([]*Card, 0)
-
-var roomByPlayerId map[string]*Room = make(map[string]*Room, 0)
-
-var playerByPlayerId map[string]*Player = make(map[string]*Player, 0)
 
 /// Respond with a card
 func handleCards(w http.ResponseWriter, req *http.Request) {
@@ -126,18 +123,19 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 	} else {
 
 		// Find player/room
-		room := roomByPlayerId[playerId.String()]
-		player := playerByPlayerId[playerId.String()]
-		if room == nil {
-			log.Println("Need room to handle " + command.Type)
-			return
+		for _, room := range roomById {
+			player := room.playerMap[playerId.String()]
+			if player != nil {
+				room.HandleRoomCommand(player, *command)
+				return
+			}
 		}
-		room.HandleRoomCommand(player, *command)
+		log.Println("Need room to handle " + command.Type)
 	}
 
 }
 
-func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) *Room {
+func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 	joinCommand := struct {
 		RoomId     string `json:"roomId"`
 		PlayerName string `json:"playerName"`
@@ -146,35 +144,37 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) *
 	err := json.Unmarshal([]byte(message), &joinCommand)
 	if err != nil {
 		log.Print("Error unmarshalling story")
-		return nil
+		return
 	}
 
 	// Find the room
-	// TODO: Make it a look up
-	var room *Room
-	for _, r := range rooms {
-		if r.Id == joinCommand.RoomId {
-			room = r
-			break
-		}
-	}
+	var room = roomById[joinCommand.RoomId]
 
 	if room == nil {
 		sendError(conn, "room_not_found", "Room not found")
-		return nil
+		return
 	}
 
-	player := NewPlayer(joinCommand.PlayerName, *playerId)
-	playerByPlayerId[playerId.String()] = player
+	// Check if player already exist - may be re-joining
+	player := room.playerMap[playerId.String()]
+	if player != nil {
+		log.Println("Found player in the room")
+		room.conns[playerId.String()] = NewPlayerConn(conn, player, room)
+	} else {
+		log.Println("Player not in the room yet")
+		player = NewPlayer(joinCommand.PlayerName, *playerId)
+		if player == nil {
+			panic("no player")
+		}
+		room.AddPlayer(player, conn)
+	}
 
-	room.AddPlayer(player, conn)
-	roomByPlayerId[player.IdAsString()] = room
-
+	// Send on_joined msg
 	b, _ := json.Marshal(struct {
 		RoomId   string `json:"roomId"`
 		OwnerId  string `json:"ownerId"`
 		PlayerId string `json:"playerId"`
-	}{RoomId: room.Id, OwnerId: room.OwnerId.String(), PlayerId: player.IdAsString()})
+	}{RoomId: room.Id, OwnerId: room.OwnerId.String(), PlayerId: player.Id.String()})
 	payload := json.RawMessage(b)
 
 	resposneMsg := ReponseMessage{
@@ -189,7 +189,6 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) *
 	if err != nil {
 		fmt.Println(err)
 	}
-	return room
 }
 
 func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) *Room {
@@ -210,7 +209,7 @@ func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string)
 	}
 
 	room := NewRoom(cardIds, *playerId)
-	rooms = append(rooms, room)
+	roomById[room.Id] = room
 
 	b, _ := json.Marshal(struct {
 		RoomId string `json:"roomId"`
@@ -276,6 +275,17 @@ func start(staticDir string) {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
+	roomCleanupTimer := time.NewTimer(2 * time.Second)
+	go func() {
+		<-roomCleanupTimer.C
+		for _, val := range roomById {
+			diff := time.Since(val.CreatedAt)
+			if int(diff.Minutes()) >= *roomMaxDurationMin {
+				delete(roomById, val.Id)
+			}
+		}
+	}()
 
 	log.Printf(("Starting to listen"))
 	log.Fatal(srv.ListenAndServe())

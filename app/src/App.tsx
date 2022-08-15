@@ -6,10 +6,11 @@ import { far } from "@fortawesome/free-regular-svg-icons";
 
 import { PlayerContextProvider } from "./contexts/PlayerContext";
 import { RoomContextProvider } from "./contexts/RoomContext";
-import { GameInit } from "./GameInit";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import GameRoom from "./GameRoom";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
+import CreateRoomButton from "./CreateRoomButton";
+import PlayerName from "./PlayerName";
 
 // Font awesome icons
 library.add(far);
@@ -27,7 +28,8 @@ const App = () => {
               element={
                 <RoomContextProvider>
                   <PlayerContextProvider>
-                    <GameInit />
+                    <PlayerName />
+                    <CreateRoomButton />
                   </PlayerContextProvider>
                 </RoomContextProvider>
               }

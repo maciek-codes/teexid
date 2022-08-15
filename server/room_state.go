@@ -10,7 +10,7 @@ const (
 	Ended
 )
 
-var toString = map[RoomState]string{
+var gameStateToString = map[RoomState]string{
 	WaitingForPlayers: "waiting",
 	PlayingGame:       "playing",
 	Ended:             "ended",
@@ -18,7 +18,7 @@ var toString = map[RoomState]string{
 
 func (rs RoomState) MarshalJSON() ([]byte, error) {
 	buffer := bytes.NewBufferString(`"`)
-	buffer.WriteString(toString[rs])
+	buffer.WriteString(gameStateToString[rs])
 	buffer.WriteString(`"`)
 	return buffer.Bytes(), nil
 }

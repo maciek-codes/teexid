@@ -39,7 +39,3 @@ func (p *Player) SetReady() {
 func (p *Player) IsReady() bool {
 	return p.ReadyState == Ready
 }
-
-func (p *Player) IdAsString() string {
-	return p.Id.String()
-}

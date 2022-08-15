@@ -75,7 +75,7 @@ export const PlayerList: React.FC = () => {
   const allReady = useMemo(() => {
     return playersList.reduce((acc: number, curr: Player) => {
       return acc + (curr.ready ? 1 : 0)
-    }, 0);
+    }, 0) >= 3;
   }, [playersList]);
 
   const startGame = useCallback(() => {

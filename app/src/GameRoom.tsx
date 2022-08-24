@@ -7,7 +7,7 @@ import { useSocket } from "./contexts/WebsocketContext";
 import { useAuth } from "./hooks/useAuth";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
-import { ErrorPayload, ResponseMsg } from "./types";
+import { ErrorPayload } from "./types";
 
 type OnJoinedPayload = {
   roomId: string,
@@ -16,7 +16,7 @@ type OnJoinedPayload = {
 };
 
 const GameRoom: React.FC = () => {
-  const {ws, sendCommand} = useSocket();
+  const {addMsgListener, removeMsgListener, sendCommand} = useSocket();
   
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [isJoined, setIsJoined] = useState<boolean>(false);
@@ -26,27 +26,27 @@ const GameRoom: React.FC = () => {
   const player = usePlayer();
   const roomId = useRoom();
 
-  const onMessage = useCallback((evt: MessageEvent<any>) => {
-    const msg = JSON.parse(evt.data) as ResponseMsg<unknown>;
-    if (msg.type === "on_joined") {
+  const onMessage = useCallback((type: string, data: unknown) => {
+    if (type === "on_joined") {
       setIsJoined(true);
-      const payload = msg.payload as OnJoinedPayload;
+      const payload = data as OnJoinedPayload;
       if (payload.playerId !== authQuery.data?.playerId) {
         setErrorMsg("Wrong room?")
       } else {
         setErrorMsg(null);
+        player.setIsOwner(payload.ownerId === payload.playerId);
       }
       setIsJoining(false);
-    } else if (msg.type === "error") {
-      const payload = msg.payload as ErrorPayload;
+    } else if (type === "error") {
+      const payload = data as ErrorPayload;
       setIsJoining(false);
       setErrorMsg(payload.message);
     }
-  }, [authQuery, setErrorMsg, setIsJoining]);
+  }, [player, authQuery, setErrorMsg, setIsJoining]);
 
   useEffect(() => {
-    ws.addEventListener("message", onMessage);
-    if (!isJoined && !isJoining && player.name !== '' && ws.OPEN === ws.readyState) {
+    addMsgListener(onMessage);
+    if (!isJoined && !isJoining && player.name !== '') {
       setIsJoining(true);
       sendCommand("join_room", {
           roomId: roomId,
@@ -54,9 +54,9 @@ const GameRoom: React.FC = () => {
       });
     }
     return () => {
-      ws.removeEventListener("message", onMessage);
+      removeMsgListener(onMessage);
     }
-  }, [roomId, player, ws, token, onMessage, isJoined, isJoining, sendCommand]);
+  }, [roomId, player, token, onMessage, isJoined, isJoining, sendCommand, addMsgListener, removeMsgListener]);
 
   return (
     <Stack px={20}>

@@ -16,10 +16,12 @@ import { usePlayer } from "./contexts/PlayerContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRoom } from "./contexts/RoomContext";
 import { useSocket } from "./contexts/WebsocketContext";
-import { ResponseMsg } from "./types";
-import CardView from "./CardView";
 import CardSelector from "./CardSelector";
 import Card from "./models/Card";
+import Player from "./models/Player";
+import { OnPlayersUpdatedPayload } from "./types";
+import { CardPicker } from "./CardPicker";
+import { Voting } from "./Voting";
 
 interface CopyButtonProps {
   copyText: string;
@@ -40,7 +42,12 @@ const CopyButton: React.FC<CopyButtonProps> = ({
 };
 
 type RoomState = "waiting" | "playing" | "ended";
-type TurnState = "not_started" | "waiting_for_story" | "voting" | "scoring";
+type TurnState =
+  | "not_started"
+  | "waiting_for_story"
+  | "selecting_cards"
+  | "voting"
+  | "scoring";
 
 // Room state updated
 type RoomStateUpdatedPayload = {
@@ -50,6 +57,7 @@ type RoomStateUpdatedPayload = {
   story: string;
   storyCardId: number;
   turnState: TurnState;
+  cardsSubmitted: number[];
 };
 
 // New cards dealt
@@ -95,58 +103,100 @@ const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
   );
 };
 
+type ScoreListProps = {
+  players: Player[];
+};
+
+const ScoreList: React.FC<ScoreListProps> = ({ players }: ScoreListProps) => {
+  const playerScores = players
+    .sort((a: Player, b: Player): number => {
+      return a.points === b.points ? 0 : a.points < b.points ? -1 : 1;
+    })
+    .map((player, idx) => {
+      return (
+        <Text key={idx}>
+          {player.name}: {player.points} pt
+        </Text>
+      );
+    });
+  return <>{playerScores}</>;
+};
+
 export const GameFeed: React.FC = () => {
   const player = usePlayer();
   const roomId = useRoom();
-  const { ws, sendCommand } = useSocket();
+  const { addMsgListener, removeMsgListener, sendCommand } = useSocket();
   const [roomState, setRoomState] = useState<RoomState>("waiting");
   const [turnState, setTurnState] = useState<TurnState>("not_started");
   const [storyPlayerId, setStoryPlayerId] = useState<string>("");
   const [cards, setCards] = useState<Card[]>([]);
   const [story, setStory] = useState<string>("");
-  const [storyCard, setStoryCard] = useState<Card | null>(null);
+  const [storyCards, setStoryCards] = useState<Card[] | null>(null);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [players, setPlayers] = useState<Player[] | null>(null);
+
+  const isTellingStory = storyPlayerId === player.id;
+  const isPlaying = roomState === "playing";
+  const isVoting = turnState === "voting";
+  const isScoring = turnState === "scoring";
 
   const onMessage = useCallback(
-    (evt: MessageEvent<string>) => {
-      const msg = JSON.parse(evt.data) as ResponseMsg<unknown>;
-      if (msg.type === "onroomstateupdated") {
-        const payload = msg.payload as RoomStateUpdatedPayload;
+    (type: string, data: unknown) => {
+      if (type === "on_room_state_updated") {
+        const payload = data as RoomStateUpdatedPayload;
         setRoomState(payload.state);
         setStoryPlayerId(payload.storyPlayerId);
         setStory(payload.story);
         setTurnState(payload.turnState);
-        if (payload.storyCardId > 0)
-          setStoryCard({ cardId: payload.storyCardId } as Card);
-      } else if (msg.type === "on_cards") {
-        const payload = msg.payload as OnCardsPayload;
+        if (payload.cardsSubmitted.length > 0)
+          setStoryCards(
+            payload.cardsSubmitted.map((cardId) => {
+              return { cardId: cardId } as Card;
+            })
+          );
+      } else if (type === "on_cards") {
+        const payload = data as OnCardsPayload;
         setCards(payload.cards.map((cardId) => ({ cardId } as Card)));
+      } else if (type === "on_players_updated") {
+        const payload = data as OnPlayersUpdatedPayload;
+        setPlayers(payload.players);
       }
     },
     [setRoomState]
   );
 
-  ws.addEventListener("message", onMessage);
-
   useEffect(() => {
+    addMsgListener(onMessage);
     const onMessageHandler = onMessage;
-    const wsRef = ws;
     return () => {
-      wsRef.removeEventListener("message", onMessageHandler);
-    }
-  }, [ws, onMessage]);
+      removeMsgListener(onMessageHandler);
+    };
+  }, [addMsgListener, removeMsgListener, onMessage]);
 
-  const voteForStory = useCallback(() => {
-    if (selectedCard !== null)
-      sendCommand("player/vote", {
+  const submitCardForStory = useCallback(() => {
+    if (selectedCard !== null) {
+      sendCommand("player/submitCard", {
         cardId: selectedCard.cardId,
       });
+      setSelectedCard(null);
+    }
   }, [sendCommand, selectedCard]);
 
-  const storyUx = roomState === "playing" && turnState === "waiting_for_story" && 
-    storyPlayerId === player.id ? 
-    (<StoryPromptInput selectedCard={selectedCard} />) :
-    (<Text>Waiting for a story</Text>);
+  const storyUx =
+    isPlaying && turnState === "waiting_for_story" && isTellingStory ? (
+      <Box>
+        <StoryPromptInput selectedCard={selectedCard} />
+        <CardSelector
+          cards={cards}
+          onSelected={(selectedCard) => {
+            setSelectedCard(selectedCard);
+          }}
+        />
+      </Box>
+    ) : (
+      <Text>Waiting for a story</Text>
+    );
+
   return (
     <Box>
       <Grid templateColumns="repeat(5, 1fr)" templateRows="repeat(4, 2fr)">
@@ -171,45 +221,34 @@ export const GameFeed: React.FC = () => {
 
         <GridItem colStart={0} colSpan={3} rowStart={1} rowSpan={4}>
           {roomState === "waiting" && <Text> Wait for players to join...</Text>}
-          {roomState === "playing" && turnState === "waiting_for_story" ? 
-            storyUx : null
-          }
-          {roomState === "playing" && turnState === "voting" ? 
-              <Stack>
-                <Text>Submit a card for this story</Text>
-                <CardSelector
-                  cards={cards}
-                  onSelected={(selectedCard) => {
-                    setSelectedCard(selectedCard);
-                  }}
-                />
-                 <Button
-                    isActive={selectedCard !== null}
-                    isDisabled={selectedCard === null}
-                    onClick={() => voteForStory()}
-                  >
-                    Vote
-                  </Button>
-              </Stack> : null
-          }
-          {roomState === "playing" && turnState === "voting" ? 
-              <Stack>
-                <Text>Submit a card for this story</Text>
-                <CardSelector
-                cards={cards}
-                onSelected={(selectedCard) => {
-                  setSelectedCard(selectedCard);
-                }}
-              />
-              </Stack> : null
-          }
+          {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
+          {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (
+            <CardPicker
+              cards={cards}
+              story={story}
+              selectedCard={selectedCard}
+              setSelectedCard={setSelectedCard}
+              buttonText="Submit a card"
+              onSelectedCard={submitCardForStory}
+            />
+          ) : null}
+          {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
+            <Text>Waiting for players to submit cards...</Text>
+          ) : null}
+          {isPlaying && isVoting && isTellingStory ? (
+            <Text>Waiting for votes...</Text>
+          ) : null}
+          {isPlaying && isScoring && players ? (
+            <ScoreList players={players} />
+          ) : null}
           {roomState === "ended" && <Text>Ended!</Text>}
-          {story !== "" ? <Text>Story: {story}</Text> : null}
-          {storyCard !== null ? (
-          <>
-            <Text>Story card was:</Text>
-            <CardView card={storyCard} />
-          </>): null}
+          {isPlaying &&
+          isVoting &&
+          !isTellingStory &&
+          storyCards &&
+          storyCards?.length !== null ? (
+            <Voting story={story} playerCards={cards} storyCards={storyCards} />
+          ) : null}
         </GridItem>
       </Grid>
     </Box>

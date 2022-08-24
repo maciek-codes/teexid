@@ -4,11 +4,9 @@ import { Avatar, Button, HStack, List, ListItem, Text } from "@chakra-ui/react";
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
 import { useSocket } from "./contexts/WebsocketContext";
-import { ErrorPayload, ResponseMsg } from "./types";
+import { ErrorPayload, OnPlayersUpdatedPayload } from "./types";
 
-type OnPlayersUpdatedPayload = {
-  players: Player[];
-};
+const MIN_PLAYERS = 2;
 
 type PlayerItemProps = {
   player: Player;
@@ -38,19 +36,23 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
 export const PlayerList: React.FC = () => {
   const [playersList, setPlayersList] = useState<Player[]>([]);
   const [hasError, setHasError] = useState<boolean>(false);
-  const { id } = usePlayer();
-  const { ws, sendCommand } = useSocket();
+  const { id, isOwner } = usePlayer();
+  const { addMsgListener, removeMsgListener, sendCommand } = useSocket();
+  const [gameStarted, setGameStarted] = useState<boolean>(false);
 
   const onMessage = useCallback(
-    (evt: MessageEvent<string>) => {
-      const data = JSON.parse(evt.data) as ResponseMsg<unknown>;
-      if (data.type === "onplayersupdated") {
-        const payload = data.payload as OnPlayersUpdatedPayload;
+    (type: string, data: unknown) => {
+      if (type === "on_players_updated") {
+        const payload = data as OnPlayersUpdatedPayload;
         setPlayersList(payload.players);
-      } if (data.type === "error") {
-        const payload = data.payload as ErrorPayload;
-        if (payload.type === "room_not_found")
-          setHasError(true)
+      } else if (type === "error") {
+        const payload = data as ErrorPayload;
+        if (payload.type === "room_not_found") {
+          setHasError(true);
+        }
+      } else if (type === "on_room_state_updated") {
+        const payload = data as any;
+        setGameStarted(payload.state === "playing")
       }
     },
     [setPlayersList]
@@ -60,27 +62,31 @@ export const PlayerList: React.FC = () => {
     sendCommand("player/ready", null);
   }, [sendCommand]);
 
-  ws.addEventListener("message", onMessage);
+  
+  useEffect(() => {
+    addMsgListener(onMessage);
+    const onMessageRef = onMessage;
+    return () => {
+      removeMsgListener(onMessageRef);
+    };
+  }, [addMsgListener, onMessage, removeMsgListener]);
 
   useEffect(() => {
     if (!hasError) {
-      sendCommand("get_players", null);
+      sendCommand("get_players", {});
     }
+  }, [hasError, sendCommand]);
 
-    return () => {
-      ws.removeEventListener("message", onMessage);
-    };
-  }, [ws, sendCommand, onMessage, hasError]);
-
-  const allReady = useMemo(() => {
-    return playersList.reduce((acc: number, curr: Player) => {
+  const canStart = useMemo(() => {
+    return !gameStarted && isOwner && playersList.reduce((acc: number, curr: Player) => {
       return acc + (curr.ready ? 1 : 0)
-    }, 0) >= 3;
-  }, [playersList]);
+    }, 0) >= MIN_PLAYERS;
+  }, [gameStarted, isOwner, playersList]);
 
   const startGame = useCallback(() => {
-    sendCommand("game/start", null);
-  }, [sendCommand]);
+    if (isOwner)
+      sendCommand("game/start", null);
+  }, [isOwner, sendCommand]);
 
   // Create a list of players
   return (
@@ -97,7 +103,8 @@ export const PlayerList: React.FC = () => {
           );
         })}
       </List>
-      {allReady ? <Button onClick={() => startGame()}>Start</Button> : null}
+      { canStart ?
+      <Button onClick={() => startGame()}>Start</Button> : null}
     </>
   );
 };

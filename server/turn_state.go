@@ -7,6 +7,7 @@ type TurnState string
 const (
 	NotStarted      TurnState = "not_started"
 	WaitingForStory TurnState = "waiting_for_story"
+	SelectingCards  TurnState = "selecting_cards"
 	Voting          TurnState = "voting"
 	Scoring         TurnState = "scoring"
 )
@@ -14,6 +15,7 @@ const (
 var turnStateToString = map[TurnState]string{
 	NotStarted:      "not_started",
 	WaitingForStory: "waiting_for_story",
+	SelectingCards:  "selecting_cards",
 	Voting:          "voting",
 	Scoring:         "scoring",
 }

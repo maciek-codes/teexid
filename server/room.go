@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	"sort"
-	"strconv"
 	"sync"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const MinPlayers = 3
+const MinPlayers = 2
 
 var randGenSource = rand.NewSource(time.Now().UnixNano())
 var randGen = rand.New(randGenSource)
@@ -33,18 +32,26 @@ type GameRoom interface {
 	CanJoin() bool
 }
 
+type Vote struct {
+	Voter  *Player
+	Voted  *Player
+	CardId int
+}
+
 type Room struct {
-	Id        string    `json:"id"`
-	State     RoomState `json:"state,omitempty"`
-	OwnerId   uuid.UUID `json:"ownerId"`
-	playerMap map[string]*Player
-	conns     map[string]playerConn
-	cardIds   []int
-	cardIdx   int
-	mu        sync.Mutex
+	Id             string    `json:"id"`
+	State          RoomState `json:"state,omitempty"`
+	OwnerId        uuid.UUID `json:"ownerId"`
+	playerMap      map[string]*Player
+	conns          map[string]playerConn
+	cardIds        []int
+	cardIdx        int
+	votes          []Vote
+	cardsSubmitted []CardSubmitted
+	mu             sync.Mutex
 
 	TurnState     TurnState `json:"turnState"`
-	StoryPlayerId string    `json:"storyPlayerId"`
+	StoryPlayerId uuid.UUID `json:"storyPlayerId"`
 	Story         string    `json:"story"`
 	StoryCard     int       `json:"storyCardId"`
 	CreatedAt     time.Time `json:"createdAt"`
@@ -55,6 +62,11 @@ type ReponseMessage struct {
 	Payload *json.RawMessage `json:"payload"`
 }
 
+type CardSubmitted struct {
+	playerId string
+	cardId   int
+}
+
 func NewRoom(cardIds []int, playerId uuid.UUID) *Room {
 	id := randSeq(6)
 	rand.Seed(time.Now().UnixNano())
@@ -62,15 +74,17 @@ func NewRoom(cardIds []int, playerId uuid.UUID) *Room {
 		cardIds[i], cardIds[j] = cardIds[j], cardIds[i]
 	})
 	room := Room{Id: id,
-		State:         WaitingForPlayers,
-		playerMap:     make(map[string]*Player, 0),
-		conns:         make(map[string]playerConn, 0),
-		TurnState:     NotStarted,
-		cardIds:       cardIds,
-		OwnerId:       playerId,
-		StoryPlayerId: "",
-		Story:         "",
-		StoryCard:     -1,
+		State:          WaitingForPlayers,
+		playerMap:      make(map[string]*Player, 0),
+		conns:          make(map[string]playerConn, 0),
+		TurnState:      NotStarted,
+		cardIds:        cardIds,
+		OwnerId:        playerId,
+		StoryPlayerId:  uuid.Nil,
+		Story:          "",
+		StoryCard:      -1,
+		votes:          make([]Vote, 0),
+		cardsSubmitted: make([]CardSubmitted, 0),
 	}
 	return &room
 }
@@ -95,7 +109,7 @@ func (r *Room) BroadcastPlayers() {
 	playersMessage := json.RawMessage(b)
 
 	message := ReponseMessage{
-		Type:    "onplayersupdated",
+		Type:    "on_players_updated",
 		Payload: &playersMessage}
 
 	b, err := json.Marshal(&message)
@@ -113,26 +127,44 @@ func (r *Room) BroadcastPlayers() {
 	}
 }
 
+// Return cards for voting
+func GetCardsForVoting(room *Room) []int {
+	cardIds := make([]int, 0)
+	if room.TurnState == Voting {
+		for _, cardSubmitted := range room.cardsSubmitted {
+			cardIds = append(cardIds, cardSubmitted.cardId)
+		}
+		cardIds = append(cardIds, room.StoryCard)
+
+		// Shuffle
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(cardIds), func(i, j int) { cardIds[i], cardIds[j] = cardIds[j], cardIds[i] })
+	}
+	return cardIds
+}
+
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
 	b, _ := json.Marshal(struct {
-		Id            string    `json:"id"`
-		RoomState     RoomState `json:"state"`
-		TurnState     TurnState `json:"turnState"`
-		StoryPlayerId string    `json:"storyPlayerId"`
-		Story         string    `json:"story"`
+		Id             string    `json:"id"`
+		RoomState      RoomState `json:"state"`
+		TurnState      TurnState `json:"turnState"`
+		StoryPlayerId  string    `json:"storyPlayerId"`
+		Story          string    `json:"story"`
+		CardsSubmitted []int     `json:"cardsSubmitted"`
 	}{
-		Id:            r.Id,
-		RoomState:     r.State,
-		TurnState:     r.TurnState,
-		StoryPlayerId: r.StoryPlayerId,
-		Story:         r.Story,
+		Id:             r.Id,
+		RoomState:      r.State,
+		TurnState:      r.TurnState,
+		StoryPlayerId:  r.StoryPlayerId.String(),
+		Story:          r.Story,
+		CardsSubmitted: GetCardsForVoting(r),
 	})
 
 	payloadMessage := json.RawMessage(b)
 
 	message := ReponseMessage{
-		Type:    "onroomstateupdated",
+		Type:    "on_room_state_updated",
 		Payload: &payloadMessage}
 
 	b, err := json.Marshal(&message)
@@ -142,17 +174,12 @@ func (r *Room) BroadcastRoomState() {
 	}
 
 	log.Printf("Writing %s\n", string(b))
-
-	r.mu.Lock()
 	for _, playerConn := range r.conns {
 		playerConn.ws.WriteMessage(websocket.TextMessage, b)
 	}
-	r.mu.Unlock()
 }
 
 func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	r.playerMap[p.Id.String()] = p
 	r.conns[p.Id.String()] = NewPlayerConn(conn, p, r)
 	r.BroadcastPlayers()
@@ -160,10 +187,8 @@ func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
 }
 
 func (r *Room) RemovePlayer(p *Player) {
-	r.mu.Lock()
 	delete(r.playerMap, p.Id.String())
 	r.BroadcastPlayers()
-	r.mu.Unlock()
 }
 
 func (r *Room) startGame() {
@@ -180,16 +205,22 @@ func (r *Room) startGame() {
 }
 
 func (r *Room) nextPlayerToTellStory() {
-	// Sort players by key
-	playerIds := make([]string, 0, len(r.playerMap))
+	// Update the turn state
+	r.TurnState = WaitingForStory
+
+	playerIds := make([]uuid.UUID, 0, len(r.playerMap))
 	currentPlayer := r.StoryPlayerId
 
-	for playerId := range r.playerMap {
-		playerIds = append(playerIds, playerId)
+	for _, player := range r.playerMap {
+		playerIds = append(playerIds, player.Id)
 	}
 
-	sort.Strings(playerIds)
-	if currentPlayer == "" {
+	// Sort players by ID
+	sort.Slice(playerIds, func(i, j int) bool {
+		return playerIds[i].String() < playerIds[j].String()
+	})
+
+	if currentPlayer == uuid.Nil {
 		r.StoryPlayerId = playerIds[0]
 		return
 	}
@@ -216,27 +247,27 @@ func (r *Room) findConn(p *Player) *websocket.Conn {
 }
 
 func (r *Room) sendCardsToEach(cardCount int) {
-	r.mu.Lock()
 	for _, playerConn := range r.conns {
 
+		var player = playerConn.player
 		cardCountToPlayer := cardCount
-		cardIds := make([]int, 0)
+		player.Cards = make([]int, 0)
 		for cardCountToPlayer > 0 {
 			cardCountToPlayer -= 1
 			if r.cardIdx > len(r.cardIds) {
 				break
 			}
-			cardIds = append(cardIds, r.cardIds[r.cardIdx])
+			player.Cards = append(player.Cards, r.cardIds[r.cardIdx])
 			r.cardIdx++
 		}
 
-		if len(cardIds) == 0 {
+		if len(player.Cards) == 0 {
 			return
 		}
 
 		b, _ := json.Marshal(struct {
 			CardIds []int `json:"cards"`
-		}{CardIds: cardIds})
+		}{CardIds: player.Cards})
 
 		payloadMessage := json.RawMessage(b)
 
@@ -248,7 +279,6 @@ func (r *Room) sendCardsToEach(cardCount int) {
 
 		playerConn.ws.WriteMessage(websocket.TextMessage, b)
 	}
-	r.mu.Unlock()
 }
 
 func (r *Room) HandleRoomCommand(p *Player, command Command) {
@@ -265,6 +295,7 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 		r.BroadcastPlayers()
 	} else if command.Type == "game/start" {
 		if p.Id != r.OwnerId {
+			log.Printf("Not room owner: %s", p.Id.String())
 			return
 		}
 		var allReady = true
@@ -276,7 +307,7 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 		}
 	} else if command.Type == "player/story" {
 		conn := r.findConn(p)
-		if p.Id.String() != r.StoryPlayerId {
+		if p.Id != r.StoryPlayerId {
 			sendError(conn, "story_error", "Can't tell story now.")
 			return
 		}
@@ -293,10 +324,86 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 
 		r.Story = story.Story
 		r.StoryCard = story.Card
-		r.TurnState = Voting
+		r.TurnState = SelectingCards
 		r.BroadcastRoomState()
+	} else if command.Type == "player/submitCard" {
+		conn := r.findConn(p)
+		submission := struct {
+			CardId int `json:"cardId"`
+		}{}
+		err := json.Unmarshal([]byte(command.Data), &submission)
+		if err != nil {
+			sendError(conn, "story_error", "Bad story: "+command.Data)
+			return
+		}
+		r.cardsSubmitted = append(r.cardsSubmitted, CardSubmitted{
+			playerId: p.Id.String(),
+			cardId:   submission.CardId,
+		})
+		if len(r.cardsSubmitted) == len(r.playerMap)-1 {
+			r.TurnState = Voting
+			r.BroadcastRoomState()
+		}
 	} else if command.Type == "player/vote" {
-		votedCard, _ := strconv.Atoi(command.Data)
-		log.Printf("Player %s voted for card %d", p.Id.String(), votedCard)
+		vote := struct {
+			CardId int `json:"cardId"`
+		}{}
+		err := json.Unmarshal([]byte(command.Data), &vote)
+		if err != nil {
+			sendError(r.findConn(p), "story_error", "Bad story: "+command.Data)
+			return
+		}
+
+		log.Printf("Player %s voted for card %d", p.Id.String(), vote.CardId)
+		for _, otherPlayer := range r.playerMap {
+			if otherPlayer.HasCard(vote.CardId) {
+				r.votes = append(r.votes, Vote{p, otherPlayer, vote.CardId})
+				break
+			}
+		}
+
+		// Last vote - all players voted except story teller
+		if len(r.votes) == len(r.playerMap)-1 {
+			r.ScoreTurn()
+		}
 	}
+}
+
+/*
+From: http://www.itsyourmoveoakland.com/game-library-cd/dixit
+ If nobody or everybody finds the correct card, the storyteller scores 0,
+ and each of the other players scores 2.
+ Otherwise the storyteller and whoever found the correct answer score 3.
+ Players score 1 point for every vote for their own card.
+*/
+func (r *Room) ScoreTurn() {
+	r.TurnState = Scoring
+	var votesForStoryPlayer = 0
+	for _, vote := range r.votes {
+		if vote.Voted.Id == r.StoryPlayerId {
+			votesForStoryPlayer += 1
+		}
+	}
+
+	var allRightOrAllWrong = votesForStoryPlayer == 0 || votesForStoryPlayer == len(r.playerMap)-1
+
+	if allRightOrAllWrong {
+		for _, player := range r.playerMap {
+			if player.Id != r.StoryPlayerId {
+				player.Points += 2
+			}
+		}
+	} else {
+		for _, vote := range r.votes {
+			log.Printf("Player %s voted for %s", vote.Voter.Name, vote.Voted.Name)
+			if vote.Voted.Id == r.StoryPlayerId {
+				r.playerMap[vote.Voted.Id.String()].Points += 3
+				r.playerMap[vote.Voter.Id.String()].Points += 3
+			} else {
+				r.playerMap[vote.Voter.Id.String()].Points += 1
+			}
+		}
+	}
+	r.BroadcastRoomState()
+	r.BroadcastPlayers()
 }

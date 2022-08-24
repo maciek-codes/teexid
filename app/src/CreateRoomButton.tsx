@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 import { useSocket } from "./contexts/WebsocketContext";
 import { usePlayer } from "./contexts/PlayerContext";
-import { ErrorPayload, ResponseMsg } from "./types";
+import { ErrorPayload } from "./types";
 
 interface CreateRoomButtonProps {}
 
@@ -21,7 +21,7 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   const [isJoining, setIsJoining] = useState<boolean>(false);
   const [joinError, setJoinError] = useState<string | null>(null);
 
-  const {ws, sendCommand} = useSocket();
+  const {addMsgListener, removeMsgListener, sendCommand} = useSocket();
 
   const createRoomClick = useCallback(() => {
     // Create room
@@ -39,14 +39,13 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   };
 
 
-  const onMessage = (evt: MessageEvent<any>) => {
-    const msg = JSON.parse(evt.data) as ResponseMsg<unknown>;
-    if (msg.type === "on_room_created") {
-      const payload = msg.payload as OnRoomCreatedPayload;
+  const onMessage = (type: string, data: unknown) => {
+    if (type === "on_room_created") {
+      const payload = data as OnRoomCreatedPayload;
       navigate("room/" + payload.roomId);
     }
-    if (msg.type === "error") {
-      const payload = msg.payload as ErrorPayload;
+    if (type === "error") {
+      const payload = data as ErrorPayload;
       if (payload.type === "room_not_found") {
         setJoinError(payload.message);
       }
@@ -54,9 +53,9 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   }
 
   useEffect(() => {
-    ws.addEventListener("message", onMessage);
+    addMsgListener(onMessage);
     return () => {
-      ws.removeEventListener("message", onMessage);
+      removeMsgListener(onMessage);
     }
   });
 

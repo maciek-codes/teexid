@@ -139,6 +139,7 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 	joinCommand := struct {
 		RoomId     string `json:"roomId"`
 		PlayerName string `json:"playerName"`
+		Players    Player
 	}{}
 
 	err := json.Unmarshal([]byte(message), &joinCommand)
@@ -185,6 +186,8 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 
 	log.Printf("Writing %s\n", string(b))
 	err = conn.WriteMessage(websocket.TextMessage, []byte(b))
+
+	room.BroadcastPlayers()
 
 	if err != nil {
 		fmt.Println(err)

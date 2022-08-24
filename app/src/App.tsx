@@ -11,6 +11,8 @@ import GameRoom from "./GameRoom";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
 import CreateRoomButton from "./CreateRoomButton";
 import PlayerName from "./PlayerName";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { Container } from "@chakra-ui/react";
 
 // Font awesome icons
 library.add(far);
@@ -21,31 +23,35 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <WebSocketContextProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <RoomContextProvider>
-                  <PlayerContextProvider>
-                    <PlayerName />
-                    <CreateRoomButton />
-                  </PlayerContextProvider>
-                </RoomContextProvider>
-              }
-            />
-            <Route
-              path="/room/:roomId"
-              element={
-                <RoomContextProvider>
-                  <PlayerContextProvider>
-                    <GameRoom />
-                  </PlayerContextProvider>
-                </RoomContextProvider>
-              }
-            />
-          </Routes>
-        </BrowserRouter>
+        <ErrorBoundary>
+          <Container minWidth="120ch">
+            <BrowserRouter>
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <RoomContextProvider>
+                      <PlayerContextProvider>
+                        <PlayerName />
+                        <CreateRoomButton />
+                      </PlayerContextProvider>
+                    </RoomContextProvider>
+                  }
+                />
+                <Route
+                  path="/room/:roomId"
+                  element={
+                    <RoomContextProvider>
+                      <PlayerContextProvider>
+                        <GameRoom />
+                      </PlayerContextProvider>
+                    </RoomContextProvider>
+                  }
+                />
+              </Routes>
+            </BrowserRouter>
+          </Container>
+        </ErrorBoundary>
       </WebSocketContextProvider>
     </QueryClientProvider>
   );

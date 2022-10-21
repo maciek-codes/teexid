@@ -32,7 +32,6 @@ const App = () => {
                   element={
                     <RoomContextProvider>
                       <PlayerContextProvider>
-                        <PlayerName />
                         <CreateRoomButton />
                       </PlayerContextProvider>
                     </RoomContextProvider>

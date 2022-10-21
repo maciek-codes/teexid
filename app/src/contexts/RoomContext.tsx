@@ -1,5 +1,7 @@
-import React, { createContext, ReactNode, useContext } from "react";
-import { useParams } from "react-router-dom";
+import React, { createContext, ReactNode, useCallback, useContext, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ErrorPayload } from "../types";
+import { useSocket } from "./WebsocketContext";
 
 const RoomContext = createContext<string>('');
 
@@ -7,6 +9,25 @@ type Props = { children: ReactNode };
 
 export const RoomContextProvider: React.FC<Props> = ({children}: Props) => {
     const params = useParams();
+    const ws = useSocket();
+    const navigate = useNavigate();
+
+    const onMsg = useCallback((type: string, data: unknown) => {
+        if (type === "error") {
+            const payload = data as ErrorPayload;
+            if (payload.type === "room_not_found") {
+                navigate('/');
+            }
+        }
+    }, [navigate]);
+
+    ws.addMsgListener(onMsg);
+
+    useEffect(() => {
+        return () => {
+            ws.removeMsgListener(onMsg);
+        }
+    }, [ws, onMsg]);
 
     return (
         <RoomContext.Provider value={params?.roomId ?? ''}>

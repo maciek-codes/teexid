@@ -1,10 +1,11 @@
-import { Alert, AlertIcon, AlertTitle, Button, Input, Stack, Text } from "@chakra-ui/react";
+import { Alert, AlertIcon, AlertTitle, Box, Button, Flex, Input, Text } from "@chakra-ui/react";
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 import { useSocket } from "./contexts/WebsocketContext";
 import { usePlayer } from "./contexts/PlayerContext";
 import { ErrorPayload } from "./types";
+import PlayerName from './PlayerName';
 
 interface CreateRoomButtonProps {}
 
@@ -60,31 +61,38 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   });
 
   return (
-    <Stack>
-      <Button isDisabled={auth.isLoading || isJoining || player?.name === null || player.name.trim() === ''} onClick={createRoomClick} my={5}>
-        Start a new room
-      </Button>
-
-      <Text fontSize="sm">- or -</Text>
-        <Input type="text" 
-            placeholder="Room name" 
-            onChange={(e) => setRoomIdText(e.target.value)} />
-        <Button
-          isLoading={isJoining}
-          className="rounded-full bg-purple-700 text-white"
-          isDisabled={roomIdText.trim() === "" || auth.isLoading || isJoining}
-          onClick={joinRoomClick}
-        >
-          Join
+    <Flex flexDirection="column" alignItems="center" justifyContent="center">
+      <Box>
+        <PlayerName />
+      </Box>
+      <Box alignItems="center">
+        <Button isDisabled={auth.isLoading || isJoining || player?.name === null || player.name.trim() === ''} onClick={createRoomClick} my={5}>
+          Start a new room
         </Button>
-        {isJoining ? <Text>Connecting...</Text> : null}
-        {joinError !== null ? (
-          <Alert status='error'>
-            <AlertIcon />
-            <AlertTitle>{joinError}</AlertTitle>
-          </Alert>
-        ) : null}
-    </Stack>
+
+        <Box verticalAlign="center">
+          <Text fontSize="sm">- or -</Text>
+        </Box>
+          <Input type="text" 
+              placeholder="Room name" 
+              onChange={(e) => setRoomIdText(e.target.value)} />
+          <Button
+            isLoading={isJoining}
+            className="rounded-full bg-purple-700 text-white"
+            isDisabled={roomIdText.trim() === "" || auth.isLoading || isJoining}
+            onClick={joinRoomClick}
+          >
+            Join a room
+          </Button>
+          {isJoining ? <Text>Connecting...</Text> : null}
+          {joinError !== null ? (
+            <Alert status='error'>
+              <AlertIcon />
+              <AlertTitle>{joinError}</AlertTitle>
+            </Alert>
+          ) : null}
+        </Box>
+    </Flex>
   );
 };
 

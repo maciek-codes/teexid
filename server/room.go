@@ -45,6 +45,7 @@ type Room struct {
 	playerMap      map[string]*Player
 	conns          map[string]playerConn
 	cardIds        []int
+	discardCardIds []int
 	cardIdx        int
 	votes          []Vote
 	cardsSubmitted []CardSubmitted
@@ -208,6 +209,9 @@ func (r *Room) nextPlayerToTellStory() {
 	// Update the turn state
 	r.TurnState = WaitingForStory
 
+	// Reset submissions
+	r.cardsSubmitted = make([]CardSubmitted, 0)
+
 	playerIds := make([]uuid.UUID, 0, len(r.playerMap))
 	currentPlayer := r.StoryPlayerId
 
@@ -247,19 +251,31 @@ func (r *Room) findConn(p *Player) *websocket.Conn {
 }
 
 func (r *Room) sendCardsToEach(cardCount int) {
-	for _, playerConn := range r.conns {
+	var playerCount = len(r.conns)
+	if len(r.cardIds) < playerCount {
+		log.Print("Need to shuffle discard pile")
+		// shuffle discard and move all to cards
+		rand.Shuffle(len(r.discardCardIds), func(i, j int) {
+			r.discardCardIds[i], r.discardCardIds[j] = r.discardCardIds[j], r.discardCardIds[i]
+		})
 
+		r.cardIds = append(r.cardIds, r.discardCardIds...)
+		r.discardCardIds = make([]int, 0)
+	}
+
+	// Deal N cards to each player
+	for _, playerConn := range r.conns {
 		var player = playerConn.player
-		cardCountToPlayer := cardCount
-		player.Cards = make([]int, 0)
-		for cardCountToPlayer > 0 {
-			cardCountToPlayer -= 1
-			if r.cardIdx > len(r.cardIds) {
-				break
-			}
-			player.Cards = append(player.Cards, r.cardIds[r.cardIdx])
-			r.cardIdx++
+
+		// Calculate N cards from the end
+		var startIndex = 0
+		if len(r.cardIds) > cardCount {
+			startIndex = len(r.cardIds) - 1 - cardCount
 		}
+
+		// Move N cards to the player
+		player.Cards = append(player.Cards, r.cardIds[startIndex:]...)
+		r.cardIds = r.cardIds[:startIndex]
 
 		if len(player.Cards) == 0 {
 			return
@@ -277,6 +293,7 @@ func (r *Room) sendCardsToEach(cardCount int) {
 
 		b, _ = json.Marshal(message)
 
+		log.Printf("Writing %s\n", string(b))
 		playerConn.ws.WriteMessage(websocket.TextMessage, b)
 	}
 }
@@ -322,6 +339,7 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 			return
 		}
 
+		p.discardCard(r, story.Card)
 		r.Story = story.Story
 		r.StoryCard = story.Card
 		r.TurnState = SelectingCards
@@ -340,31 +358,46 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 			playerId: p.Id.String(),
 			cardId:   submission.CardId,
 		})
+		p.discardCard(r, submission.CardId)
 		if len(r.cardsSubmitted) == len(r.playerMap)-1 {
 			r.TurnState = Voting
 			r.BroadcastRoomState()
 		}
 	} else if command.Type == "player/vote" {
-		vote := struct {
-			CardId int `json:"cardId"`
-		}{}
-		err := json.Unmarshal([]byte(command.Data), &vote)
-		if err != nil {
-			sendError(r.findConn(p), "story_error", "Bad story: "+command.Data)
-			return
-		}
-
-		log.Printf("Player %s voted for card %d", p.Id.String(), vote.CardId)
-		for _, otherPlayer := range r.playerMap {
-			if otherPlayer.HasCard(vote.CardId) {
-				r.votes = append(r.votes, Vote{p, otherPlayer, vote.CardId})
-				break
-			}
-		}
+		r.handleVoteCommand(p, command.Data)
 
 		// Last vote - all players voted except story teller
-		if len(r.votes) == len(r.playerMap)-1 {
-			r.ScoreTurn()
+		if len(r.votes) == len(r.Players())-1 {
+			r.scoreTurn()
+		}
+	}
+}
+
+func (r *Room) handleVoteCommand(p *Player, commandData string) {
+	vote := struct {
+		CardId int `json:"cardId"`
+	}{}
+
+	err := json.Unmarshal([]byte(commandData), &vote)
+	if err != nil {
+		sendError(r.findConn(p), "story_error", "Bad story: "+commandData)
+		return
+	}
+
+	if vote.CardId == r.StoryCard {
+		var votedPlayer *Player = r.playerMap[r.StoryPlayerId.String()]
+		log.Printf("Player %s voted for story card %d from %s", p.Id.String(), vote.CardId, votedPlayer.Name)
+
+		r.votes = append(r.votes, Vote{p, votedPlayer, vote.CardId})
+		return
+	}
+
+	for _, cardSubmitted := range r.cardsSubmitted {
+		if cardSubmitted.cardId == vote.CardId {
+			var votedPlayer *Player = r.playerMap[cardSubmitted.playerId]
+			log.Printf("Player %s voted for submitted card %d from %s", p.Id.String(), vote.CardId, votedPlayer.Name)
+			r.votes = append(r.votes, Vote{p, votedPlayer, vote.CardId})
+			break
 		}
 	}
 }
@@ -376,7 +409,7 @@ From: http://www.itsyourmoveoakland.com/game-library-cd/dixit
  Otherwise the storyteller and whoever found the correct answer score 3.
  Players score 1 point for every vote for their own card.
 */
-func (r *Room) ScoreTurn() {
+func (r *Room) scoreTurn() {
 	r.TurnState = Scoring
 	var votesForStoryPlayer = 0
 	for _, vote := range r.votes {
@@ -388,22 +421,63 @@ func (r *Room) ScoreTurn() {
 	var allRightOrAllWrong = votesForStoryPlayer == 0 || votesForStoryPlayer == len(r.playerMap)-1
 
 	if allRightOrAllWrong {
+		// Storyplayer gets 0 points, everyone else gets 2
 		for _, player := range r.playerMap {
 			if player.Id != r.StoryPlayerId {
 				player.Points += 2
 			}
 		}
 	} else {
+		// Story player gets 3 points
+		r.playerMap[r.StoryPlayerId.String()].Points += 3
+
+		// Players who voted for the storyteller’s card also score 3
 		for _, vote := range r.votes {
 			log.Printf("Player %s voted for %s", vote.Voter.Name, vote.Voted.Name)
 			if vote.Voted.Id == r.StoryPlayerId {
-				r.playerMap[vote.Voted.Id.String()].Points += 3
 				r.playerMap[vote.Voter.Id.String()].Points += 3
-			} else {
-				r.playerMap[vote.Voter.Id.String()].Points += 1
 			}
 		}
 	}
+
+	// In addition, each player (except the storyteller) scores
+	// 1 bonus for each vote received on their own card.
+	for _, vote := range r.votes {
+		log.Printf("Player %s voted for %s", vote.Voter.Name, vote.Voted.Name)
+		if vote.Voted.Id != r.StoryPlayerId {
+			r.playerMap[vote.Voted.Id.String()].Points += 1
+		}
+	}
+
+	// Check if any has 30 points
+	var maxScorePlayer *Player = nil
+	for _, player := range r.Players() {
+		WINNING_SCORE := 30
+		if player.Points >= WINNING_SCORE && (maxScorePlayer == nil || maxScorePlayer.Points < player.Points) {
+			maxScorePlayer = player
+		}
+	}
+
+	// Reset votes
+	r.votes = make([]Vote, 0)
+
+	if maxScorePlayer != nil {
+		r.endGame()
+		return
+	}
+
+	// Deal new card to each player
+	r.sendCardsToEach(1)
+
+	// Next player tells the story
+	r.nextPlayerToTellStory()
+
+	r.BroadcastRoomState()
+	r.BroadcastPlayers()
+}
+
+func (r *Room) endGame() {
+	r.State = Ended
 	r.BroadcastRoomState()
 	r.BroadcastPlayers()
 }

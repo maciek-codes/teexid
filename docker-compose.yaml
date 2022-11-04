@@ -1,0 +1,15 @@
+services:
+  frontend:
+    build: app/.
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+  backend:
+    build: server/.
+    ports:
+      - "8080:8080"
+  #redis:
+  #  image: redis
+#volumes:
+  #logvolume01: {}

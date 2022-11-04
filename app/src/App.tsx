@@ -10,7 +10,6 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import GameRoom from "./GameRoom";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
 import CreateRoomButton from "./CreateRoomButton";
-import PlayerName from "./PlayerName";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { Container } from "@chakra-ui/react";
 

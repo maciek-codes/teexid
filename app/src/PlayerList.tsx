@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Avatar, Button, HStack, List, ListItem, Text } from "@chakra-ui/react";
+import { Avatar, Box, Button, HStack, List, ListItem, Text } from "@chakra-ui/react";
 
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
@@ -21,7 +21,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
 }: PlayerItemProps) => {
   const isSelf = player.id === currentPlayerId;
   return (
-    <ListItem>
+    <ListItem mt="1">
       <HStack>
         <Avatar name={player.name} />
         <Text color={isSelf ? "green.400 " : "black"}>{player.name}</Text>
@@ -90,7 +90,7 @@ export const PlayerList: React.FC = () => {
 
   // Create a list of players
   return (
-    <>
+    <Box backgroundColor="red.100" m="5" p="5">
       <List>
         {playersList.map((player: Player, idx: number) => {
           return (
@@ -105,6 +105,23 @@ export const PlayerList: React.FC = () => {
       </List>
       { canStart ?
       <Button onClick={() => startGame()}>Start</Button> : null}
-    </>
+
+      {/* Scores */}
+      {playersList.filter((p => p.points > 0)).length > 0 ? 
+      <Box mt="10">
+       <Text fontSize="xl" className="heading">Points:</Text>
+        <List>
+          {playersList.sort((a, b) => {
+            return a.points === b.points ? 0 : 
+              a.points > b.points ? 1 : - 1;
+          }).map((player: Player, idx: number) => {
+            return (
+              <Text key={idx} fontSize="m">{player.name}: {player.points}</Text>
+            );
+          })}
+        </List>
+      </Box> : null
+      }
+    </Box>
   );
 };

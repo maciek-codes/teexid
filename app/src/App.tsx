@@ -1,5 +1,3 @@
-import "./App.css";
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
@@ -23,7 +21,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <WebSocketContextProvider>
         <ErrorBoundary>
-          <Container minWidth="120ch">
+          <Container minWidth="120ch" h="calc(100vh)">
             <BrowserRouter>
               <Routes>
                 <Route

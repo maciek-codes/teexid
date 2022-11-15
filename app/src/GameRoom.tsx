@@ -25,6 +25,7 @@ const GameRoom: React.FC = () => {
   const token = authQuery.data?.token;
   const player = usePlayer();
   const roomId = useRoom();
+  const {connecting, connected} = useSocket();
 
   const onMessage = useCallback((type: string, data: unknown) => {
     if (type === "on_joined") {
@@ -60,6 +61,8 @@ const GameRoom: React.FC = () => {
 
   return (
     <Stack px={20}>
+      {connecting ? <Alert>Re-connecting</Alert> : null}
+      {connected ? <Alert>Connected</Alert>: null}
       <Heading size="xl">Teexid</Heading>
       {errorMsg !== null ? (
         <Alert status="error">

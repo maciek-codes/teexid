@@ -199,12 +199,12 @@ export const GameFeed: React.FC = () => {
 
   return (
     <Box>
-      <Grid templateColumns="repeat(5, 1fr)" templateRows="repeat(4, 2fr)">
+      <Grid templateColumns="repeat(5, 1fr)" templateRows="repeat(2, 1fr)">
         <GridItem>{player.name === "" ? <PlayerName /> : null}</GridItem>
         <GridItem
-          colStart={0}
+          colStart={5}
+          colSpan={1}
           rowStart={0}
-          colSpan={5}
           rowSpan={1}
           alignContent="start"
           justifyContent="start"
@@ -215,11 +215,11 @@ export const GameFeed: React.FC = () => {
           </Text>
         </GridItem>
 
-        <GridItem colStart={4} colSpan={1} rowStart={1} rowSpan={1}>
+        <GridItem colStart={5} colSpan={1} rowStart={2} rowSpan={1}>
           <PlayerList />
         </GridItem>
 
-        <GridItem colStart={0} colSpan={3} rowStart={1} rowSpan={4}>
+        <GridItem colStart={0} colSpan={4} rowStart={1} rowSpan={4}>
           {roomState === "waiting" && <Text> Wait for players to join...</Text>}
           {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
           {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (

@@ -23,6 +23,8 @@ interface SocketContextData {
   sendCommand: (type: CommandType, data: any) => void;
   addMsgListener: (fn: CallbackFn) => void;
   removeMsgListener: (fn: CallbackFn) => void;
+  connecting: boolean;
+  connected: boolean;
   error: Error | null;
 }
 const WebSocketContext = createContext<SocketContextData | null>(null);
@@ -37,6 +39,10 @@ export const WebSocketContextProvider: React.FC<
   WebSocketContextProviderProps
 > = ({ children }: WebSocketContextProviderProps) => {
   const auth = useAuth();
+  
+  const [connected, setConnected] = useState(ws.readyState === ws.OPEN);
+  const [connecting, setConnecting] = useState(ws.readyState !== ws.OPEN);
+
   const [error, setError] = useState<Error | null>(ws.readyState === ws.CLOSED ?
     new Error("Couldn't connect to the server") : null);
 
@@ -50,7 +56,24 @@ export const WebSocketContextProvider: React.FC<
 
   useEffect(() => {
     const timeoutId = setInterval(() => {
+      if (connected && ws.readyState !== ws.OPEN) {
+        setConnected(false);
+        setConnecting(true);
+      } else if (!connected) {
+        setConnected(true);
+        setConnecting(false);
+      }
+    });
+    return () => {
+      clearInterval(timeoutId);
+    }
+  })
+
+  useEffect(() => {
+    const timeoutId = setInterval(() => {
       if (ws.readyState === ws.CLOSED) {
+        setConnected(false);
+        setConnecting(true);
         ws = new WebSocket(SOCKET_HOST);
       }
     }, 10000);
@@ -103,7 +126,7 @@ export const WebSocketContextProvider: React.FC<
 
   return (
     <WebSocketContext.Provider value={
-      { ws, sendCommand, addMsgListener, removeMsgListener, error }}>
+      { ws, sendCommand, addMsgListener, removeMsgListener, error, connected, connecting }}>
       {children}
     </WebSocketContext.Provider>
   );

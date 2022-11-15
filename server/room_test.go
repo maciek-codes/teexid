@@ -26,12 +26,12 @@ func TestCanJoin(t *testing.T) {
 func TestRoomHasPlayers(t *testing.T) {
 	assert := assert.New(t)
 
-	p1 := NewPlayer("Alice", uuid.UUID{})
+	p1 := NewPlayer("Alice", uuid.New())
 
 	room := NewRoom(make([]int, 0), p1.Id)
 	assert.Len(room.Players(), 0)
 
-	p2 := NewPlayer("Bob", uuid.UUID{})
+	p2 := NewPlayer("Bob", uuid.New())
 	room.AddPlayer(p1, nil)
 	room.AddPlayer(p2, nil)
 
@@ -48,4 +48,39 @@ func TestMarshalToJson(t *testing.T) {
 	assert.NotEmpty(b)
 	assert.Contains(string(b), `"id":"bcd"`)
 	assert.Contains(string(b), `"ownerId"`)
+}
+
+func TestDealCards(t *testing.T) {
+
+	assert := assert.New(t)
+
+	p1 := NewPlayer("Alice", uuid.New())
+
+	room := NewRoom(make([]int, 0), p1.Id)
+	assert.Len(room.Players(), 0)
+
+	p2 := NewPlayer("Bob", uuid.New())
+	room.AddPlayer(p1, nil)
+	room.AddPlayer(p2, nil)
+
+	assert.Len(room.Players(), 2)
+
+	room.cardIds = append(room.cardIds, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+
+	room.sendCardsToEach(2)
+	assert.Equal(len(p1.Cards), 2)
+	assert.Equal(len(p2.Cards), 2)
+
+	room.sendCardsToEach(1)
+	assert.Equal(len(p1.Cards), 3)
+	assert.Equal(len(p2.Cards), 3)
+
+	room.sendCardsToEach(3)
+	assert.Equal(len(p1.Cards), 6)
+	assert.Equal(len(p2.Cards), 5)
+
+	room.sendCardsToEach(3)
+	assert.Equal(len(p1.Cards), 6)
+	assert.Equal(len(p2.Cards), 5)
+
 }

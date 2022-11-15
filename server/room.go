@@ -213,7 +213,7 @@ func (r *Room) nextPlayerToTellStory() {
 	r.cardsSubmitted = make([]CardSubmitted, 0)
 
 	playerIds := make([]uuid.UUID, 0, len(r.playerMap))
-	currentPlayer := r.StoryPlayerId
+	currentPlayerId := r.StoryPlayerId
 
 	for _, player := range r.playerMap {
 		playerIds = append(playerIds, player.Id)
@@ -224,17 +224,20 @@ func (r *Room) nextPlayerToTellStory() {
 		return playerIds[i].String() < playerIds[j].String()
 	})
 
-	if currentPlayer == uuid.Nil {
+	// First player if choosing for the first time
+	if currentPlayerId == uuid.Nil {
 		r.StoryPlayerId = playerIds[0]
 		return
 	}
 
-	for idx, key := range playerIds {
-		if currentPlayer == key {
-			if idx == len(playerIds)-1 {
-				idx = 0
+	// Find the next player
+	for idx, playerId := range playerIds {
+		if currentPlayerId == playerId {
+			if idx+1 >= len(playerIds) {
+				r.StoryPlayerId = playerIds[0]
+			} else {
+				r.StoryPlayerId = playerIds[idx+1]
 			}
-			r.StoryPlayerId = playerIds[idx]
 			return
 		}
 	}
@@ -268,9 +271,11 @@ func (r *Room) sendCardsToEach(cardCount int) {
 		var player = playerConn.player
 
 		// Calculate N cards from the end
-		var startIndex = 0
-		if len(r.cardIds) > cardCount {
-			startIndex = len(r.cardIds) - 1 - cardCount
+		var startIndex = len(r.cardIds)
+		var i = 0
+		for i < cardCount && startIndex > 0 {
+			startIndex -= 1
+			i += 1
 		}
 
 		// Move N cards to the player
@@ -294,7 +299,9 @@ func (r *Room) sendCardsToEach(cardCount int) {
 		b, _ = json.Marshal(message)
 
 		log.Printf("Writing %s\n", string(b))
-		playerConn.ws.WriteMessage(websocket.TextMessage, b)
+		if playerConn.ws != nil {
+			playerConn.ws.WriteMessage(websocket.TextMessage, b)
+		}
 	}
 }
 
@@ -316,10 +323,13 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 			return
 		}
 		var allReady = true
+		var countReady = 0
 		for _, player := range r.playerMap {
+			log.Printf("%s is ready", player.Id.String())
 			allReady = allReady && player.IsReady()
+			countReady += 1
 		}
-		if allReady && len(r.playerMap) >= MinPlayers {
+		if allReady && countReady >= MinPlayers {
 			r.startGame()
 		}
 	} else if command.Type == "player/story" {
@@ -404,10 +414,11 @@ func (r *Room) handleVoteCommand(p *Player, commandData string) {
 
 /*
 From: http://www.itsyourmoveoakland.com/game-library-cd/dixit
- If nobody or everybody finds the correct card, the storyteller scores 0,
- and each of the other players scores 2.
- Otherwise the storyteller and whoever found the correct answer score 3.
- Players score 1 point for every vote for their own card.
+
+	If nobody or everybody finds the correct card, the storyteller scores 0,
+	and each of the other players scores 2.
+	Otherwise the storyteller and whoever found the correct answer score 3.
+	Players score 1 point for every vote for their own card.
 */
 func (r *Room) scoreTurn() {
 	r.TurnState = Scoring
@@ -433,7 +444,7 @@ func (r *Room) scoreTurn() {
 
 		// Players who voted for the storyteller’s card also score 3
 		for _, vote := range r.votes {
-			log.Printf("Player %s voted for %s", vote.Voter.Name, vote.Voted.Name)
+			log.Printf("Player %s voted for %s (3p)", vote.Voter.Name, vote.Voted.Name)
 			if vote.Voted.Id == r.StoryPlayerId {
 				r.playerMap[vote.Voter.Id.String()].Points += 3
 			}
@@ -443,7 +454,7 @@ func (r *Room) scoreTurn() {
 	// In addition, each player (except the storyteller) scores
 	// 1 bonus for each vote received on their own card.
 	for _, vote := range r.votes {
-		log.Printf("Player %s voted for %s", vote.Voter.Name, vote.Voted.Name)
+		log.Printf("Player %s voted for %s (1p)", vote.Voter.Name, vote.Voted.Name)
 		if vote.Voted.Id != r.StoryPlayerId {
 			r.playerMap[vote.Voted.Id.String()].Points += 1
 		}

@@ -463,8 +463,9 @@ func (r *Room) scoreTurn() {
 	// Check if any has 30 points
 	var maxScorePlayer *Player = nil
 	for _, player := range r.Players() {
-		WINNING_SCORE := 30
-		if player.Points >= WINNING_SCORE && (maxScorePlayer == nil || maxScorePlayer.Points < player.Points) {
+
+		if player.Points >= config.GetMaxScore() &&
+			(maxScorePlayer == nil || maxScorePlayer.Points < player.Points) {
 			maxScorePlayer = player
 		}
 	}

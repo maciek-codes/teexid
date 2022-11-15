@@ -18,6 +18,7 @@ import (
 
 var addr = flag.String("addr", "localhost:8080", "http service address")
 var roomMaxDurationMin = flag.Int("room-timeout", 5, "max room duration")
+var config = Config{}
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -34,7 +35,7 @@ var roomById map[string]*Room = make(map[string]*Room, 0)
 // All the cards available
 var cards []*Card = make([]*Card, 0)
 
-/// Respond with a card
+// / Respond with a card
 func handleCards(w http.ResponseWriter, req *http.Request) {
 	// To be removed in prod
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
@@ -50,7 +51,6 @@ func handleCards(w http.ResponseWriter, req *http.Request) {
 			log.Printf("Not found card id %d", cardId)
 			w.WriteHeader(http.StatusNotFound)
 		} else {
-			log.Printf("Redirecting to %s", cards[cardId].Url)
 			http.Redirect(w, req, cards[cardId].Url, http.StatusFound)
 		}
 	} else {

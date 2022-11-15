@@ -4,14 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
 import { useSocket } from "./contexts/WebsocketContext";
 import { usePlayer } from "./contexts/PlayerContext";
-import { ErrorPayload } from "./types";
+import { ResponseMsg } from "./types";
 import PlayerName from './PlayerName';
 
 interface CreateRoomButtonProps {}
 
-type OnRoomCreatedPayload = {
-  roomId: string
-};
+
 
 const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   const [roomIdText, setRoomIdText] = useState("");
@@ -40,13 +38,11 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   };
 
 
-  const onMessage = (type: string, data: unknown) => {
+  const onMessage = ({type, payload}: ResponseMsg) => {
     if (type === "on_room_created") {
-      const payload = data as OnRoomCreatedPayload;
       navigate("room/" + payload.roomId);
     }
     if (type === "error") {
-      const payload = data as ErrorPayload;
       if (payload.type === "room_not_found") {
         setJoinError(payload.message);
       }

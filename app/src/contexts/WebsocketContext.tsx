@@ -16,7 +16,8 @@ type CommandType =
   | "player/submitCard"
   | "player/vote";
 
-type CallbackFn = (type: string, payload: unknown) => void;
+
+type CallbackFn = (msg: ResponseMsg) => void;
 
 interface SocketContextData {
   ws: WebSocket;
@@ -82,9 +83,10 @@ export const WebSocketContextProvider: React.FC<
     }
   }, []);
 
-  const onMsg = useCallback((ev: MessageEvent<any>) => {
-    const msg = JSON.parse(ev.data) as ResponseMsg<unknown>;
-    listeners.forEach(listener => listener(msg.type, msg.payload));
+  const onMsg = useCallback((ev: MessageEvent<string>) => {
+    const msg = JSON.parse(ev.data) as ResponseMsg;
+
+    listeners.forEach(listener => listener(msg));
   }, []);
 
   useEffect(() => {

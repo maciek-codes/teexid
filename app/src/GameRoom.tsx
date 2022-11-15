@@ -7,13 +7,7 @@ import { useSocket } from "./contexts/WebsocketContext";
 import { useAuth } from "./hooks/useAuth";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
-import { ErrorPayload } from "./types";
-
-type OnJoinedPayload = {
-  roomId: string,
-  ownerId: string,
-  playerId: string,
-};
+import { ResponseMsg } from "./types";
 
 const GameRoom: React.FC = () => {
   const {addMsgListener, removeMsgListener, sendCommand} = useSocket();
@@ -27,10 +21,9 @@ const GameRoom: React.FC = () => {
   const roomId = useRoom();
   const {connecting, connected} = useSocket();
 
-  const onMessage = useCallback((type: string, data: unknown) => {
+  const onMessage = useCallback(({type, payload}: ResponseMsg) => {
     if (type === "on_joined") {
       setIsJoined(true);
-      const payload = data as OnJoinedPayload;
       if (payload.playerId !== authQuery.data?.playerId) {
         setErrorMsg("Wrong room?")
       } else {
@@ -39,7 +32,6 @@ const GameRoom: React.FC = () => {
       }
       setIsJoining(false);
     } else if (type === "error") {
-      const payload = data as ErrorPayload;
       setIsJoining(false);
       setErrorMsg(payload.message);
     }

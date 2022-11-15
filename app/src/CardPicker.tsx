@@ -11,6 +11,7 @@ type CardPickerProps = {
   selectedCard: Card | null;
   setSelectedCard: (card: Card | null) => void;
   buttonText: string;
+  promptText: string;
   onSelectedCard: () => void;
 };
 
@@ -19,13 +20,14 @@ export const CardPicker: React.FC<CardPickerProps> = ({
   story,
   cards,
   selectedCard,
+  promptText,
   setSelectedCard,
   onSelectedCard,
 }: CardPickerProps) => {
   return (
     <Stack>
       <Text>Story: {story}</Text>
-      <Text>Submit a card for this story</Text>
+      <Text>{promptText}</Text>
       <CardSelector
         cards={cards}
         onSelected={(card) => {

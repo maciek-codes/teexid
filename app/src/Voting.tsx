@@ -36,6 +36,7 @@ export const Voting: React.FC<VotingProps> = ({story, playerCards, storyCards}: 
       story={story}
       selectedCard={selectedCard}
       setSelectedCard={setSelectedCard}
+      promptText="Select the card you want to vote for"
       buttonText="Vote"
       onSelectedCard={voteForCard}
     />;

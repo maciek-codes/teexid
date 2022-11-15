@@ -4,7 +4,7 @@ import { Avatar, Box, Button, HStack, List, ListItem, Text } from "@chakra-ui/re
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
 import { useSocket } from "./contexts/WebsocketContext";
-import { ErrorPayload, OnPlayersUpdatedPayload } from "./types";
+import { ResponseMsg } from "./types";
 
 const MIN_PLAYERS = 2;
 
@@ -41,21 +41,24 @@ export const PlayerList: React.FC = () => {
   const [gameStarted, setGameStarted] = useState<boolean>(false);
 
   const onMessage = useCallback(
-    (type: string, data: unknown) => {
-      if (type === "on_players_updated") {
-        const payload = data as OnPlayersUpdatedPayload;
-        setPlayersList(payload.players);
-      } else if (type === "error") {
-        const payload = data as ErrorPayload;
-        if (payload.type === "room_not_found") {
-          setHasError(true);
+    ({type, payload}: ResponseMsg) => {
+      switch (type) {
+        case "on_players_updated":
+          setPlayersList(payload.players);
+          break;
+        case "error":
+          if (payload.type === "room_not_found") {
+            setHasError(true);
+          }
+          break;
+        case "on_room_state_updated":
+          if (!gameStarted) {
+            setGameStarted(payload.state !== 'waiting')
+          }
+          break;
         }
-      } else if (type === "on_room_state_updated") {
-        const payload = data as any;
-        setGameStarted(payload.state === "playing")
-      }
     },
-    [setPlayersList]
+    [gameStarted, setPlayersList]
   );
 
   const onReadyClick = useCallback(() => {

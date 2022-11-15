@@ -1,6 +1,6 @@
 import React, { createContext, ReactNode, useCallback, useContext, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ErrorPayload } from "../types";
+import { ResponseMsg } from "../types";
 import { useSocket } from "./WebsocketContext";
 
 const RoomContext = createContext<string>('');
@@ -12,9 +12,8 @@ export const RoomContextProvider: React.FC<Props> = ({children}: Props) => {
     const ws = useSocket();
     const navigate = useNavigate();
 
-    const onMsg = useCallback((type: string, data: unknown) => {
+    const onMsg = useCallback(({type, payload}: ResponseMsg) => {
         if (type === "error") {
-            const payload = data as ErrorPayload;
             if (payload.type === "room_not_found") {
                 navigate('/');
             }

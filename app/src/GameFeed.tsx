@@ -19,7 +19,7 @@ import { useSocket } from "./contexts/WebsocketContext";
 import CardSelector from "./CardSelector";
 import Card from "./models/Card";
 import Player from "./models/Player";
-import { OnPlayersUpdatedPayload } from "./types";
+import { ResponseMsg, RoomState, TurnState } from "./types";
 import { CardPicker } from "./CardPicker";
 import { Voting } from "./Voting";
 
@@ -39,30 +39,6 @@ const CopyButton: React.FC<CopyButtonProps> = ({
       <FontAwesomeIcon icon={["far", "copy"]} />
     </button>
   );
-};
-
-type RoomState = "waiting" | "playing" | "ended";
-type TurnState =
-  | "not_started"
-  | "waiting_for_story"
-  | "selecting_cards"
-  | "voting"
-  | "scoring";
-
-// Room state updated
-type RoomStateUpdatedPayload = {
-  id: string;
-  state: RoomState;
-  storyPlayerId: string;
-  story: string;
-  storyCardId: number;
-  turnState: TurnState;
-  cardsSubmitted: number[];
-};
-
-// New cards dealt
-type OnCardsPayload = {
-  cards: number[];
 };
 
 type StoryPromptInputProps = {
@@ -141,9 +117,8 @@ export const GameFeed: React.FC = () => {
   const isScoring = turnState === "scoring";
 
   const onMessage = useCallback(
-    (type: string, data: unknown) => {
+    ({type, payload}: ResponseMsg) => {
       if (type === "on_room_state_updated") {
-        const payload = data as RoomStateUpdatedPayload;
         setRoomState(payload.state);
         setStoryPlayerId(payload.storyPlayerId);
         setStory(payload.story);
@@ -155,10 +130,8 @@ export const GameFeed: React.FC = () => {
             })
           );
       } else if (type === "on_cards") {
-        const payload = data as OnCardsPayload;
         setCards(payload.cards.map((cardId) => ({ cardId } as Card)));
       } else if (type === "on_players_updated") {
-        const payload = data as OnPlayersUpdatedPayload;
         setPlayers(payload.players);
       }
     },
@@ -228,6 +201,7 @@ export const GameFeed: React.FC = () => {
               story={story}
               selectedCard={selectedCard}
               setSelectedCard={setSelectedCard}
+              promptText="Submit a card for this story"
               buttonText="Submit a card"
               onSelectedCard={submitCardForStory}
             />

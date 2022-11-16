@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { Heading, Stack, Text, Alert, AlertIcon, AlertTitle, Link } from "@chakra-ui/react";
+import { Heading, Stack, Text, Alert, AlertIcon, AlertTitle, Link, Box } from "@chakra-ui/react";
 
 import { GameFeed } from "./GameFeed";
 import { useSocket } from "./contexts/WebsocketContext";
@@ -29,8 +29,6 @@ const GameRoom: React.FC = () => {
 
   return (
     <Stack px={20}>
-      {connecting ? <Alert>Re-connecting</Alert> : null}
-      {connected ? <Alert>Connected</Alert>: null}
       <Heading size="xl">
         <Link as={RouterLink} to="/">Teexid</Link>
       </Heading>
@@ -45,6 +43,19 @@ const GameRoom: React.FC = () => {
       ) : 
       <GameFeed />
       }
+
+      <Box fontSize='small'>
+      <Text>Debug info</Text>
+      <Text>
+        Connection Status:
+        {connecting ? <> Re-connecting</> : null}
+        {connected ? <> Connected</>: null}
+      </Text>
+      <Text>
+        Room id: {roomId}
+        Player id: {roomId}
+      </Text>
+      </Box>
     </Stack>
   );
 };

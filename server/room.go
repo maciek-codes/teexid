@@ -54,7 +54,7 @@ type Room struct {
 	TurnState     TurnState `json:"turnState"`
 	StoryPlayerId uuid.UUID `json:"storyPlayerId"`
 	Story         string    `json:"story"`
-	StoryCard     int       `json:"storyCardId"`
+	StoryCard     int       `json:"-"`
 	CreatedAt     time.Time `json:"createdAt"`
 }
 
@@ -119,9 +119,8 @@ func (r *Room) BroadcastPlayers() {
 		return
 	}
 
-	log.Printf("Writing %s\n", string(b))
-
 	for _, playerConn := range r.conns {
+		log.Printf("Writing %s to %s\n", string(b), playerConn.player.Id)
 		if playerConn.ws != nil {
 			playerConn.ws.WriteMessage(websocket.TextMessage, b)
 		}
@@ -148,7 +147,7 @@ func GetCardsForVoting(room *Room) []int {
 func (r *Room) BroadcastRoomState() {
 	b, _ := json.Marshal(struct {
 		Id             string    `json:"id"`
-		RoomState      RoomState `json:"state"`
+		RoomState      RoomState `json:"roomState"`
 		TurnState      TurnState `json:"turnState"`
 		StoryPlayerId  string    `json:"storyPlayerId"`
 		Story          string    `json:"story"`
@@ -311,8 +310,6 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 	if command.Type == "player/updateName" {
 		var newName = command.Data
 		p.SetName(newName)
-		r.BroadcastPlayers()
-	} else if command.Type == "get_players" {
 		r.BroadcastPlayers()
 	} else if command.Type == "player/ready" {
 		p.SetReady()

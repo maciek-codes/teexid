@@ -1,68 +1,46 @@
 
-import React, { useCallback, useEffect, useState } from "react";
-import { Heading, Stack, Text, Alert, AlertIcon, AlertTitle } from "@chakra-ui/react";
+import React, { useEffect } from "react";
+import { Heading, Stack, Text, Alert, AlertIcon, AlertTitle, Link } from "@chakra-ui/react";
 
 import { GameFeed } from "./GameFeed";
 import { useSocket } from "./contexts/WebsocketContext";
 import { useAuth } from "./hooks/useAuth";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
-import { ResponseMsg } from "./types";
+import { Link as RouterLink } from "react-router-dom";
 
 const GameRoom: React.FC = () => {
-  const {addMsgListener, removeMsgListener, sendCommand} = useSocket();
+  const {sendCommand} = useSocket();
   
-  const [isJoining, setIsJoining] = useState<boolean>(false);
-  const [isJoined, setIsJoined] = useState<boolean>(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const authQuery = useAuth();
   const token = authQuery.data?.token;
   const player = usePlayer();
-  const roomId = useRoom();
+  const {roomId, joinedState} = useRoom();
   const {connecting, connected} = useSocket();
 
-  const onMessage = useCallback(({type, payload}: ResponseMsg) => {
-    if (type === "on_joined") {
-      setIsJoined(true);
-      if (payload.playerId !== authQuery.data?.playerId) {
-        setErrorMsg("Wrong room?")
-      } else {
-        setErrorMsg(null);
-        player.setIsOwner(payload.ownerId === payload.playerId);
-      }
-      setIsJoining(false);
-    } else if (type === "error") {
-      setIsJoining(false);
-      setErrorMsg(payload.message);
-    }
-  }, [player, authQuery, setErrorMsg, setIsJoining]);
-
   useEffect(() => {
-    addMsgListener(onMessage);
-    if (!isJoined && !isJoining && player.name !== '') {
-      setIsJoining(true);
-      sendCommand("join_room", {
-          roomId: roomId,
-          playerName: player.name,
-      });
+    if (joinedState !== 'joined' && (player?.name ?? '') !== '') {
+      sendCommand({type: "join_room", data: {
+        roomId: roomId,
+        playerName: player.name!,
+      }});
     }
-    return () => {
-      removeMsgListener(onMessage);
-    }
-  }, [roomId, player, token, onMessage, isJoined, isJoining, sendCommand, addMsgListener, removeMsgListener]);
+  }, [roomId, player, token, joinedState, sendCommand]);
 
   return (
     <Stack px={20}>
       {connecting ? <Alert>Re-connecting</Alert> : null}
       {connected ? <Alert>Connected</Alert>: null}
-      <Heading size="xl">Teexid</Heading>
-      {errorMsg !== null ? (
+      <Heading size="xl">
+        <Link as={RouterLink} to="/">Teexid</Link>
+      </Heading>
+      {/*hasError ? (
         <Alert status="error">
           <AlertIcon  />
-          <AlertTitle>{errorMsg}</AlertTitle>
+          <AlertTitle>{error}</AlertTitle>
         </Alert>
-      ) : null}
-      {isJoining ? (
+      ) : null*/}
+      {joinedState === 'joining' ? (
         <Text>Joining the room {roomId}</Text>
       ) : 
       <GameFeed />

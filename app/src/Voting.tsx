@@ -5,6 +5,7 @@ import {Text} from "@chakra-ui/react"
 import { CardPicker } from "./CardPicker";
 import { useSocket } from "./contexts/WebsocketContext";
 import Card from "./models/Card";
+import { useRoom } from "./contexts/RoomContext";
 
 
 type VotingProps = {
@@ -16,17 +17,19 @@ type VotingProps = {
 export const Voting: React.FC<VotingProps> = ({story, playerCards, storyCards}: VotingProps) => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [voted, setVoted] = useState<boolean>(false);
+  const { roomId } = useRoom();
   const { sendCommand } = useSocket();
 
   const voteForCard = useCallback(() => {
     if (selectedCard !== null) {
-      sendCommand("player/vote", {
+      sendCommand({type: "player/vote", data: {
+        roomId,
         cardId: selectedCard.cardId,
-      });
+      }});
       setSelectedCard(null);
       setVoted(true);
     }
-  }, [setVoted, sendCommand, selectedCard]);
+  }, [roomId, setVoted, sendCommand, selectedCard]);
   
   const content = voted ? <Text>Already voted</Text> :
     <CardPicker

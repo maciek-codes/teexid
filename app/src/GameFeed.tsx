@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 
 import {
   Box,
@@ -19,9 +19,9 @@ import { useSocket } from "./contexts/WebsocketContext";
 import CardSelector from "./CardSelector";
 import Card from "./models/Card";
 import Player from "./models/Player";
-import { ResponseMsg, RoomState, TurnState } from "./types";
 import { CardPicker } from "./CardPicker";
 import { Voting } from "./Voting";
+import PlayerScores from "./PlayerScoreList";
 
 interface CopyButtonProps {
   copyText: string;
@@ -48,15 +48,17 @@ type StoryPromptInputProps = {
 const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
   selectedCard,
 }) => {
-  const ws = useSocket();
+  const { sendCommand } = useSocket();
+  const { roomId } = useRoom();
   const [storyText, setStoryText] = useState<string>("");
   const submitStory = useCallback(() => {
     if (storyText !== "" && selectedCard !== null)
-      ws.sendCommand("player/story", {
+      sendCommand({type: "player/story", data: {
+        roomId,
         story: storyText,
         cardId: selectedCard.cardId,
-      });
-  }, [ws, storyText, selectedCard]);
+      }});
+  }, [sendCommand, storyText, selectedCard]);
 
   return (
     <Stack>
@@ -100,57 +102,22 @@ const ScoreList: React.FC<ScoreListProps> = ({ players }: ScoreListProps) => {
 
 export const GameFeed: React.FC = () => {
   const player = usePlayer();
-  const roomId = useRoom();
-  const { addMsgListener, removeMsgListener, sendCommand } = useSocket();
-  const [roomState, setRoomState] = useState<RoomState>("waiting");
-  const [turnState, setTurnState] = useState<TurnState>("not_started");
-  const [storyPlayerId, setStoryPlayerId] = useState<string>("");
-  const [cards, setCards] = useState<Card[]>([]);
-  const [story, setStory] = useState<string>("");
-  const [storyCards, setStoryCards] = useState<Card[] | null>(null);
+  const { sendCommand } = useSocket();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const [players, setPlayers] = useState<Player[] | null>(null);
+  const {roomId, story, players, cards, storyCards, storyPlayerId, roomState, turnState} = useRoom();
 
   const isTellingStory = storyPlayerId === player.id;
   const isPlaying = roomState === "playing";
   const isVoting = turnState === "voting";
   const isScoring = turnState === "scoring";
 
-  const onMessage = useCallback(
-    ({type, payload}: ResponseMsg) => {
-      if (type === "on_room_state_updated") {
-        setRoomState(payload.state);
-        setStoryPlayerId(payload.storyPlayerId);
-        setStory(payload.story);
-        setTurnState(payload.turnState);
-        if (payload.cardsSubmitted.length > 0)
-          setStoryCards(
-            payload.cardsSubmitted.map((cardId) => {
-              return { cardId: cardId } as Card;
-            })
-          );
-      } else if (type === "on_cards") {
-        setCards(payload.cards.map((cardId) => ({ cardId } as Card)));
-      } else if (type === "on_players_updated") {
-        setPlayers(payload.players);
-      }
-    },
-    [setRoomState]
-  );
-
-  useEffect(() => {
-    addMsgListener(onMessage);
-    const onMessageHandler = onMessage;
-    return () => {
-      removeMsgListener(onMessageHandler);
-    };
-  }, [addMsgListener, removeMsgListener, onMessage]);
-
   const submitCardForStory = useCallback(() => {
     if (selectedCard !== null) {
-      sendCommand("player/submitCard", {
+      sendCommand({type: "player/submitCard", 
+      data: {
+        roomId,
         cardId: selectedCard.cardId,
-      });
+      }});
       setSelectedCard(null);
     }
   }, [sendCommand, selectedCard]);
@@ -172,7 +139,9 @@ export const GameFeed: React.FC = () => {
 
   return (
     <Box>
-      <Grid templateColumns="repeat(5, 1fr)" templateRows="repeat(2, 1fr)">
+      <Grid 
+        templateRows="20px 1fr 20px" 
+        templateColumns="2fr 150px">
         <GridItem>{player.name === "" ? <PlayerName /> : null}</GridItem>
         <GridItem
           colStart={5}
@@ -215,7 +184,11 @@ export const GameFeed: React.FC = () => {
           {isPlaying && isScoring && players ? (
             <ScoreList players={players} />
           ) : null}
-          {roomState === "ended" && <Text>Ended!</Text>}
+          {roomState === "ended" && 
+            <Box>
+              <Text>Ended!</Text>
+              <PlayerScores playersList={players} />
+            </Box>}
           {isPlaying &&
           isVoting &&
           !isTellingStory &&

@@ -13,7 +13,7 @@ interface CreateRoomButtonProps {}
 
 const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
   const [roomIdText, setRoomIdText] = useState("");
-  let navigate = useNavigate();
+  const navigate = useNavigate();
 
   const auth = useAuth();
   const player = usePlayer();
@@ -27,16 +27,15 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
     if (player?.name === null || player.name.trim() === '') {
       return;
     }
-    sendCommand("create_room", {
+    sendCommand({type: "create_room", data: {
         playerName: player.name
-    });
+    }});
     setIsJoining(true);
   }, [sendCommand, player]);
 
   const joinRoomClick = () => {
     navigate("room/" + roomIdText);
   };
-
 
   const onMessage = ({type, payload}: ResponseMsg) => {
     if (type === "on_room_created") {

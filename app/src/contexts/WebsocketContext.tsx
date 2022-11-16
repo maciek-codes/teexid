@@ -6,22 +6,26 @@ const SOCKET_HOST = "ws://localhost:8080/ws";
 
 let ws = new WebSocket(SOCKET_HOST);
 
-type CommandType =
-  | "join_room"
-  | "create_room"
-  | "get_players"
-  | "game/start"
-  | "player/ready"
-  | "player/story"
-  | "player/submitCard"
-  | "player/vote";
+type CreateRoomCommandData = {playerName: string}
+type JoinCommandData = {roomId: string, playerName: string};
+type RoomCommandData = {roomId: string}
+type StoryCommandData = {roomId: string, story: string, cardId: number}
+type CardCommandData = {roomId: string, cardId: number}
+type Command =
+  {type: "create_room", data: CreateRoomCommandData } 
+  | {type: "join_room", data: JoinCommandData }  
+  | {type: "game/start", data: RoomCommandData } 
+  | {type: "player/ready", data: RoomCommandData } 
+  | {type: "player/story", data: StoryCommandData } 
+  | {type: "player/submitCard", data: CardCommandData } 
+  | {type: "player/vote", data: CardCommandData };
 
 
 type CallbackFn = (msg: ResponseMsg) => void;
 
 interface SocketContextData {
   ws: WebSocket;
-  sendCommand: (type: CommandType, data: any) => void;
+  sendCommand: (cmd: Command) => void;
   addMsgListener: (fn: CallbackFn) => void;
   removeMsgListener: (fn: CallbackFn) => void;
   connecting: boolean;
@@ -85,7 +89,6 @@ export const WebSocketContextProvider: React.FC<
 
   const onMsg = useCallback((ev: MessageEvent<string>) => {
     const msg = JSON.parse(ev.data) as ResponseMsg;
-
     listeners.forEach(listener => listener(msg));
   }, []);
 
@@ -98,11 +101,11 @@ export const WebSocketContextProvider: React.FC<
     }
   }, [onMsg]);
 
-  const sendCommand = useCallback(
-    (type: CommandType, data: any) => {
+  const sendCommand = useCallback(({type, data}: Command) => {
       if (ws.readyState !== ws.OPEN) {
         return;
       }
+      console.log("command: " + type + " auth: " + auth.data)
       ws.send(
         JSON.stringify({
           token: auth.data?.token,

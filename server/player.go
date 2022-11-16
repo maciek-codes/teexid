@@ -21,7 +21,7 @@ type Player struct {
 	ReadyState PlayerReadyState `json:"-"`
 	Ready      bool             `json:"ready"`
 	Points     int              `json:"points"`
-	Cards      []int
+	Cards      []int            `json:"-"`
 }
 
 func NewPlayer(name string, playerId uuid.UUID) *Player {

@@ -63,6 +63,7 @@ func startSocket(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
 
 	conn, err := upgrader.Upgrade(w, req, nil)
+	log.Println("Connected")
 
 	if _, ok := err.(websocket.HandshakeError); ok {
 		log.Println("Not a websocket handshake")
@@ -87,10 +88,7 @@ func receiveMessages(conn *websocket.Conn) {
 		if err != nil {
 			// TODO use ping/pong to detect real disconnect
 			log.Printf("Disconnected")
-			if conn != nil {
-				conn.Close()
-			}
-			return
+			break
 		}
 
 		var command Command
@@ -114,7 +112,8 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 		return
 	}
 
-	log.Println("Got command " + command.Type + " from " + playerId.String())
+	log.Printf("Got command %s from %s with data %s",
+		command.Type, playerId.String(), command.Data)
 
 	if command.Type == "join_room" {
 		handleJoinRoom(conn, &playerId, command.Data)
@@ -123,7 +122,17 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 	} else {
 
 		// Find player/room
-		for _, room := range roomById {
+		roomMsg := struct {
+			RoomId string `json:"roomId"`
+		}{}
+
+		err := json.Unmarshal([]byte(command.Data), &roomMsg)
+		if err != nil {
+			sendError(conn, "story_error", "Bad msg: "+command.Data)
+			return
+		}
+		room := roomById[roomMsg.RoomId]
+		if room != nil {
 			player := room.playerMap[playerId.String()]
 			if player != nil {
 				room.HandleRoomCommand(player, *command)
@@ -159,10 +168,10 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 	// Check if player already exist - may be re-joining
 	player := room.playerMap[playerId.String()]
 	if player != nil {
-		log.Println("Found player in the room")
+		log.Printf("Found player %s in the room\n", player.Id.String())
 		room.conns[playerId.String()] = NewPlayerConn(conn, player, room)
 	} else {
-		log.Println("Player not in the room yet")
+		log.Printf("Player %s not in the room yet\n", playerId)
 		player = NewPlayer(joinCommand.PlayerName, *playerId)
 		if player == nil {
 			panic("no player")
@@ -172,22 +181,38 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 
 	// Send on_joined msg
 	b, _ := json.Marshal(struct {
-		RoomId   string `json:"roomId"`
-		OwnerId  string `json:"ownerId"`
-		PlayerId string `json:"playerId"`
-	}{RoomId: room.Id, OwnerId: room.OwnerId.String(), PlayerId: player.Id.String()})
+		RoomId         string    `json:"roomId"`
+		OwnerId        string    `json:"ownerId"`
+		PlayerId       string    `json:"playerId"`
+		PlayerCards    []int     `json:"cards"`
+		RoomState      RoomState `json:"roomState"`
+		TurnState      TurnState `json:"turnState"`
+		Players        []*Player `json:"players"`
+		Story          string    `json:"story"`
+		CardsSubmitted []int     `json:"cardsSubmitted"`
+		StoryPlayerId  uuid.UUID `json:"storyPlayerId"`
+	}{
+		RoomId:         room.Id,
+		OwnerId:        room.OwnerId.String(),
+		PlayerId:       player.Id.String(),
+		PlayerCards:    player.Cards,
+		RoomState:      room.State,
+		TurnState:      room.TurnState,
+		Players:        room.Players(),
+		Story:          room.Story,
+		StoryPlayerId:  room.StoryPlayerId,
+		CardsSubmitted: GetCardsForVoting(room),
+	})
 	payload := json.RawMessage(b)
 
-	resposneMsg := ReponseMessage{
+	responseMsg := ReponseMessage{
 		Type:    "on_joined",
 		Payload: &payload}
 
-	b, _ = json.Marshal(resposneMsg)
+	b, _ = json.Marshal(responseMsg)
 
 	log.Printf("Writing %s\n", string(b))
 	err = conn.WriteMessage(websocket.TextMessage, []byte(b))
-
-	room.BroadcastPlayers()
 
 	if err != nil {
 		fmt.Println(err)
@@ -219,11 +244,11 @@ func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string)
 	}{RoomId: room.Id})
 	payload := json.RawMessage(b)
 
-	resposneMsg := ReponseMessage{
+	responseMsg := ReponseMessage{
 		Type:    "on_room_created",
 		Payload: &payload}
 
-	b, _ = json.Marshal(resposneMsg)
+	b, _ = json.Marshal(responseMsg)
 
 	log.Printf("Writing %s\n", string(b))
 	conn.WriteMessage(websocket.TextMessage, []byte(b))

@@ -1,12 +1,12 @@
 import React, { useContext, createContext, useState, useCallback, useMemo } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useRoom } from "./RoomContext";
 
 interface PlayerData {
     id: string | null;
     name: string | null;
     isOwner: boolean,
     setName: (name: string) => void;
-    setIsOwner: (isOwner: boolean) => void;
 }
 
 const PlayerContext = createContext<PlayerData | null>(null);
@@ -25,8 +25,8 @@ export const PlayerContextProvider: React.FC<Props> = ({children}: Props) => {
     }, []);
 
     const auth = useAuth();
+    const {ownerId} = useRoom();
     const [name, setName] = useState<string>(storedName);
-    const [isOwner, setIsOwner] = useState<boolean>(false);
 
     const setNameCallback = useCallback((name: string) => {
         setName(name);
@@ -37,9 +37,8 @@ export const PlayerContextProvider: React.FC<Props> = ({children}: Props) => {
         <PlayerContext.Provider value={{
             id: auth.data?.playerId ?? null,
             name,
-            isOwner,
+            isOwner: auth.data?.playerId === ownerId,
             setName: setNameCallback,
-            setIsOwner: setIsOwner,
         }}>
             {children}
         </PlayerContext.Provider>

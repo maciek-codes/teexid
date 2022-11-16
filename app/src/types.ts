@@ -24,6 +24,13 @@ type OnJoinedPayload = {
   roomId: string,
   ownerId: string,
   playerId: string,
+  cards: number[],
+  roomState: RoomState,
+  turnState: TurnState,
+  storyPlayerId: string,
+  story: string,
+  cardsSubmitted: number[],
+  players: Player[],
 };
 
 type OnRoomCreatedPayload = {
@@ -44,7 +51,7 @@ export type OnPlayersUpdatedPayload = {
 };
 
 export type OnRoomStateUpdatedPayload = {
-  state: RoomState,
+  roomState: RoomState,
   turnState: TurnState,
   storyPlayerId: string,
   story: string,

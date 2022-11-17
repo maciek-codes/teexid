@@ -58,7 +58,7 @@ const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
         story: storyText,
         cardId: selectedCard.cardId,
       }});
-  }, [sendCommand, storyText, selectedCard]);
+  }, [roomId, sendCommand, storyText, selectedCard]);
 
   return (
     <Stack>
@@ -120,7 +120,7 @@ export const GameFeed: React.FC = () => {
       }});
       setSelectedCard(null);
     }
-  }, [sendCommand, selectedCard]);
+  }, [roomId, sendCommand, selectedCard]);
 
   const storyUx =
     isPlaying && turnState === "waiting_for_story" && isTellingStory ? (

@@ -7,8 +7,21 @@ import (
 )
 
 type Config struct {
-	configOnce sync.Once
-	maxScore   int
+	configOnce       sync.Once
+	maxScore         int
+	cardCount        int
+	frontendHostName string
+}
+
+func NewConfig(env string, cardCount int) *Config {
+	var frontendHostName = "localhost:8080"
+	if env == "prod" {
+		frontendHostName = "whale-app-uecxk.ondigitalocean.app"
+	}
+	return &Config{
+		frontendHostName: frontendHostName,
+		cardCount:        cardCount,
+	}
 }
 
 func (c *Config) GetMaxScore() int {

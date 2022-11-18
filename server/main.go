@@ -6,9 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,9 +13,13 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var addr = flag.String("addr", "localhost:8080", "http service address")
+var addr = flag.String("addr", ":8080", "http service address")
 var roomMaxDurationMin = flag.Int("room-timeout", 5, "max room duration")
-var config = Config{}
+var env = flag.String("env", "dev", "Front end host")
+
+// All the cards available
+var cardCount = flag.Int("card-count", 55, "How many cards")
+var config *Config
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
@@ -31,32 +32,6 @@ var upgrader = websocket.Upgrader{
 
 // All the rooms in the game
 var roomById map[string]*Room = make(map[string]*Room, 0)
-
-// All the cards available
-var cards []*Card = make([]*Card, 0)
-
-// / Respond with a card
-func handleCards(w http.ResponseWriter, req *http.Request) {
-	// To be removed in prod
-	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
-
-	// Get card id
-	vars := mux.Vars(req)
-	cardId64, _ := strconv.ParseInt(vars["cardId"], 10, 32)
-	cardId := int(cardId64)
-
-	// Respond
-	if req.Method == http.MethodGet {
-		if len(cards) <= cardId || cardId < 0 {
-			log.Printf("Not found card id %d", cardId)
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			http.Redirect(w, req, cards[cardId].Url, http.StatusFound)
-		}
-	} else {
-		http.Error(w, "POST only", http.StatusMethodNotAllowed)
-	}
-}
 
 func startSocket(w http.ResponseWriter, req *http.Request) {
 	// To be removed in prod
@@ -232,8 +207,8 @@ func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string)
 
 	// cards for the room
 	cardIds := make([]int, 0)
-	for _, card := range cards {
-		cardIds = append(cardIds, card.Id)
+	for idx := 0; idx < *cardCount; idx++ {
+		cardIds = append(cardIds, idx)
 	}
 
 	room := NewRoom(cardIds, *playerId)
@@ -279,22 +254,13 @@ func sendError(conn *websocket.Conn, errorType string, errorMsg string) {
 	conn.WriteMessage(websocket.TextMessage, b)
 }
 
-func start(staticDir string) {
+func start() {
 	r := mux.NewRouter()
 	r.HandleFunc("/auth", handleAuth).Methods("POST")
 	r.HandleFunc("/ws", startSocket).Methods("GET")
-	r.HandleFunc("/cards/{cardId}", handleCards)
 
-	// This will serve files under http://localhost:8080/static/<filename>
-	err := buildCards(staticDir)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	r.PathPrefix("/static/").Handler(
-		http.StripPrefix("/static/", http.FileServer(
-			http.Dir(staticDir))))
+	log.Printf("Using env %s", *env)
+	log.Printf("Using hostname %s", config.frontendHostName)
 
 	srv := &http.Server{
 		Handler: r,
@@ -319,27 +285,9 @@ func start(staticDir string) {
 	log.Fatal(srv.ListenAndServe())
 }
 
-func buildCards(staticDir string) error {
-	cardIdx := 0
-	err := filepath.Walk(staticDir+"/cards/", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			url := "http://" + *addr + "/static/cards/" + info.Name()
-			log.Printf("Adding card url: %s", url)
-			cards = append(cards, &Card{Id: cardIdx, Url: url})
-			cardIdx++
-		}
-		return nil
-	})
-	return err
-}
-
 func main() {
-	var staticDir string
-	flag.StringVar(&staticDir, "dir", "./../app/public", "the directory to serve files from. Defaults to the current dir")
 	flag.Parse()
+	config = NewConfig(*env, *cardCount)
 	log.Printf("Starting...")
-	start(staticDir)
+	start()
 }

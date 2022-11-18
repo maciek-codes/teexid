@@ -8,7 +8,7 @@ interface CardViewProps {
 }
 
 const CardView = ({card, selected, onClick}: CardViewProps) => {
-    const imageUrl = "http://localhost:8080/cards/" + card.cardId;
+    const imageUrl = "/cards/" + card.cardId + ".png";
 
     const handleClick = () => {
         if (onClick) {

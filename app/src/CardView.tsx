@@ -8,7 +8,7 @@ interface CardViewProps {
 }
 
 const CardView = ({card, selected, onClick}: CardViewProps) => {
-    const imageUrl = "/cards/" + card.cardId + ".png";
+    const imageUrl = "/cards/" + card.cardId + ".jpg";
 
     const handleClick = () => {
         if (onClick) {

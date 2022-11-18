@@ -23,10 +23,9 @@ var config *Config
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		// TODO Check origin in prod
 		log.Println("Host: " + r.Host)
 		log.Println("Remote address: " + r.RemoteAddr)
-		return r.Host == "localhost:8080"
+		return r.Host == config.frontendHostName
 	},
 } // use mostly default options
 

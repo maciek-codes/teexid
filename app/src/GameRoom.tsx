@@ -44,18 +44,17 @@ const GameRoom: React.FC = () => {
       <GameFeed />
       }
 
-      <Box fontSize='small'>
-      <Text>Debug info</Text>
-      <Text>
-        Connection Status:
-        {connecting ? <> Re-connecting</> : null}
-        {connected ? <> Connected</>: null}
-      </Text>
-      <Text>
-        Room id: {roomId}
-        Player id: {roomId}
-      </Text>
-      </Box>
+      <Stack fontSize='2xs' backgroundColor="#f5f5f5">
+        <Text>Debug info</Text>
+        <Text>
+          Connection Status:
+          {connecting ? <> Re-connecting</> : null}
+          {connected ? <> Connected</>: null}
+        </Text>
+        <Text>Room id: {roomId}</Text>
+        <Text>Player id: {player.id}</Text>
+        <Text>Room owner?: {player.isOwner ? "true" : "false"}</Text>
+      </Stack>
     </Stack>
   );
 };

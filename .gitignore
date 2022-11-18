@@ -12,8 +12,6 @@ app/coverage
 # production
 app/build
 
-app/public/cards/*.jpg
-
 server/teexid
 
 # misc

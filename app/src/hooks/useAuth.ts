@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { getHost } from "../utils/config";
 
 interface Token {
     playerId: string,
@@ -16,7 +17,7 @@ const getAuthToken = (): Promise<Token> => {
 
     window.sessionStorage.removeItem("token");
     window.sessionStorage.removeItem("playerId");
-    return fetch("http://localhost:8080/auth", {method: "POST"})
+    return fetch(`${getHost()}/auth`, {method: "POST"})
     .then((response) => {
         if (!response.ok) {
             throw new Error("Can't auth " + response.status);

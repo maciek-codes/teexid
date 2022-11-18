@@ -16,6 +16,8 @@ import (
 var addr = flag.String("addr", ":8080", "http service address")
 var roomMaxDurationMin = flag.Int("room-timeout", 5, "max room duration")
 var env = flag.String("env", "dev", "Front end host")
+var host = flag.String("host", "localhost", "")
+var port = flag.String("port", "8080", "")
 
 // All the cards available
 var cardCount = flag.Int("card-count", 55, "How many cards")
@@ -25,16 +27,16 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		log.Println("Host: " + r.Host)
 		log.Println("Remote address: " + r.RemoteAddr)
-		return r.Host == config.frontendHostName
+		return r.Host == *host+":"+*port
 	},
 } // use mostly default options
 
 // All the rooms in the game
 var roomById map[string]*Room = make(map[string]*Room, 0)
 
-func startSocket(w http.ResponseWriter, req *http.Request) {
+func startSocket(config *Config, w http.ResponseWriter, req *http.Request) {
 	// To be removed in prod
-	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Add("Access-Control-Allow-Origin", config.frontendHostName)
 
 	conn, err := upgrader.Upgrade(w, req, nil)
 	log.Println("Connected")
@@ -255,11 +257,16 @@ func sendError(conn *websocket.Conn, errorType string, errorMsg string) {
 
 func start() {
 	r := mux.NewRouter()
-	r.HandleFunc("/auth", handleAuth).Methods("POST")
-	r.HandleFunc("/ws", startSocket).Methods("GET")
+	r.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+		handleAuth(config, w, r)
+	}).Methods("POST")
+	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		startSocket(config, w, r)
+	}).Methods("GET")
 
 	log.Printf("Using env %s", *env)
-	log.Printf("Using hostname %s", config.frontendHostName)
+	log.Printf("Host %s:%s", *host, *port)
+	log.Printf("Using FRONT hostname %s", config.frontendHostName)
 
 	srv := &http.Server{
 		Handler: r,

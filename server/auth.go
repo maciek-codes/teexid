@@ -17,9 +17,9 @@ type Token struct {
 	TokenString string `json:"token"`
 }
 
-func handleAuth(w http.ResponseWriter, req *http.Request) {
+func handleAuth(config *Config, w http.ResponseWriter, req *http.Request) {
 
-	w.Header().Add("Access-Control-Allow-Origin", "http://localhost:3000")
+	w.Header().Add("Access-Control-Allow-Origin", config.frontendHostName)
 
 	// Authenticate a player - generate a UUID and send it back to the user
 	// User will have to pass it when opening the websocket

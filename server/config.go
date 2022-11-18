@@ -6,6 +6,8 @@ import (
 	"sync"
 )
 
+var PROD_HOST = "https://whale-app-uecxk.ondigitalocean.app"
+
 type Config struct {
 	configOnce       sync.Once
 	maxScore         int
@@ -14,9 +16,9 @@ type Config struct {
 }
 
 func NewConfig(env string, cardCount int) *Config {
-	var frontendHostName = "localhost:8080"
+	var frontendHostName = "http://localhost:3000"
 	if env == "prod" {
-		frontendHostName = "whale-app-uecxk.ondigitalocean.app"
+		frontendHostName = PROD_HOST
 	}
 	return &Config{
 		frontendHostName: frontendHostName,

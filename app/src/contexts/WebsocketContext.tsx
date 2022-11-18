@@ -1,10 +1,24 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { ResponseMsg } from "../types";
+import { getWsHost } from "../utils/config";
 
-const SOCKET_HOST = "ws://localhost:8080/ws";
+const SOCKET_HOST = getWsHost();
 
-let ws = new WebSocket(SOCKET_HOST);
+
+let ws: WebSocket | null = null;
+const getWs = () => {
+  if (ws == null) {
+    ws = new WebSocket(SOCKET_HOST);
+  }
+  return ws;
+}
+
+const getReadyState = (): number => {
+  const socket = getWs();
+  return socket.readyState;
+}
+
 
 type CreateRoomCommandData = {playerName: string}
 type JoinCommandData = {roomId: string, playerName: string};
@@ -24,7 +38,6 @@ type Command =
 type CallbackFn = (msg: ResponseMsg) => void;
 
 interface SocketContextData {
-  ws: WebSocket;
   sendCommand: (cmd: Command) => void;
   addMsgListener: (fn: CallbackFn) => void;
   removeMsgListener: (fn: CallbackFn) => void;
@@ -45,10 +58,10 @@ export const WebSocketContextProvider: React.FC<
 > = ({ children }: WebSocketContextProviderProps) => {
   const auth = useAuth();
   
-  const [connected, setConnected] = useState(ws.readyState === ws.OPEN);
-  const [connecting, setConnecting] = useState(ws.readyState !== ws.OPEN);
+  const [connected, setConnected] = useState(getReadyState() === WebSocket.OPEN);
+  const [connecting, setConnecting] = useState(getReadyState() !== WebSocket.OPEN);
 
-  const [error, setError] = useState<Error | null>(ws.readyState === ws.CLOSED ?
+  const [error, setError] = useState<Error | null>(getReadyState() === WebSocket.CLOSED ?
     new Error("Couldn't connect to the server") : null);
 
   const addMsgListener = useCallback((fn: CallbackFn) => {
@@ -61,7 +74,7 @@ export const WebSocketContextProvider: React.FC<
 
   useEffect(() => {
     const timeoutId = setInterval(() => {
-      if (connected && ws.readyState !== ws.OPEN) {
+      if (connected && getReadyState() !== WebSocket.OPEN) {
         setConnected(false);
         setConnecting(true);
       } else if (!connected) {
@@ -76,7 +89,7 @@ export const WebSocketContextProvider: React.FC<
 
   useEffect(() => {
     const timeoutId = setInterval(() => {
-      if (ws.readyState === ws.CLOSED) {
+      if (getReadyState() === WebSocket.CLOSED) {
         setConnected(false);
         setConnecting(true);
         ws = new WebSocket(SOCKET_HOST);
@@ -93,20 +106,20 @@ export const WebSocketContextProvider: React.FC<
   }, []);
 
   useEffect(() => {
-    ws.addEventListener('message', onMsg);
+    getWs().addEventListener('message', onMsg);
     const onMsgRef = onMsg;
-    const websocketRef = ws;
+    const websocketRef = getWs();
     return () => {
       websocketRef.removeEventListener('message', onMsgRef);
     }
   }, [onMsg]);
 
   const sendCommand = useCallback(({type, data}: Command) => {
-      if (ws.readyState !== ws.OPEN) {
+      if (getReadyState() !== getWs().OPEN) {
         return;
       }
       console.log("command: " + type + " auth: " + auth.data)
-      ws.send(
+      getWs().send(
         JSON.stringify({
           token: auth.data?.token,
           type: type,
@@ -122,16 +135,16 @@ export const WebSocketContextProvider: React.FC<
   }, [setError]);
 
   useEffect(() => {
-    ws.addEventListener('error', onError)
+    getWs().addEventListener('error', onError)
     const thisOnError = onError;
     return () => {
-      ws.removeEventListener('error', thisOnError);
+      getWs().removeEventListener('error', thisOnError);
     }
   }, [onError]);
 
   return (
     <WebSocketContext.Provider value={
-      { ws, sendCommand, addMsgListener, removeMsgListener, error, connected, connecting }}>
+      { sendCommand, addMsgListener, removeMsgListener, error, connected, connecting }}>
       {children}
     </WebSocketContext.Provider>
   );

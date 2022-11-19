@@ -39,15 +39,9 @@ func startSocket(config *Config, w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", config.frontendHostName)
 
 	conn, err := upgrader.Upgrade(w, req, nil)
-	log.Println("Connected")
 
-	if _, ok := err.(websocket.HandshakeError); ok {
-		log.Println("Not a websocket handshake")
-		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
-		return
-	} else if err != nil {
-		log.Println("Not a websocket handshake: " + err.Error())
-		http.Error(w, "Unknown socket error: "+err.Error(), http.StatusInternalServerError)
+	if err != nil {
+		log.Printf("Not a websocket handshake: %s\n", err.Error())
 		return
 	}
 

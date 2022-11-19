@@ -263,6 +263,10 @@ func start() {
 	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		startSocket(config, w, r)
 	}).Methods("GET")
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		return
+	}).Methods("GET", "POST")
 
 	log.Printf("Using env %s", *env)
 	log.Printf("Host %s:%s", *host, *port)

@@ -15,9 +15,9 @@ import (
 
 var addr = flag.String("addr", ":8080", "http service address")
 var roomMaxDurationMin = flag.Int("room-timeout", 5, "max room duration")
-var env = flag.String("env", "dev", "Front end host")
 var host = flag.String("host", "localhost", "")
 var port = flag.String("port", "8080", "")
+var origin = flag.String("allowed-origin", "*", "")
 
 // All the cards available
 var cardCount = flag.Int("card-count", 55, "How many cards")
@@ -25,9 +25,12 @@ var config *Config
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		log.Println("Host: " + r.Host)
-		log.Println("Remote address: " + r.RemoteAddr)
-		return r.Host == *host+":"+*port
+		if config.allowedOrigin == "*" {
+			return true
+		}
+		var origin = r.Header.Get("Origin")
+		log.Printf("Origin: %s\n", origin)
+		return origin == config.allowedOrigin
 	},
 } // use mostly default options
 
@@ -36,7 +39,7 @@ var roomById map[string]*Room = make(map[string]*Room, 0)
 
 func startSocket(config *Config, w http.ResponseWriter, req *http.Request) {
 	// To be removed in prod
-	w.Header().Add("Access-Control-Allow-Origin", config.frontendHostName)
+	w.Header().Add("Access-Control-Allow-Origin", config.allowedOrigin)
 
 	conn, err := upgrader.Upgrade(w, req, nil)
 
@@ -262,9 +265,8 @@ func start() {
 		return
 	}).Methods("GET", "POST")
 
-	log.Printf("Using env %s", *env)
-	log.Printf("Host %s:%s", *host, *port)
-	log.Printf("Using FRONT hostname %s", config.frontendHostName)
+	log.Printf("Host %s:%s\n", *host, *port)
+	log.Printf("Allowed origin: %s\n", config.allowedOrigin)
 
 	srv := &http.Server{
 		Handler: r,
@@ -291,7 +293,7 @@ func start() {
 
 func main() {
 	flag.Parse()
-	config = NewConfig(*env, *cardCount)
+	config = NewConfig(*origin, *cardCount)
 	log.Printf("Starting...")
 	start()
 }

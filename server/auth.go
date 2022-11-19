@@ -18,8 +18,7 @@ type Token struct {
 }
 
 func handleAuth(config *Config, w http.ResponseWriter, req *http.Request) {
-
-	w.Header().Add("Access-Control-Allow-Origin", config.frontendHostName)
+	w.Header().Add("Access-Control-Allow-Origin", config.allowedOrigin)
 
 	// Authenticate a player - generate a UUID and send it back to the user
 	// User will have to pass it when opening the websocket

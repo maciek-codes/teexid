@@ -1,7 +1,6 @@
 import Card from "./models/Card";
 import Player from "./models/Player";
 
-
 export type RoomState = "waiting" | "playing" | "ended";
 export type TurnState =
   | "not_started"
@@ -10,31 +9,30 @@ export type TurnState =
   | "voting"
   | "scoring";
 
-
 // Web socket response
-export type ResponseMsg = 
-{ type: 'on_room_created', payload: OnRoomCreatedPayload } |
-{ type: 'on_room_state_updated', payload: OnRoomStateUpdatedPayload } |
-{ type: 'on_cards', payload: OnCardsPayload } |
-{ type: 'error', payload: ErrorPayload } |
-{ type: 'on_joined', payload: OnJoinedPayload } |
-{ type: 'on_players_updated', payload: OnPlayersUpdatedPayload };
+export type ResponseMsg =
+  | { type: "on_room_created"; payload: OnRoomCreatedPayload }
+  | { type: "on_room_state_updated"; payload: OnRoomStateUpdatedPayload }
+  | { type: "on_cards"; payload: OnCardsPayload }
+  | { type: "error"; payload: ErrorPayload }
+  | { type: "on_joined"; payload: OnJoinedPayload }
+  | { type: "on_players_updated"; payload: OnPlayersUpdatedPayload };
 
 type OnJoinedPayload = {
-  roomId: string,
-  ownerId: string,
-  playerId: string,
-  cards: number[],
-  roomState: RoomState,
-  turnState: TurnState,
-  storyPlayerId: string,
-  story: string,
-  cardsSubmitted: number[],
-  players: Player[],
+  roomId: string;
+  ownerId: string;
+  playerId: string;
+  cards: number[];
+  roomState: RoomState;
+  turnState: TurnState;
+  storyPlayerId: string;
+  story: string;
+  cardsSubmitted: number[];
+  players: Player[];
 };
 
 type OnRoomCreatedPayload = {
-  roomId: string
+  roomId: string;
 };
 
 type OnCardsPayload = {
@@ -51,9 +49,9 @@ export type OnPlayersUpdatedPayload = {
 };
 
 export type OnRoomStateUpdatedPayload = {
-  roomState: RoomState,
-  turnState: TurnState,
-  storyPlayerId: string,
-  story: string,
-  cardsSubmitted: number[]
-}
+  roomState: RoomState;
+  turnState: TurnState;
+  storyPlayerId: string;
+  story: string;
+  cardsSubmitted: number[];
+};

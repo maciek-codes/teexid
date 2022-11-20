@@ -1,5 +1,13 @@
 import React, { useCallback, useMemo } from "react";
-import { Avatar, Box, Button, HStack, List, ListItem, Text } from "@chakra-ui/react";
+import {
+  Avatar,
+  Box,
+  Button,
+  HStack,
+  List,
+  ListItem,
+  Text,
+} from "@chakra-ui/react";
 
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
@@ -38,21 +46,25 @@ export const PlayerList: React.FC = () => {
   const { id, isOwner } = usePlayer();
   const { roomId, players, roomState } = useRoom();
   const { sendCommand } = useSocket();
-  const gameStarted = roomState !== 'waiting';
+  const gameStarted = roomState !== "waiting";
 
   const onReadyClick = useCallback(() => {
-    sendCommand({type: "player/ready", data: {roomId}});
+    sendCommand({ type: "player/ready", data: { roomId } });
   }, [roomId, sendCommand]);
 
   const canStart = useMemo(() => {
-    return !gameStarted && isOwner && players.reduce((acc: number, curr: Player) => {
-      return acc + (curr.ready ? 1 : 0)
-    }, 0) >= MIN_PLAYERS;
+    return (
+      !gameStarted &&
+      isOwner &&
+      players.reduce((acc: number, curr: Player) => {
+        return acc + (curr.ready ? 1 : 0);
+      }, 0) >= MIN_PLAYERS
+    );
   }, [gameStarted, isOwner, players]);
 
   const startGame = useCallback(() => {
     if (isOwner) {
-      sendCommand({type: "game/start", data: {roomId}});
+      sendCommand({ type: "game/start", data: { roomId } });
     }
   }, [roomId, isOwner, sendCommand]);
 
@@ -63,14 +75,15 @@ export const PlayerList: React.FC = () => {
         {players.map((player: Player, idx: number) => {
           return (
             <PlayerItem
-              key={idx} player={player} currentPlayerId={id ?? ""} 
+              key={idx}
+              player={player}
+              currentPlayerId={id ?? ""}
               onReadyClick={onReadyClick}
             />
           );
         })}
       </List>
-      { canStart ?
-      <Button onClick={() => startGame()}>Start</Button> : null}
+      {canStart ? <Button onClick={() => startGame()}>Start</Button> : null}
 
       <PlayerScores playersList={players} />
     </Box>

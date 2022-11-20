@@ -6,7 +6,9 @@ interface ChildrenProps {
   children: React.ReactNode;
 }
 
-export const ErrorBoundary: React.FC<ChildrenProps> = ({children}: ChildrenProps) => {
+export const ErrorBoundary: React.FC<ChildrenProps> = ({
+  children,
+}: ChildrenProps) => {
   const { error } = useSocket();
   return (
     <Box>

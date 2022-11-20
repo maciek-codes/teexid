@@ -1,12 +1,11 @@
 import React, { useCallback, useState } from "react";
 
-import {Text} from "@chakra-ui/react"
+import { Text } from "@chakra-ui/react";
 
 import { CardPicker } from "./CardPicker";
 import { useSocket } from "./contexts/WebsocketContext";
 import Card from "./models/Card";
 import { useRoom } from "./contexts/RoomContext";
-
 
 type VotingProps = {
   story: string;
@@ -14,7 +13,11 @@ type VotingProps = {
   storyCards: Card[];
 };
 
-export const Voting: React.FC<VotingProps> = ({story, playerCards, storyCards}: VotingProps) => {
+export const Voting: React.FC<VotingProps> = ({
+  story,
+  playerCards,
+  storyCards,
+}: VotingProps) => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [voted, setVoted] = useState<boolean>(false);
   const { roomId } = useRoom();
@@ -22,16 +25,21 @@ export const Voting: React.FC<VotingProps> = ({story, playerCards, storyCards}: 
 
   const voteForCard = useCallback(() => {
     if (selectedCard !== null) {
-      sendCommand({type: "player/vote", data: {
-        roomId,
-        cardId: selectedCard.cardId,
-      }});
+      sendCommand({
+        type: "player/vote",
+        data: {
+          roomId,
+          cardId: selectedCard.cardId,
+        },
+      });
       setSelectedCard(null);
       setVoted(true);
     }
   }, [roomId, setVoted, sendCommand, selectedCard]);
-  
-  const content = voted ? <Text>Already voted</Text> :
+
+  const content = voted ? (
+    <Text>Already voted</Text>
+  ) : (
     <CardPicker
       cards={storyCards.filter(
         (card) => !playerCards.map((card) => card.cardId).includes(card.cardId)
@@ -42,7 +50,8 @@ export const Voting: React.FC<VotingProps> = ({story, playerCards, storyCards}: 
       promptText="Select the card you want to vote for"
       buttonText="Vote"
       onSelectedCard={voteForCard}
-    />;
+    />
+  );
 
-    return content;
+  return content;
 };

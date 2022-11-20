@@ -1,4 +1,3 @@
-
 export default interface Card {
-    cardId: number
+  cardId: number;
 }

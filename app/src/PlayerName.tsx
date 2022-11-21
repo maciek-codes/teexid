@@ -26,6 +26,7 @@ const PlayerName: React.FC = () => {
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
         placeholder="Enter your name"
+        background="white"
       />
       <Button onClick={updateName}>Apply</Button>
     </Stack>

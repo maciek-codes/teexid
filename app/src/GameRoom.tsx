@@ -1,14 +1,5 @@
 import React, { useEffect } from "react";
-import {
-  Heading,
-  Stack,
-  Text,
-  Alert,
-  AlertIcon,
-  AlertTitle,
-  Link,
-  Box,
-} from "@chakra-ui/react";
+import { Heading, Stack, Text, Link, Box } from "@chakra-ui/react";
 
 import { GameFeed } from "./GameFeed";
 import { useSocket } from "./contexts/WebsocketContext";
@@ -38,11 +29,24 @@ const GameRoom: React.FC = () => {
     }
   }, [roomId, player, token, joinedState, sendCommand]);
 
+  /*
+  Brandy Punch
+#DC8B32
+
+Ship Gray
+#433D4B
+
+Tana
+#D9D3B6
+
+Burnt Umber
+#843225
+*/
   return (
-    <Stack px={20}>
-      <Heading size="xl">
-        <Link as={RouterLink} to="/">
-          Teexid
+    <Box>
+      <Heading size="xl" pt="10px" background="#48323A" px="0.5em" py="0.25em">
+        <Link as={RouterLink} to="/" color="#E7E2C1" mt="10">
+          TeeXid
         </Link>
       </Heading>
       {joinedState === "joining" ? (
@@ -62,7 +66,7 @@ const GameRoom: React.FC = () => {
         <Text>Player id: {player.id}</Text>
         <Text>Room owner?: {player.isOwner ? "true" : "false"}</Text>
       </Stack>
-    </Stack>
+    </Box>
   );
 };
 

@@ -68,13 +68,12 @@ type CardSubmitted struct {
 	cardId   int
 }
 
-func NewRoom(cardIds []int, playerId uuid.UUID) *Room {
-	id := randSeq(6)
+func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(cardIds), func(i, j int) {
 		cardIds[i], cardIds[j] = cardIds[j], cardIds[i]
 	})
-	room := Room{Id: id,
+	room := Room{Id: roomId,
 		State:          WaitingForPlayers,
 		playerMap:      make(map[string]*Player, 0),
 		conns:          make(map[string]playerConn, 0),
@@ -128,11 +127,14 @@ func (r *Room) BroadcastPlayers() {
 }
 
 // Return cards for voting
-func GetCardsForVoting(room *Room) []int {
+func GetCardsForVoting(room *Room, player *Player) []int {
 	cardIds := make([]int, 0)
 	if room.TurnState == Voting {
 		for _, cardSubmitted := range room.cardsSubmitted {
-			cardIds = append(cardIds, cardSubmitted.cardId)
+			// Send cards for voting except the one player submitted themselves
+			if cardSubmitted.playerId != player.Id.String() {
+				cardIds = append(cardIds, cardSubmitted.cardId)
+			}
 		}
 		cardIds = append(cardIds, room.StoryCard)
 
@@ -145,36 +147,37 @@ func GetCardsForVoting(room *Room) []int {
 
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
-	b, _ := json.Marshal(struct {
-		Id             string    `json:"id"`
-		RoomState      RoomState `json:"roomState"`
-		TurnState      TurnState `json:"turnState"`
-		StoryPlayerId  string    `json:"storyPlayerId"`
-		Story          string    `json:"story"`
-		CardsSubmitted []int     `json:"cardsSubmitted"`
-	}{
-		Id:             r.Id,
-		RoomState:      r.State,
-		TurnState:      r.TurnState,
-		StoryPlayerId:  r.StoryPlayerId.String(),
-		Story:          r.Story,
-		CardsSubmitted: GetCardsForVoting(r),
-	})
-
-	payloadMessage := json.RawMessage(b)
-
-	message := ReponseMessage{
-		Type:    "on_room_state_updated",
-		Payload: &payloadMessage}
-
-	b, err := json.Marshal(&message)
-	if err != nil {
-		log.Println("Error marshalling", err)
-		return
-	}
-
-	log.Printf("Writing %s\n", string(b))
 	for _, playerConn := range r.conns {
+		b, _ := json.Marshal(struct {
+			Id             string    `json:"id"`
+			RoomState      RoomState `json:"roomState"`
+			TurnState      TurnState `json:"turnState"`
+			StoryPlayerId  string    `json:"storyPlayerId"`
+			Story          string    `json:"story"`
+			CardsSubmitted []int     `json:"cardsSubmitted"`
+		}{
+			Id:             r.Id,
+			RoomState:      r.State,
+			TurnState:      r.TurnState,
+			StoryPlayerId:  r.StoryPlayerId.String(),
+			Story:          r.Story,
+			CardsSubmitted: GetCardsForVoting(r, playerConn.player),
+		})
+
+		payloadMessage := json.RawMessage(b)
+
+		message := ReponseMessage{
+			Type:    "on_room_state_updated",
+			Payload: &payloadMessage}
+
+		b, err := json.Marshal(&message)
+		if err != nil {
+			log.Println("Error marshalling", err)
+			return
+		}
+
+		log.Printf("Writing %s\n", string(b))
+
 		playerConn.ws.WriteMessage(websocket.TextMessage, b)
 	}
 }

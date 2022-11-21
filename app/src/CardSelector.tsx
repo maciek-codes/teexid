@@ -1,4 +1,4 @@
-import { HStack } from "@chakra-ui/react";
+import { Box, HStack } from "@chakra-ui/react";
 import { useState } from "react";
 import CardView from "./CardView";
 import Card from "./models/Card";
@@ -29,7 +29,11 @@ const CardSelector = ({ cards, onSelected }: CardSelectorProps) => {
       />
     );
   });
-  return <HStack>{cardViews}</HStack>;
+  return (
+    <Box display="flex" flexDirection="row">
+      {cardViews}
+    </Box>
+  );
 };
 
 export default CardSelector;

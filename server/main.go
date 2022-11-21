@@ -88,9 +88,8 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 	log.Printf("Got command %s from %s with data %s",
 		command.Type, playerId.String(), command.Data)
 
-	if command.Type == "join_room" {
-		handleJoinRoom(conn, &playerId, command.Data)
-	} else if command.Type == "create_room" {
+	if command.Type == "create_room" ||
+		command.Type == "join_room" {
 		handleCreateRoom(conn, &playerId, command.Data)
 	} else {
 
@@ -117,26 +116,7 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 
 }
 
-func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
-	joinCommand := struct {
-		RoomId     string `json:"roomId"`
-		PlayerName string `json:"playerName"`
-		Players    Player
-	}{}
-
-	err := json.Unmarshal([]byte(message), &joinCommand)
-	if err != nil {
-		log.Print("Error unmarshalling story")
-		return
-	}
-
-	// Find the room
-	var room = roomById[joinCommand.RoomId]
-
-	if room == nil {
-		sendError(conn, "room_not_found", "Room not found")
-		return
-	}
+func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, room *Room, playerName *string) {
 
 	// Check if player already exist - may be re-joining
 	player := room.playerMap[playerId.String()]
@@ -145,7 +125,7 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 		room.conns[playerId.String()] = NewPlayerConn(conn, player, room)
 	} else {
 		log.Printf("Player %s not in the room yet\n", playerId)
-		player = NewPlayer(joinCommand.PlayerName, *playerId)
+		player = NewPlayer(*playerName, *playerId)
 		if player == nil {
 			panic("no player")
 		}
@@ -174,7 +154,7 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 		Players:        room.Players(),
 		Story:          room.Story,
 		StoryPlayerId:  room.StoryPlayerId,
-		CardsSubmitted: GetCardsForVoting(room),
+		CardsSubmitted: GetCardsForVoting(room, player),
 	})
 	payload := json.RawMessage(b)
 
@@ -185,22 +165,30 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 	b, _ = json.Marshal(responseMsg)
 
 	log.Printf("Writing %s\n", string(b))
-	err = conn.WriteMessage(websocket.TextMessage, []byte(b))
+	err := conn.WriteMessage(websocket.TextMessage, []byte(b))
 
 	if err != nil {
 		fmt.Println(err)
 	}
 }
 
-func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) *Room {
+func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string) {
 	createRoomCommand := struct {
+		RoomId     string `json:"roomId"`
 		PlayerName string `json:"playerName"`
 	}{}
 
 	err := json.Unmarshal([]byte(message), &createRoomCommand)
 	if err != nil {
 		log.Print("Error unmarshalling story")
-		return nil
+		return
+	}
+
+	room, foundRoom := roomById[createRoomCommand.RoomId]
+
+	if foundRoom {
+		handleJoinRoom(conn, playerId, room, &createRoomCommand.PlayerName)
+		return
 	}
 
 	// cards for the room
@@ -209,7 +197,7 @@ func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string)
 		cardIds = append(cardIds, idx)
 	}
 
-	room := NewRoom(cardIds, *playerId)
+	room = NewRoom(cardIds, *playerId, createRoomCommand.RoomId)
 	roomById[room.Id] = room
 
 	b, _ := json.Marshal(struct {
@@ -225,8 +213,6 @@ func handleCreateRoom(conn *websocket.Conn, playerId *uuid.UUID, message string)
 
 	log.Printf("Writing %s\n", string(b))
 	conn.WriteMessage(websocket.TextMessage, []byte(b))
-
-	return room
 }
 
 func sendError(conn *websocket.Conn, errorType string, errorMsg string) {

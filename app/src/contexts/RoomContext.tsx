@@ -126,7 +126,7 @@ export const RoomContextProvider: React.FC<Props> = ({ children }: Props) => {
     <RoomContext.Provider
       value={{
         ...state,
-        roomId,
+        roomId: state.roomId === "" ? roomId : state.roomId,
       }}
     >
       {children}

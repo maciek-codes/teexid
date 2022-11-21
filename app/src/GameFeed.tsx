@@ -3,6 +3,7 @@ import React, { useCallback, useState } from "react";
 import {
   Box,
   Button,
+  Center,
   Grid,
   GridItem,
   HStack,
@@ -22,6 +23,7 @@ import Player from "./models/Player";
 import { CardPicker } from "./CardPicker";
 import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
+import CardView from "./CardView";
 
 interface CopyButtonProps {
   copyText: string;
@@ -119,6 +121,7 @@ export const GameFeed: React.FC = () => {
   } = useRoom();
 
   const isTellingStory = storyPlayerId === player.id;
+  const storyPlayerName = players.find((p) => p.id === storyPlayerId)?.name;
   const isPlaying = roomState === "playing";
   const isVoting = turnState === "voting";
   const isScoring = turnState === "scoring";
@@ -148,7 +151,11 @@ export const GameFeed: React.FC = () => {
         />
       </Box>
     ) : (
-      <Text>Waiting for a story</Text>
+      <Center>
+        <Text textAlign="center">
+          Waiting for {storyPlayerName} to write a story and pick a card.
+        </Text>
+      </Center>
     );
 
   return (
@@ -191,7 +198,10 @@ export const GameFeed: React.FC = () => {
             <Text>Waiting for players to submit cards...</Text>
           ) : null}
           {isPlaying && isVoting && isTellingStory ? (
-            <Text>Waiting for votes...</Text>
+            <Stack>
+              <Text>Waiting for votes...</Text>
+              <CardSelector onSelected={() => {}} cards={storyCards} />
+            </Stack>
           ) : null}
           {isPlaying && isScoring && players ? (
             <ScoreList players={players} />

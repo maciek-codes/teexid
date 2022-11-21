@@ -14,6 +14,14 @@ import { Container } from "@chakra-ui/react";
 // Font awesome icons
 library.add(far);
 
+/**
+ * #d9832b  #de7e29
+ * #433f4f #544b5b
+ * #d6d1b7 #c5ccc3
+ * #f6d06a #f9d45c
+ * #833225 #873e36
+ */
+
 const App = () => {
   const queryClient = new QueryClient();
 
@@ -21,7 +29,14 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <WebSocketContextProvider>
         <ErrorBoundary>
-          <Container minWidth="120ch" h="calc(100vh)">
+          <Container
+            background="#efefef"
+            maxWidth={["900px", "720px", "1600px"]}
+            width="100%"
+            margin="0px 0px"
+            padding="0px"
+            h="calc(100vh)"
+          >
             <BrowserRouter>
               <Routes>
                 <Route

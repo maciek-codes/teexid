@@ -11,7 +11,7 @@ import (
 func TestCanJoin(t *testing.T) {
 	assert := assert.New(t)
 
-	room := NewRoom(make([]int, 0), uuid.UUID{})
+	room := NewRoom(make([]int, 0), uuid.UUID{}, "foobar")
 	assert.Equal(WaitingForPlayers, room.State)
 
 	// Start playing
@@ -28,7 +28,7 @@ func TestRoomHasPlayers(t *testing.T) {
 
 	p1 := NewPlayer("Alice", uuid.New())
 
-	room := NewRoom(make([]int, 0), p1.Id)
+	room := NewRoom(make([]int, 0), p1.Id, "room-1")
 	assert.Len(room.Players(), 0)
 
 	p2 := NewPlayer("Bob", uuid.New())
@@ -41,8 +41,7 @@ func TestRoomHasPlayers(t *testing.T) {
 func TestMarshalToJson(t *testing.T) {
 	assert := assert.New(t)
 
-	room := NewRoom(make([]int, 0), uuid.UUID{})
-	room.Id = "bcd"
+	room := NewRoom(make([]int, 0), uuid.UUID{}, "bcd")
 	b, err := json.Marshal(room)
 	assert.Nil(err)
 	assert.NotEmpty(b)
@@ -56,7 +55,7 @@ func TestDealCards(t *testing.T) {
 
 	p1 := NewPlayer("Alice", uuid.New())
 
-	room := NewRoom(make([]int, 0), p1.Id)
+	room := NewRoom(make([]int, 0), p1.Id, "room-1")
 	assert.Len(room.Players(), 0)
 
 	p2 := NewPlayer("Bob", uuid.New())

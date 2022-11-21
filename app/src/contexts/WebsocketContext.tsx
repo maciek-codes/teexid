@@ -24,7 +24,7 @@ const getReadyState = (): number => {
   return socket.readyState;
 };
 
-type CreateRoomCommandData = { playerName: string };
+type CreateRoomCommandData = { playerName: string; roomId: string };
 type JoinCommandData = { roomId: string; playerName: string };
 type RoomCommandData = { roomId: string };
 type StoryCommandData = { roomId: string; story: string; cardId: number };

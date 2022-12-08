@@ -125,6 +125,14 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, room *Room, playe
 		room.conns[playerId.String()] = NewPlayerConn(conn, player, room)
 	} else {
 		log.Printf("Player %s not in the room yet\n", playerId)
+
+		// If room is playing, can't join
+		if room.State != WaitingForPlayers {
+			log.Printf("Can't admit %s to the room, game in progress\n", *playerId)
+			sendError(conn, "join_error", "Game already started")
+			return
+		}
+
 		player = NewPlayer(*playerName, *playerId)
 		if player == nil {
 			panic("no player")

@@ -4,6 +4,10 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App";
 import reportWebVitals from "./reportWebVitals";
+
+import "@fontsource/noto-sans/400.css";
+import "@fontsource/noto-sans/700.css";
+
 import { theme } from "./theme";
 
 const root = createRoot(document.getElementById("root")!);

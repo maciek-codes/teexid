@@ -4,15 +4,12 @@ import {
   Box,
   Button,
   Center,
-  Grid,
-  GridItem,
-  HStack,
+  Flex,
   Input,
   Stack,
   Text,
 } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
-import PlayerName from "./PlayerName";
 import { usePlayer } from "./contexts/PlayerContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRoom } from "./contexts/RoomContext";
@@ -23,32 +20,17 @@ import Player from "./models/Player";
 import { CardPicker } from "./CardPicker";
 import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
-import CardView from "./CardView";
-
-interface CopyButtonProps {
-  copyText: string;
-}
-
-const CopyButton: React.FC<CopyButtonProps> = ({
-  copyText,
-}: CopyButtonProps) => {
-  return (
-    <button
-      onClick={() => {
-        navigator.clipboard.writeText(copyText);
-      }}
-    >
-      <FontAwesomeIcon icon={["far", "copy"]} />
-    </button>
-  );
-};
 
 type StoryPromptInputProps = {
+  cards: Array<Card>;
   selectedCard: Card | null;
+  setSelectedCard: (c: Card | null) => void;
 };
 
 const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
+  cards,
   selectedCard,
+  setSelectedCard,
 }) => {
   const { sendCommand } = useSocket();
   const { roomId } = useRoom();
@@ -66,15 +48,24 @@ const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
   }, [roomId, sendCommand, storyText, selectedCard]);
 
   return (
-    <Stack>
-      <HStack>
-        <Text>Type story: </Text>
-        <Input
-          type="text"
-          placeholder="Be creative!"
-          onChange={(e) => setStoryText(e.currentTarget.value)}
-        />
-      </HStack>
+    <Flex flexDirection="column" alignItems="start" justifyContent="start">
+      <Text fontSize="lg" mt={5} mb={10}>
+        Pick a card a and type your story:{" "}
+      </Text>
+      <CardSelector
+        cards={cards}
+        onSelected={(selectedCard) => {
+          setSelectedCard(selectedCard);
+        }}
+      />
+      <Input
+        type="text"
+        background="white"
+        placeholder="Be creative!"
+        onChange={(e) => setStoryText(e.currentTarget.value)}
+        mt={5}
+        mb={10}
+      />
       <Button
         isActive={storyText.trim() !== "" && selectedCard !== null}
         isDisabled={storyText.trim() === "" || selectedCard === null}
@@ -82,7 +73,7 @@ const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
       >
         Submit story
       </Button>
-    </Stack>
+    </Flex>
   );
 };
 
@@ -141,15 +132,11 @@ export const GameFeed: React.FC = () => {
 
   const storyUx =
     isPlaying && turnState === "waiting_for_story" && isTellingStory ? (
-      <Box>
-        <StoryPromptInput selectedCard={selectedCard} />
-        <CardSelector
-          cards={cards}
-          onSelected={(selectedCard) => {
-            setSelectedCard(selectedCard);
-          }}
-        />
-      </Box>
+      <StoryPromptInput
+        selectedCard={selectedCard}
+        cards={cards}
+        setSelectedCard={setSelectedCard}
+      />
     ) : (
       <Center>
         <Text textAlign="center">
@@ -159,68 +146,68 @@ export const GameFeed: React.FC = () => {
     );
 
   return (
-    <Box>
-      <Grid templateRows="20px 1fr 20px" templateColumns="2fr 150px">
-        <GridItem>{player.name === "" ? <PlayerName /> : null}</GridItem>
-        <GridItem
-          colStart={5}
-          colSpan={1}
-          rowStart={0}
-          rowSpan={1}
-          alignContent="start"
-          justifyContent="start"
-        >
-          <Text>Player: {player.name}</Text>
-          <Text>
-            Room: {roomId} <CopyButton copyText={roomId} />
-          </Text>
-        </GridItem>
-
-        <GridItem colStart={5} colSpan={1} rowStart={2} rowSpan={1}>
-          <PlayerList />
-        </GridItem>
-
-        <GridItem colStart={0} colSpan={4} rowStart={1} rowSpan={4}>
-          {roomState === "waiting" && <Text> Wait for players to join...</Text>}
-          {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
-          {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (
-            <CardPicker
-              cards={cards}
-              story={story}
-              selectedCard={selectedCard}
-              setSelectedCard={setSelectedCard}
-              promptText="Submit a card for this story"
-              buttonText="Submit a card"
-              onSelectedCard={submitCardForStory}
-            />
-          ) : null}
-          {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
-            <Text>Waiting for players to submit cards...</Text>
-          ) : null}
-          {isPlaying && isVoting && isTellingStory ? (
-            <Stack>
-              <Text>Waiting for votes...</Text>
-              <CardSelector onSelected={() => {}} cards={storyCards} />
-            </Stack>
-          ) : null}
-          {isPlaying && isScoring && players ? (
-            <ScoreList players={players} />
-          ) : null}
-          {roomState === "ended" && (
-            <Box>
-              <Text>Ended!</Text>
-              <PlayerScores playersList={players} />
-            </Box>
-          )}
-          {isPlaying &&
-          isVoting &&
-          !isTellingStory &&
-          storyCards &&
-          storyCards?.length !== null ? (
-            <Voting story={story} playerCards={cards} storyCards={storyCards} />
-          ) : null}
-        </GridItem>
-      </Grid>
-    </Box>
+    <Flex flexWrap="wrap" px={5}>
+      <Flex
+        flexGrow={3}
+        flexShrink={1}
+        justifyContent="center"
+        alignItems="center"
+      >
+        {roomState === "waiting" && (
+          <Text flexGrow={2}> Wait for players to join...</Text>
+        )}
+        {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
+        {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (
+          <CardPicker
+            cards={cards}
+            story={story}
+            selectedCard={selectedCard}
+            setSelectedCard={setSelectedCard}
+            promptText="Submit a card for this story"
+            buttonText="Submit a card"
+            onSelectedCard={submitCardForStory}
+          />
+        ) : null}
+        {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
+          <Box>
+            <Text fontSize="lg" mb={5}>
+              Your story: {story}
+            </Text>
+            <Text fontSize="md">Waiting for players to submit cards...</Text>
+          </Box>
+        ) : null}
+        {isPlaying && isVoting && isTellingStory ? (
+          <Stack>
+            <Text fontSize="xl">Waiting for votes... Cards submitted:</Text>
+            <CardSelector onSelected={() => {}} cards={storyCards} />
+          </Stack>
+        ) : null}
+        {isPlaying && isScoring && players ? (
+          <ScoreList players={players} />
+        ) : null}
+        {roomState === "ended" && (
+          <Box>
+            <Text fontSize="xl">Game ended!</Text>
+            <PlayerScores playersList={players} />
+          </Box>
+        )}
+        {isPlaying &&
+        isVoting &&
+        !isTellingStory &&
+        storyCards &&
+        storyCards?.length !== null ? (
+          <Voting story={story} playerCards={cards} storyCards={storyCards} />
+        ) : null}
+      </Flex>
+      {/** Right panel */}
+      <Flex
+        flexGrow={1}
+        flexShrink={3}
+        flexDirection="column"
+        flexBasis="250px"
+      >
+        <PlayerList />
+      </Flex>
+    </Flex>
   );
 };

@@ -40,7 +40,7 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
     if (roomId !== "") {
       navigate(`/room/${roomId}`);
     }
-  }, [roomId]);
+  }, [roomId, navigate]);
 
   return (
     <Flex
@@ -56,6 +56,7 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
         <Input
           type="text"
           placeholder="Room name"
+          background="white"
           onChange={(e) => setRoomIdText(e.target.value)}
         />
         <Button

@@ -34,7 +34,10 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
       <HStack>
         <Avatar name={player.name} />
         <Text color={isSelf ? "green.400 " : "black"}>{player.name}</Text>
-        {player.ready ? <Text> (ready)</Text> : null}
+        {!player.ready ? <Text> (not ready)</Text> : null}
+        <Text color={isSelf ? "green.400 " : "black"}>
+          - {player.points} pt
+        </Text>
         {isSelf && !player.ready ? (
           <Button onClick={onReadyClick}>I'm ready</Button>
         ) : null}
@@ -74,16 +77,22 @@ export const PlayerList: React.FC = () => {
       <List>
         {players.map((player: Player, idx: number) => {
           return (
-            <PlayerItem
-              key={idx}
-              player={player}
-              currentPlayerId={id ?? ""}
-              onReadyClick={onReadyClick}
-            />
+            <Box mt="10px">
+              <PlayerItem
+                key={idx}
+                player={player}
+                currentPlayerId={id ?? ""}
+                onReadyClick={onReadyClick}
+              />
+            </Box>
           );
         })}
       </List>
-      {canStart ? <Button onClick={() => startGame()}>Start</Button> : null}
+      {canStart ? (
+        <Button mt={5} onClick={() => startGame()}>
+          Start
+        </Button>
+      ) : null}
 
       <PlayerScores playersList={players} />
     </Box>

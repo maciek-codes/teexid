@@ -1,12 +1,13 @@
 import React, { useEffect } from "react";
-import { Heading, Stack, Text, Link, Box } from "@chakra-ui/react";
+import { Link as RouterLink } from "react-router-dom";
+import { Heading, Stack, Text, Link, Box, Flex } from "@chakra-ui/react";
 
 import { GameFeed } from "./GameFeed";
 import { useSocket } from "./contexts/WebsocketContext";
 import { useAuth } from "./hooks/useAuth";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
-import { Link as RouterLink } from "react-router-dom";
+import { CopyButton } from "./components/CopyButton";
 
 const GameRoom: React.FC = () => {
   const { sendCommand } = useSocket();
@@ -45,9 +46,20 @@ Burnt Umber
   return (
     <Box>
       <Heading size="xl" pt="10px" background="#48323A" px="0.5em" py="0.25em">
-        <Link as={RouterLink} to="/" color="#E7E2C1" mt="10">
-          TeeXid
-        </Link>
+        <Flex
+          flexDirection="row"
+          alignItems="start"
+          justifyItems="center"
+          justifyContent="space-between"
+        >
+          <Link as={RouterLink} to="/" color="#E7E2C1" mt="2">
+            TeeXid
+          </Link>
+
+          <Text fontSize="md" alignSelf="flex-end" color="white">
+            Room: {roomId} <CopyButton copyText={roomId} />
+          </Text>
+        </Flex>
       </Heading>
       {joinedState === "joining" ? (
         <Text>Joining the room {roomId}...</Text>

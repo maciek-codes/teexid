@@ -1,4 +1,4 @@
-import { Box, HStack } from "@chakra-ui/react";
+import { Flex } from "@chakra-ui/react";
 import { useState } from "react";
 import CardView from "./CardView";
 import Card from "./models/Card";
@@ -30,9 +30,14 @@ const CardSelector = ({ cards, onSelected }: CardSelectorProps) => {
     );
   });
   return (
-    <Box display="flex" flexDirection="row">
+    <Flex
+      flexDirection="row"
+      gap="10px"
+      justifyItems="center"
+      alignItems="stretch"
+    >
       {cardViews}
-    </Box>
+    </Flex>
   );
 };
 

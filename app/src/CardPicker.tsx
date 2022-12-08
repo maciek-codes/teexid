@@ -26,7 +26,9 @@ export const CardPicker: React.FC<CardPickerProps> = ({
 }: CardPickerProps) => {
   return (
     <Stack>
-      <Text>Story: {story}</Text>
+      <Text fontSize="xl" fontWeight={600}>
+        Story: {story}
+      </Text>
       <Text>{promptText}</Text>
       <CardSelector
         cards={cards}
@@ -35,6 +37,7 @@ export const CardPicker: React.FC<CardPickerProps> = ({
         }}
       />
       <Button
+        mt={20}
         isActive={selectedCard !== null}
         isDisabled={selectedCard === null}
         onClick={() => onSelectedCard()}

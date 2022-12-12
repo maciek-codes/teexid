@@ -11,7 +11,6 @@ import {
 } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
 import { usePlayer } from "./contexts/PlayerContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRoom } from "./contexts/RoomContext";
 import { useSocket } from "./contexts/WebsocketContext";
 import CardSelector from "./CardSelector";
@@ -154,7 +153,10 @@ export const GameFeed: React.FC = () => {
         alignItems="center"
       >
         {roomState === "waiting" && (
-          <Text flexGrow={2}> Wait for players to join...</Text>
+          <Text flexGrow={2} align="center" fontSize="xl">
+            {" "}
+            Wait for players to join...
+          </Text>
         )}
         {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
         {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (

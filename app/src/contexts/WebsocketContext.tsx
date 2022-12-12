@@ -129,7 +129,6 @@ export const WebSocketContextProvider: React.FC<
       if (getReadyState() !== getWs().OPEN) {
         return;
       }
-      console.log("command: " + type + " auth: " + auth.data);
       getWs().send(
         JSON.stringify({
           token: auth.data?.token,

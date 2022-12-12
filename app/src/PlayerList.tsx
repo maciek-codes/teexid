@@ -21,12 +21,14 @@ type PlayerItemProps = {
   player: Player;
   currentPlayerId: string;
   onReadyClick: () => void;
+  isTellingStory: boolean;
 };
 
 const PlayerItem: React.FC<PlayerItemProps> = ({
   player,
   currentPlayerId,
   onReadyClick,
+  isTellingStory,
 }: PlayerItemProps) => {
   const isSelf = player.id === currentPlayerId;
   return (
@@ -37,6 +39,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
         {!player.ready ? <Text> (not ready)</Text> : null}
         <Text color={isSelf ? "green.400 " : "black"}>
           - {player.points} pt
+          {isTellingStory ? <i> &#128211;</i> : null}
         </Text>
         {isSelf && !player.ready ? (
           <Button onClick={onReadyClick}>I'm ready</Button>
@@ -47,7 +50,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
 };
 export const PlayerList: React.FC = () => {
   const { id, isOwner } = usePlayer();
-  const { roomId, players, roomState } = useRoom();
+  const { roomId, players, roomState, storyPlayerId } = useRoom();
   const { sendCommand } = useSocket();
   const gameStarted = roomState !== "waiting";
 
@@ -83,6 +86,7 @@ export const PlayerList: React.FC = () => {
                 player={player}
                 currentPlayerId={id ?? ""}
                 onReadyClick={onReadyClick}
+                isTellingStory={player.id === storyPlayerId}
               />
             </Box>
           );

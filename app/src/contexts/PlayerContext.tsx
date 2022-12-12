@@ -24,9 +24,9 @@ type Props = {
 const NAME_KEY = "55d78e7c-9f3e-49e4-9385-0ee53138972f";
 
 export const PlayerContextProvider: React.FC<Props> = ({ children }: Props) => {
-  // Check local storage
+  // Check sessionStorage
   const storedName = useMemo(() => {
-    return window.localStorage.getItem(NAME_KEY) ?? "";
+    return window.sessionStorage.getItem(NAME_KEY) ?? "";
   }, []);
 
   const auth = useAuth();
@@ -36,7 +36,7 @@ export const PlayerContextProvider: React.FC<Props> = ({ children }: Props) => {
   const setNameCallback = useCallback(
     (name: string) => {
       setName(name);
-      window.localStorage.setItem(NAME_KEY, name);
+      window.sessionStorage.setItem(NAME_KEY, name);
     },
     [setName]
   );

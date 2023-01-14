@@ -76,7 +76,7 @@ export const PlayerList: React.FC = () => {
 
   // Create a list of players
   return (
-    <Box backgroundColor="red.100" m="5" p="5">
+    <Box backgroundColor="red.100" m="5" p="5" width="sm">
       <List>
         {players.map((player: Player, idx: number) => {
           return (
@@ -97,8 +97,6 @@ export const PlayerList: React.FC = () => {
           Start
         </Button>
       ) : null}
-
-      <PlayerScores playersList={players} />
     </Box>
   );
 };

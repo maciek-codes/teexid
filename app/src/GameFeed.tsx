@@ -19,6 +19,7 @@ import Player from "./models/Player";
 import { CardPicker } from "./CardPicker";
 import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
+import GameLog from "./components/GameLog";
 
 type StoryPromptInputProps = {
   cards: Array<Card>;
@@ -145,71 +146,57 @@ export const GameFeed: React.FC = () => {
     );
 
   return (
-    <Flex flexWrap="wrap" px={5}>
-      <Flex
-        flexGrow={3}
-        flexShrink={1}
-        justifyContent="center"
-        alignItems="center"
-      >
-        {roomState === "waiting" && (
-          <Text flexGrow={2} align="center" fontSize="xl">
-            {" "}
-            Wait for players to join...
+    <Stack>
+      {roomState === "waiting" && (
+        <Text flexGrow={2} align="center" fontSize="xl">
+          {" "}
+          Wait for players to join...
+        </Text>
+      )}
+      {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
+      {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (
+        <CardPicker
+          cards={cards}
+          story={story}
+          selectedCard={selectedCard}
+          setSelectedCard={setSelectedCard}
+          promptText="Submit a card for this story"
+          buttonText="Submit a card"
+          onSelectedCard={submitCardForStory}
+        />
+      ) : null}
+      {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
+        <Box>
+          <Text fontSize="lg" mb={5}>
+            Your story: {story}
           </Text>
-        )}
-        {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
-        {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (
-          <CardPicker
-            cards={cards}
-            story={story}
-            selectedCard={selectedCard}
-            setSelectedCard={setSelectedCard}
-            promptText="Submit a card for this story"
-            buttonText="Submit a card"
-            onSelectedCard={submitCardForStory}
-          />
-        ) : null}
-        {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
-          <Box>
-            <Text fontSize="lg" mb={5}>
-              Your story: {story}
-            </Text>
-            <Text fontSize="md">Waiting for players to submit cards...</Text>
-          </Box>
-        ) : null}
-        {isPlaying && isVoting && isTellingStory ? (
-          <Stack>
-            <Text fontSize="xl">Waiting for votes... Cards submitted:</Text>
-            <CardSelector onSelected={() => {}} cards={storyCards} />
-          </Stack>
-        ) : null}
-        {isPlaying && isScoring && players ? (
-          <ScoreList players={players} />
-        ) : null}
-        {roomState === "ended" && (
-          <Box>
-            <Text fontSize="xl">Game ended!</Text>
-            <PlayerScores playersList={players} />
-          </Box>
-        )}
-        {isPlaying &&
-        isVoting &&
-        !isTellingStory &&
-        storyCards &&
-        storyCards?.length !== null ? (
-          <Voting story={story} playerCards={cards} storyCards={storyCards} />
-        ) : null}
-      </Flex>
-      {/** Right panel */}
-      <Flex
-        flexGrow={1}
-        flexShrink={3}
-        flexDirection="column"
-        flexBasis="250px"
-      >
-        <PlayerList />
-      </Flex>
-    </Flex>
+          <Text fontSize="md">Waiting for players to submit cards...</Text>
+        </Box>
+      ) : null}
+      {isPlaying && isVoting && isTellingStory ? (
+        <Stack>
+          <Text fontSize="xl">Waiting for votes... Cards submitted:</Text>
+          <CardSelector onSelected={() => {}} cards={storyCards} />
+        </Stack>
+      ) : null}
+      {isPlaying && isScoring && players ? (
+        <ScoreList players={players} />
+      ) : null}
+      {roomState === "ended" && (
+        <Box>
+          <Text fontSize="xl">Game ended!</Text>
+          <PlayerScores playersList={players} />
+        </Box>
+      )}
+      {isPlaying &&
+      isVoting &&
+      !isTellingStory &&
+      storyCards &&
+      storyCards?.length !== null ? (
+        <Voting story={story} playerCards={cards} storyCards={storyCards} />
+      ) : null}
+      <PlayerList />
+      <GameLog />
+    </Stack>
   );
 };

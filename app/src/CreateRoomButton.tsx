@@ -47,26 +47,35 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      width="100vh"
-      height="100vh"
       margin="auto"
     >
       <Stack flexDir="column">
         <PlayerName />
-        <Input
-          type="text"
-          placeholder="Room name"
-          background="white"
-          onChange={(e) => setRoomIdText(e.target.value)}
-        />
-        <Button
-          isLoading={isJoining}
-          className="rounded-full bg-purple-700 text-white"
-          isDisabled={roomIdText.trim() === "" || auth.isLoading || isJoining}
-          onClick={joinRoomClick}
-        >
-          Join a room
-        </Button>
+        {(player?.name ?? "") !== "" && (
+          <Stack px={5}>
+            <Text fontSize="smaller">
+              Enter the room name to start a new room or type in the room name
+              that someone shared with you
+            </Text>
+            <Input
+              type="text"
+              placeholder="Room name"
+              background="white"
+              onChange={(e) => setRoomIdText(e.target.value)}
+            />
+
+            <Button
+              isLoading={isJoining}
+              className="rounded-full bg-purple-700 text-white"
+              isDisabled={
+                roomIdText.trim() === "" || auth.isLoading || isJoining
+              }
+              onClick={joinRoomClick}
+            >
+              Join or start a room
+            </Button>
+          </Stack>
+        )}
         {isJoining ? <Text>Connecting...</Text> : null}
       </Stack>
     </Flex>

@@ -21,14 +21,14 @@ const PlayerName: React.FC = () => {
 
   return isEditingName ? (
     <Stack>
-      <Text>Name: {value}</Text>
+      <Text>What is your player's name?</Text>
       <Input
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
         placeholder="Enter your name"
         background="white"
       />
-      <Button onClick={updateName}>Apply</Button>
+      <Button onClick={updateName}>Done</Button>
     </Stack>
   ) : (
     <Box>

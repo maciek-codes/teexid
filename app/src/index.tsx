@@ -17,7 +17,7 @@ root.render(
     <>
       {localStorage.setItem("chakra-ui-color-mode", "light")}
       <ColorModeScript initialColorMode={theme.config.initialColorMode} />
-      <ChakraProvider theme={theme}>
+      <ChakraProvider theme={theme} resetCSS={true}>
         <App />
       </ChakraProvider>
     </>

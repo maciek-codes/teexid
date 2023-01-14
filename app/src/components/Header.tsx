@@ -18,9 +18,11 @@ const Header: React.FC = () => {
           TeeXid
         </Link>
 
-        <Text fontSize="md" alignSelf="flex-end" color="white">
-          Room: {roomId} <CopyButton copyText={roomId} />
-        </Text>
+        {roomId !== "" && (
+          <Text fontSize="md" alignSelf="flex-end" color="white">
+            Room: {roomId} <CopyButton copyText={roomId} />
+          </Text>
+        )}
       </Flex>
     </Heading>
   );

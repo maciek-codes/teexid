@@ -9,7 +9,8 @@ import GameRoom from "./GameRoom";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
 import CreateRoomButton from "./CreateRoomButton";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { Container } from "@chakra-ui/react";
+import { Box, Container, Flex, Stack } from "@chakra-ui/react";
+import Header from "./components/Header";
 
 // Font awesome icons
 library.add(far);
@@ -28,41 +29,50 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <WebSocketContextProvider>
-        <ErrorBoundary>
-          <Container
-            background="#efefef"
-            maxWidth={["900px", "720px", "1600px"]}
-            width="100%"
-            margin="0px 0px"
-            padding="0px"
-            h="calc(100vh)"
-          >
-            <BrowserRouter>
-              <Routes>
-                <Route
-                  path="/"
-                  element={
-                    <RoomContextProvider>
-                      <PlayerContextProvider>
-                        <CreateRoomButton />
-                      </PlayerContextProvider>
-                    </RoomContextProvider>
-                  }
-                />
-                <Route
-                  path="/room/:roomId"
-                  element={
-                    <RoomContextProvider>
-                      <PlayerContextProvider>
-                        <GameRoom />
-                      </PlayerContextProvider>
-                    </RoomContextProvider>
-                  }
-                />
-              </Routes>
-            </BrowserRouter>
-          </Container>
-        </ErrorBoundary>
+        <BrowserRouter>
+          <RoomContextProvider>
+            <ErrorBoundary>
+              <Box background="#efefef">
+                <Header />
+                <Container
+                  h="100vh"
+                  maxW="1366px"
+                  margin="0px auto"
+                  padding={0}
+                  centerContent={true}
+                >
+                  <Box alignSelf="stretch"></Box>
+                  <Stack
+                    maxW="container.xl"
+                    align={"center"}
+                    spacing={{ base: 8, md: 10 }}
+                    py={{ base: 20, md: 28 }}
+                    direction={{ base: "column", md: "row" }}
+                  >
+                    <Routes>
+                      <Route
+                        path="/"
+                        element={
+                          <PlayerContextProvider>
+                            <CreateRoomButton />
+                          </PlayerContextProvider>
+                        }
+                      />
+                      <Route
+                        path="/room/:roomId"
+                        element={
+                          <PlayerContextProvider>
+                            <GameRoom />
+                          </PlayerContextProvider>
+                        }
+                      />
+                    </Routes>
+                  </Stack>
+                </Container>
+              </Box>
+            </ErrorBoundary>
+          </RoomContextProvider>
+        </BrowserRouter>
       </WebSocketContextProvider>
     </QueryClientProvider>
   );

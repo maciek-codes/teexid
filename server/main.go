@@ -85,9 +85,6 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 		return
 	}
 
-	log.Printf("Got command %s from %s with data %s",
-		command.Type, playerId.String(), command.Data)
-
 	if command.Type == "ping" {
 		// Update user's last ping time
 		for _, room := range roomById {
@@ -98,15 +95,17 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 			}
 		}
 		message := ReponseMessage{Type: "pong"}
-
 		b, _ := json.Marshal(message)
-
-		log.Printf("Writing %s\n", string(b))
 		conn.WriteMessage(websocket.TextMessage, b)
 	} else if command.Type == "create_room" ||
 		command.Type == "join_room" {
+		log.Printf("Got command %s from %s with data %s",
+			command.Type, playerId.String(), command.Data)
+
 		handleCreateRoom(conn, &playerId, command.Data)
 	} else {
+		log.Printf("Got command %s from %s with data %s",
+			command.Type, playerId.String(), command.Data)
 
 		// Find player/room
 		roomMsg := struct {
@@ -155,29 +154,33 @@ func handleJoinRoom(conn *websocket.Conn, playerId *uuid.UUID, room *Room, playe
 		room.AddPlayer(player, conn)
 	}
 
+	var lastSubmittedCard = FindLastSubmitted(room, player.Id)
+
 	// Send on_joined msg
 	b, _ := json.Marshal(struct {
-		RoomId         string    `json:"roomId"`
-		OwnerId        string    `json:"ownerId"`
-		PlayerId       string    `json:"playerId"`
-		PlayerCards    []int     `json:"cards"`
-		RoomState      RoomState `json:"roomState"`
-		TurnState      TurnState `json:"turnState"`
-		Players        []*Player `json:"players"`
-		Story          string    `json:"story"`
-		CardsSubmitted []int     `json:"cardsSubmitted"`
-		StoryPlayerId  uuid.UUID `json:"storyPlayerId"`
+		RoomId            string    `json:"roomId"`
+		OwnerId           string    `json:"ownerId"`
+		PlayerId          string    `json:"playerId"`
+		PlayerCards       []int     `json:"cards"`
+		RoomState         RoomState `json:"roomState"`
+		TurnState         TurnState `json:"turnState"`
+		Players           []*Player `json:"players"`
+		Story             string    `json:"story"`
+		CardsSubmitted    []int     `json:"cardsSubmitted"`
+		StoryPlayerId     uuid.UUID `json:"storyPlayerId"`
+		LastSubmittedCard int       `json:"lastSubmittedCard"`
 	}{
-		RoomId:         room.Id,
-		OwnerId:        room.OwnerId.String(),
-		PlayerId:       player.Id.String(),
-		PlayerCards:    player.Cards,
-		RoomState:      room.State,
-		TurnState:      room.TurnState,
-		Players:        room.Players(),
-		Story:          room.Story,
-		StoryPlayerId:  room.StoryPlayerId,
-		CardsSubmitted: GetCardsForVoting(room, player),
+		RoomId:            room.Id,
+		OwnerId:           room.OwnerId.String(),
+		PlayerId:          player.Id.String(),
+		PlayerCards:       player.Cards,
+		RoomState:         room.State,
+		TurnState:         room.TurnState,
+		Players:           room.Players(),
+		Story:             room.Story,
+		StoryPlayerId:     room.StoryPlayerId,
+		CardsSubmitted:    GetCardsForVoting(room, player),
+		LastSubmittedCard: lastSubmittedCard,
 	})
 	payload := json.RawMessage(b)
 

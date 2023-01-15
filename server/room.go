@@ -80,9 +80,9 @@ func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 		TurnState:      NotStarted,
 		cardIds:        cardIds,
 		OwnerId:        playerId,
+		StoryCard:      -1,
 		StoryPlayerId:  uuid.Nil,
 		Story:          "",
-		StoryCard:      -1,
 		votes:          make([]Vote, 0),
 		cardsSubmitted: make([]CardSubmitted, 0),
 	}
@@ -136,7 +136,9 @@ func GetCardsForVoting(room *Room, player *Player) []int {
 				cardIds = append(cardIds, cardSubmitted.CardId)
 			}
 		}
-		cardIds = append(cardIds, room.StoryCard)
+		if room.StoryCard != -1 {
+			cardIds = append(cardIds, room.StoryCard)
+		}
 
 		// Shuffle
 		rand.Seed(time.Now().UnixNano())
@@ -145,23 +147,48 @@ func GetCardsForVoting(room *Room, player *Player) []int {
 	return cardIds
 }
 
+func FindLastSubmitted(r *Room, playerId uuid.UUID) int {
+	var lastSubmittedCard = -1
+	if playerId == r.StoryPlayerId {
+		lastSubmittedCard = r.StoryCard
+	} else if r.TurnState == Voting {
+		for _, vote := range r.votes {
+			if playerId == vote.Voter.Id {
+				lastSubmittedCard = vote.CardId
+			}
+		}
+	} else if r.TurnState == SelectingCards {
+		for _, cardSubmitted := range r.cardsSubmitted {
+			if playerId.String() == cardSubmitted.PlayerId {
+				lastSubmittedCard = cardSubmitted.CardId
+			}
+		}
+	}
+	return lastSubmittedCard
+}
+
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
 	for _, playerConn := range r.conns {
+
+		var lastSubmittedCard = FindLastSubmitted(r, playerConn.player.Id)
+
 		b, _ := json.Marshal(struct {
-			Id             string    `json:"id"`
-			RoomState      RoomState `json:"roomState"`
-			TurnState      TurnState `json:"turnState"`
-			StoryPlayerId  string    `json:"storyPlayerId"`
-			Story          string    `json:"story"`
-			CardsSubmitted []int     `json:"cardsSubmitted"`
+			Id                string    `json:"id"`
+			RoomState         RoomState `json:"roomState"`
+			TurnState         TurnState `json:"turnState"`
+			StoryPlayerId     string    `json:"storyPlayerId"`
+			LastSubmittedCard int       `json:"lastSubmittedCard"`
+			Story             string    `json:"story"`
+			CardsSubmitted    []int     `json:"cardsSubmitted"`
 		}{
-			Id:             r.Id,
-			RoomState:      r.State,
-			TurnState:      r.TurnState,
-			StoryPlayerId:  r.StoryPlayerId.String(),
-			Story:          r.Story,
-			CardsSubmitted: GetCardsForVoting(r, playerConn.player),
+			Id:                r.Id,
+			RoomState:         r.State,
+			TurnState:         r.TurnState,
+			StoryPlayerId:     r.StoryPlayerId.String(),
+			LastSubmittedCard: lastSubmittedCard,
+			Story:             r.Story,
+			CardsSubmitted:    GetCardsForVoting(r, playerConn.player),
 		})
 
 		payloadMessage := json.RawMessage(b)
@@ -382,8 +409,8 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 		p.discardCard(r, submission.CardId)
 		if len(r.cardsSubmitted) == len(r.playerMap)-1 {
 			r.TurnState = Voting
-			r.BroadcastRoomState()
 		}
+		r.BroadcastRoomState()
 	} else if command.Type == "player/vote" {
 		r.handleVoteCommand(p, command.Data)
 

@@ -21,6 +21,8 @@ type PlayerItemProps = {
   currentPlayerId: string;
   onReadyClick: () => void;
   isTellingStory: boolean;
+  hasSubmittedCard: boolean;
+  hasVoted: boolean;
 };
 
 const PlayerItem: React.FC<PlayerItemProps> = ({
@@ -28,17 +30,21 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
   currentPlayerId,
   onReadyClick,
   isTellingStory,
+  hasSubmittedCard,
+  hasVoted,
 }: PlayerItemProps) => {
   const isSelf = player.id === currentPlayerId;
   return (
     <ListItem mt="1">
       <HStack>
         <Avatar name={player.name} />
-        <Text color={isSelf ? "green.400 " : "black"}>{player.name}</Text>
+        <Text color={isSelf ? "green.700 " : "black"}>{player.name}</Text>
         {!player.ready ? <Text> (not ready)</Text> : null}
-        <Text color={isSelf ? "green.400 " : "black"}>
+        <Text color={isSelf ? "green.700 " : "black"}>
           - {player.points} pt
           {isTellingStory ? <i> &#128211;</i> : null}
+          {hasSubmittedCard ? <i> &#127183;</i> : null}
+          {hasVoted ? <i> &#128499;</i> : null}
         </Text>
         {isSelf && !player.ready ? (
           <Button onClick={onReadyClick}>I'm ready</Button>
@@ -49,7 +55,8 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
 };
 export const PlayerList: React.FC = () => {
   const { id, isOwner } = usePlayer();
-  const { roomId, players, roomState, storyPlayerId } = useRoom();
+  const { roomId, players, roomState, storyPlayerId, turnState, submittedBy } =
+    useRoom();
   const { sendCommand } = useSocket();
   const gameStarted = roomState !== "waiting";
 
@@ -73,11 +80,16 @@ export const PlayerList: React.FC = () => {
     }
   }, [roomId, isOwner, sendCommand]);
 
+  const isVoting = turnState === "voting";
+  const isSelectingCards = turnState === "selecting_cards";
+
   // Create a list of players
   return (
     <Box backgroundColor="red.200" m="5" p="5" width="lg">
       <List>
         {players.map((player: Player, idx: number) => {
+          const hasSubmitted =
+            submittedBy.filter((sb) => sb === player.id).length == 1;
           return (
             <Box mt="10px" key={idx}>
               <PlayerItem
@@ -85,6 +97,8 @@ export const PlayerList: React.FC = () => {
                 currentPlayerId={id ?? ""}
                 onReadyClick={onReadyClick}
                 isTellingStory={player.id === storyPlayerId}
+                hasSubmittedCard={hasSubmitted && isSelectingCards}
+                hasVoted={hasSubmitted && isVoting}
               />
             </Box>
           );

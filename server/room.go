@@ -50,12 +50,11 @@ type Room struct {
 	votes          []Vote
 	cardsSubmitted []CardSubmitted
 	mu             sync.Mutex
-
-	TurnState     TurnState `json:"turnState"`
-	StoryPlayerId uuid.UUID `json:"storyPlayerId"`
-	Story         string    `json:"story"`
-	StoryCard     int       `json:"-"`
-	CreatedAt     time.Time `json:"createdAt"`
+	TurnState      TurnState `json:"turnState"`
+	StoryPlayerId  uuid.UUID `json:"storyPlayerId"`
+	Story          string    `json:"story"`
+	StoryCard      int       `json:"-"`
+	CreatedAt      time.Time `json:"createdAt"`
 }
 
 type ReponseMessage struct {
@@ -167,6 +166,20 @@ func FindLastSubmitted(r *Room, playerId uuid.UUID) int {
 	return lastSubmittedCard
 }
 
+func GetPlayersWhoSubmitted(r *Room) []string {
+	var submittedBy = make([]string, 0)
+	if r.TurnState == Voting {
+		for _, vote := range r.votes {
+			submittedBy = append(submittedBy, vote.Voter.Id.String())
+		}
+	} else if r.TurnState == SelectingCards {
+		for _, cardSubmitted := range r.cardsSubmitted {
+			submittedBy = append(submittedBy, cardSubmitted.PlayerId)
+		}
+	}
+	return submittedBy
+}
+
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
 	for _, playerConn := range r.conns {
@@ -181,6 +194,7 @@ func (r *Room) BroadcastRoomState() {
 			LastSubmittedCard int       `json:"lastSubmittedCard"`
 			Story             string    `json:"story"`
 			CardsSubmitted    []int     `json:"cardsSubmitted"`
+			Submitted         []string  `json:"submittedBy"`
 		}{
 			Id:                r.Id,
 			RoomState:         r.State,
@@ -189,6 +203,7 @@ func (r *Room) BroadcastRoomState() {
 			LastSubmittedCard: lastSubmittedCard,
 			Story:             r.Story,
 			CardsSubmitted:    GetCardsForVoting(r, playerConn.player),
+			Submitted:         GetPlayersWhoSubmitted(r),
 		})
 
 		payloadMessage := json.RawMessage(b)
@@ -448,6 +463,7 @@ func (r *Room) handleVoteCommand(p *Player, commandData string) {
 			break
 		}
 	}
+	r.BroadcastRoomState()
 }
 
 /*

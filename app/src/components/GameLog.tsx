@@ -9,11 +9,13 @@ import { GameLogEntry } from "../types";
 type GameLogItemProps = {
   logEntry: GameLogEntry;
   playerMap: Map<string, Player>;
+  roundNo: number;
 };
 
 const GameLogItem: React.FC<GameLogItemProps> = ({
   logEntry,
   playerMap,
+  roundNo,
 }: GameLogItemProps) => {
   const cardVotes = Array.from(logEntry.cardsSubmitted.values()).map((card) => {
     // Check who voted for this card
@@ -39,7 +41,10 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
   });
 
   return (
-    <Stack backgroundColor="orange.200" mx="5">
+    <Stack backgroundColor="orange.200" my="15px">
+      <Text textAlign="center" fontSize="xl">
+        Round #{roundNo}
+      </Text>
       <Text>
         <Text as="b">
           {playerMap.get(logEntry.storyPlayerId)?.name ?? "???"}
@@ -57,9 +62,15 @@ const GameLog: React.FC = () => {
     map.set(player.id, player);
     return map;
   }, new Map<string, Player>());
+
+  const rounds = gameLog.length;
   const logItems = gameLog.map((logEntry, idx) => (
     <div key={idx}>
-      <GameLogItem playerMap={playerMap} logEntry={logEntry} />
+      <GameLogItem
+        playerMap={playerMap}
+        logEntry={logEntry}
+        roundNo={rounds - idx}
+      />
     </div>
   ));
   if (logItems.length === 0) {

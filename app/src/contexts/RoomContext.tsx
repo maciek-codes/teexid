@@ -34,6 +34,7 @@ type CurrentRoomState = {
   players: Player[];
   story: string;
   gameLog: GameLogEntry[];
+  submittedBy: string[];
 };
 
 const defaultRoomState: CurrentRoomState = {
@@ -49,6 +50,7 @@ const defaultRoomState: CurrentRoomState = {
   story: "",
   gameLog: [],
   lastSubmittedCard: -1,
+  submittedBy: [],
 };
 
 const RoomContext = createContext<CurrentRoomState>(defaultRoomState);

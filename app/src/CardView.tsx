@@ -32,6 +32,7 @@ const CardView = ({ card, selected, onClick }: CardViewProps) => {
         _hover={{ transform: "scale(1.1)" }}
         transform={selected ?? false ? "scale(1.1)" : "auto"}
         width="150px"
+        maxHeight="180px"
         margin="0"
       />
     </Box>

@@ -35,7 +35,7 @@ type GameRoom interface {
 type Vote struct {
 	Voter  *Player `json:"voter"`
 	Voted  *Player `json:"voted"`
-	CardId int `json:"cardId"`
+	CardId int     `json:"cardId"`
 }
 
 type Room struct {
@@ -65,7 +65,7 @@ type ReponseMessage struct {
 
 type CardSubmitted struct {
 	PlayerId string `json:"playerId"`
-	CardId   int  `json:"cardId"`
+	CardId   int    `json:"cardId"`
 }
 
 func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
@@ -367,9 +367,9 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 		}
 
 		// Maybe submitted already?
-		for _, alreadySubmittedCard := range(r.cardsSubmitted) {
+		for _, alreadySubmittedCard := range r.cardsSubmitted {
 			if alreadySubmittedCard.PlayerId == string(p.Id.String()) {
-				sendError(conn, "player/submitCard", "Already submitted: " + command.Data)
+				sendError(conn, "player/submitCard", "Already submitted: "+command.Data)
 				return
 			}
 		}
@@ -504,16 +504,16 @@ func (r *Room) scoreTurn() {
 
 func (r *Room) revealTurnResults() {
 	b, _ := json.Marshal(struct {
-		Votes []Vote `json:"votes"`
-		Submitted []CardSubmitted `json:"cardsSubmitted"`
-		StoryPlayerId string `json:"storyPlayerId"`
-		StoryCard int `json:"storyCard"`
-		Story string `json:"story"`
+		Votes         []Vote          `json:"votes"`
+		Submitted     []CardSubmitted `json:"cardsSubmitted"`
+		StoryPlayerId string          `json:"storyPlayerId"`
+		StoryCard     int             `json:"storyCard"`
+		Story         string          `json:"story"`
 	}{Votes: r.votes,
-		Submitted: r.cardsSubmitted, 
-		StoryCard: r.StoryCard, 
+		Submitted:     r.cardsSubmitted,
+		StoryCard:     r.StoryCard,
 		StoryPlayerId: r.StoryPlayerId.String(),
-		Story: r.Story,
+		Story:         r.Story,
 	})
 
 	payloadMessage := json.RawMessage(b)

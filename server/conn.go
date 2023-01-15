@@ -1,13 +1,16 @@
 package main
 
 import (
+	"time"
+
 	"github.com/gorilla/websocket"
 )
 
 type playerConn struct {
-	room   *Room
-	player *Player
-	ws     *websocket.Conn
+	room     *Room
+	player   *Player
+	ws       *websocket.Conn
+	lastPing time.Time
 }
 
 type Command struct {
@@ -17,5 +20,5 @@ type Command struct {
 }
 
 func NewPlayerConn(ws *websocket.Conn, player *Player, room *Room) playerConn {
-	return playerConn{room, player, ws}
+	return playerConn{room, player, ws, time.Now()}
 }

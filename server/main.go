@@ -88,7 +88,22 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 	log.Printf("Got command %s from %s with data %s",
 		command.Type, playerId.String(), command.Data)
 
-	if command.Type == "create_room" ||
+	if command.Type == "ping" {
+		// Update user's last ping time
+		for _, room := range roomById {
+			for _, conn := range room.conns {
+				if conn.player.Id == playerId {
+					conn.lastPing = time.Now()
+				}
+			}
+		}
+		message := ReponseMessage{Type: "pong"}
+
+		b, _ := json.Marshal(message)
+
+		log.Printf("Writing %s\n", string(b))
+		conn.WriteMessage(websocket.TextMessage, b)
+	} else if command.Type == "create_room" ||
 		command.Type == "join_room" {
 		handleCreateRoom(conn, &playerId, command.Data)
 	} else {

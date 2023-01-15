@@ -9,14 +9,12 @@ type StoryPromptInputProps = {
   cards: Array<Card>;
   selectedCard: Card | null;
   setSelectedCard: (c: Card | null) => void;
-  onSubmitted: (cardId: number) => void;
 };
 
 const StoryInput: React.FC<StoryPromptInputProps> = ({
   cards,
   selectedCard,
   setSelectedCard,
-  onSubmitted,
 }) => {
   const { sendCommand } = useSocket();
   const { roomId } = useRoom();
@@ -31,7 +29,6 @@ const StoryInput: React.FC<StoryPromptInputProps> = ({
           cardId: selectedCard.cardId,
         },
       });
-      onSubmitted(selectedCard?.cardId);
     }
   }, [roomId, sendCommand, storyText, selectedCard]);
 

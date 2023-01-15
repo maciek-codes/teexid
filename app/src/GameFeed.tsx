@@ -47,6 +47,7 @@ export const GameFeed: React.FC = () => {
     storyPlayerId,
     roomState,
     turnState,
+    lastSubmittedCard,
   } = useRoom();
 
   const isTellingStory = storyPlayerId === player.id;
@@ -54,13 +55,6 @@ export const GameFeed: React.FC = () => {
   const isPlaying = roomState === "playing";
   const isVoting = turnState === "voting";
   const isScoring = turnState === "scoring";
-  const [submittedCard, setSubmittedCard] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!isTellingStory && isVoting) {
-      setSubmittedCard(null);
-    }
-  }, []);
 
   const submitCardForStory = useCallback(() => {
     if (selectedCard !== null) {
@@ -72,7 +66,6 @@ export const GameFeed: React.FC = () => {
         },
       });
       setSelectedCard(null);
-      setSubmittedCard(selectedCard.cardId);
     }
   }, [roomId, sendCommand, selectedCard]);
 
@@ -82,9 +75,6 @@ export const GameFeed: React.FC = () => {
         selectedCard={selectedCard}
         cards={cards}
         setSelectedCard={setSelectedCard}
-        onSubmitted={(cardId) => {
-          setSubmittedCard(cardId);
-        }}
       />
     ) : (
       <Center>
@@ -104,39 +94,58 @@ export const GameFeed: React.FC = () => {
         </Text>
       )}
       {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
-      {isPlaying && turnState === "selecting_cards" && !isTellingStory && (
-        <CardPicker
-          cards={cards}
-          story={story}
-          selectedCard={selectedCard}
-          setSelectedCard={setSelectedCard}
-          promptText="Submit a card for this story"
-          buttonText="Submit a card"
-          onSelectedCard={submitCardForStory}
-        />
-      )}
+      {isPlaying &&
+        turnState === "selecting_cards" &&
+        !isTellingStory &&
+        lastSubmittedCard === -1 && (
+          <CardPicker
+            cards={cards}
+            story={story}
+            selectedCard={selectedCard}
+            setSelectedCard={setSelectedCard}
+            promptText="Submit a card for this story"
+            buttonText="Submit a card"
+            onSelectedCard={submitCardForStory}
+          />
+        )}
+      {isPlaying &&
+        turnState === "selecting_cards" &&
+        !isTellingStory &&
+        lastSubmittedCard !== -1 && (
+          <>
+            <Text fontSize="lg" mb={5}>
+              You submitted this card for the "<Text as="em">{story}</Text>"
+              story
+            </Text>
+            <CardView card={{ cardId: lastSubmittedCard ?? "-1" } as Card} />
+          </>
+        )}
       {isPlaying && isTellingStory && (
         <>
           <Text fontSize="lg" mb={5}>
             You submitted the story: <Text as="em">{story}</Text>
           </Text>
-          <Text fontSize="lg" mb={5}>
-            Your story card:
-          </Text>
-          <CardView card={{ cardId: submittedCard ?? "-1" } as Card} />
+          {lastSubmittedCard !== -1 && (
+            <>
+              <Text fontSize="lg" mb={5}>
+                Your story card:
+              </Text>
+              <CardView card={{ cardId: lastSubmittedCard ?? "-1" } as Card} />
+            </>
+          )}
         </>
       )}
       {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
         <Text fontSize="md">Waiting for players to submit cards...</Text>
       ) : null}
       {isPlaying && isVoting && isTellingStory && (
-        <Stack>
+        <>
           <Text fontSize="xl">Waiting for votes... {"\n"}Cards submitted:</Text>
           <CardSelector
             onSelected={() => {}}
-            cards={storyCards.filter((c) => c.cardId !== submittedCard)}
+            cards={storyCards.filter((c) => c.cardId !== lastSubmittedCard)}
           />
-        </Stack>
+        </>
       )}
       {isPlaying && isScoring && players ? (
         <ScoreList players={players} />

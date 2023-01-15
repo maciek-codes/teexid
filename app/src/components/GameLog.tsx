@@ -1,4 +1,4 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react";
 import React from "react";
 import CardView from "../CardView";
 import { useRoom } from "../contexts/RoomContext";
@@ -21,10 +21,12 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
       .map((playerId) => playerMap.get(playerId)?.name ?? "???")
       .join(", ");
     return (
-      <>
+      <Box mt="1em" backgroundColor="orange.300">
         <Text>
-          {" "}
-          {playerMap.get(card.playerSubmitted)?.name ?? "???"} submitted:
+          <Text as="b">
+            {playerMap.get(card.playerSubmitted)?.name ?? "???"}
+          </Text>{" "}
+          submitted:
         </Text>
         <CardView card={{ cardId: card.cardId } as Card} />
         {players.length === 0 ? (
@@ -32,18 +34,20 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
         ) : (
           <Text>{players} voted.</Text>
         )}
-      </>
+      </Box>
     );
   });
 
   return (
-    <>
+    <Stack backgroundColor="orange.200" mx="5">
       <Text>
-        {playerMap.get(logEntry.storyPlayerId)?.name ?? "???"} submitted story{" "}
-        {logEntry.story}
+        <Text as="b">
+          {playerMap.get(logEntry.storyPlayerId)?.name ?? "???"}
+        </Text>{" "}
+        submitted story {logEntry.story}
       </Text>
       {cardVotes}
-    </>
+    </Stack>
   );
 };
 
@@ -54,13 +58,15 @@ const GameLog: React.FC = () => {
     return map;
   }, new Map<string, Player>());
   const logItems = gameLog.map((logEntry, idx) => (
-    <GameLogItem key={idx} playerMap={playerMap} logEntry={logEntry} />
+    <div key={idx}>
+      <GameLogItem playerMap={playerMap} logEntry={logEntry} />
+    </div>
   ));
-  if (logItems.length == 0) {
+  if (logItems.length === 0) {
     return null;
   }
   return (
-    <Stack backgroundColor="orange.200" px={5} py={3} mt={10}>
+    <Stack px={5} py={3} mt={10}>
       <Text>History: </Text>
       {logItems}
     </Stack>

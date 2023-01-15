@@ -69,7 +69,7 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
       <Stack flexDir="column">
         <PlayerName />
         {(player?.name ?? "") !== "" && (
-          <Stack px={5}>
+          <Stack pt="5px">
             <Text fontSize="smaller">
               Enter the room name to start a new room or type in the room name
               that someone shared with you

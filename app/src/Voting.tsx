@@ -20,8 +20,8 @@ export const Voting: React.FC<VotingProps> = ({
   storyCards,
 }: VotingProps) => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const [votedCardId, setVotedCardId] = useState<number | null>(null);
-  const { roomId } = useRoom();
+  const [voted, setVoted] = useState<boolean>(false);
+  const { roomId, lastSubmittedCard } = useRoom();
   const { sendCommand } = useSocket();
 
   const voteForCard = useCallback(() => {
@@ -34,30 +34,30 @@ export const Voting: React.FC<VotingProps> = ({
         },
       });
       setSelectedCard(null);
-      setVotedCardId(selectedCard.cardId);
+      setVoted(true);
     }
-  }, [roomId, setVotedCardId, sendCommand, selectedCard]);
+  }, [roomId, setVoted, sendCommand, selectedCard]);
 
-  const content =
-    votedCardId !== null ? (
-      <>
-        <Text>You voted for:</Text>
-        <CardView card={{ cardId: votedCardId }} />
-      </>
-    ) : (
-      <CardPicker
-        cards={storyCards.filter(
-          (card) =>
-            !playerCards.map((card) => card.cardId).includes(card.cardId)
-        )}
-        story={story}
-        selectedCard={selectedCard}
-        setSelectedCard={setSelectedCard}
-        promptText="Select the card you want to vote for"
-        buttonText="Vote"
-        onSelectedCard={voteForCard}
-      />
-    );
+  const content = voted ? (
+    <>
+      <Text>You voted for:</Text>
+      {lastSubmittedCard !== -1 && (
+        <CardView card={{ cardId: lastSubmittedCard }} />
+      )}
+    </>
+  ) : (
+    <CardPicker
+      cards={storyCards.filter(
+        (card) => !playerCards.map((card) => card.cardId).includes(card.cardId)
+      )}
+      story={story}
+      selectedCard={selectedCard}
+      setSelectedCard={setSelectedCard}
+      promptText="Select the card you want to vote for"
+      buttonText="Vote"
+      onSelectedCard={voteForCard}
+    />
+  );
 
   return content;
 };

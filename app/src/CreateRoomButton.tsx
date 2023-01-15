@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, Flex, Input, Progress, Stack, Text } from "@chakra-ui/react";
 
 import { useAuth } from "./hooks/useAuth";
 import { useSocket } from "./contexts/WebsocketContext";
@@ -41,6 +41,23 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
       navigate(`/room/${roomId}`);
     }
   }, [roomId, navigate]);
+
+  if (auth.isError) {
+    return (
+      <>
+        <Text>Error connecting</Text>
+      </>
+    );
+  }
+
+  if (auth.isLoading) {
+    return (
+      <>
+        <Text>Loading ...</Text>
+        <Progress size="xs" isIndeterminate />
+      </>
+    );
+  }
 
   return (
     <Flex

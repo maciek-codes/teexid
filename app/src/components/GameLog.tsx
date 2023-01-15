@@ -56,8 +56,11 @@ const GameLog: React.FC = () => {
   const logItems = gameLog.map((logEntry, idx) => (
     <GameLogItem key={idx} playerMap={playerMap} logEntry={logEntry} />
   ));
+  if (logItems.length == 0) {
+    return null;
+  }
   return (
-    <Stack background="#ed2f2f" pt={2} my={10}>
+    <Stack backgroundColor="orange.200" px={5} py={3} mt={10}>
       <Text>History: </Text>
       {logItems}
     </Stack>

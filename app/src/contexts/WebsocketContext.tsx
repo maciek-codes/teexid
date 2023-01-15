@@ -12,6 +12,7 @@ import { getWsHost } from "../utils/config";
 const SOCKET_HOST = getWsHost();
 
 let ws: WebSocket | null = null;
+
 const getWs = () => {
   if (ws == null) {
     ws = new WebSocket(SOCKET_HOST);
@@ -36,7 +37,8 @@ type Command =
   | { type: "player/ready"; data: RoomCommandData }
   | { type: "player/story"; data: StoryCommandData }
   | { type: "player/submitCard"; data: CardCommandData }
-  | { type: "player/vote"; data: CardCommandData };
+  | { type: "player/vote"; data: CardCommandData }
+  | { type: "ping" };
 
 type CallbackFn = (msg: ResponseMsg) => void;
 
@@ -82,29 +84,36 @@ export const WebSocketContextProvider: React.FC<
     listeners = listeners.filter((listener) => listener !== fn);
   }, []);
 
+  // Monitor connection state
   useEffect(() => {
     const timeoutId = setInterval(() => {
-      if (connected && getReadyState() !== WebSocket.OPEN) {
+      const connectedState = ws?.readyState ?? -1;
+      if (connectedState === WebSocket.OPEN) {
+        setConnecting(false);
+      } else if (connectedState === WebSocket.CONNECTING) {
         setConnected(false);
         setConnecting(true);
-      } else if (!connected) {
-        setConnected(true);
-        setConnecting(false);
+      } else {
+        setConnected(false);
       }
-    });
+    }, 2000);
     return () => {
       clearInterval(timeoutId);
     };
   });
 
+  // Try to reconnnect
   useEffect(() => {
     const timeoutId = setInterval(() => {
-      if (getReadyState() === WebSocket.CLOSED) {
+      const readyState = ws?.readyState ?? -1;
+      if (readyState === WebSocket.CLOSED) {
         setConnected(false);
         setConnecting(true);
         ws = new WebSocket(SOCKET_HOST);
+      } else if (readyState === WebSocket.OPEN) {
+        sendCommand({ type: "ping" });
       }
-    }, 10000);
+    }, 50000);
     return () => {
       clearInterval(timeoutId);
     };
@@ -112,6 +121,10 @@ export const WebSocketContextProvider: React.FC<
 
   const onMsg = useCallback((ev: MessageEvent<string>) => {
     const msg = JSON.parse(ev.data) as ResponseMsg;
+    if (msg.type === "pong") {
+      setError(null);
+      return;
+    }
     listeners.forEach((listener) => listener(msg));
   }, []);
 
@@ -147,11 +160,18 @@ export const WebSocketContextProvider: React.FC<
     [setError]
   );
 
+  const onOpen = useCallback(() => {
+    setError(null);
+  }, []);
+
   useEffect(() => {
     getWs().addEventListener("error", onError);
+    getWs().addEventListener("open", onOpen);
     const thisOnError = onError;
+    const thisOnOpen = onOpen;
     return () => {
       getWs().removeEventListener("error", thisOnError);
+      getWs().removeEventListener("open", thisOnOpen);
     };
   }, [onError]);
 

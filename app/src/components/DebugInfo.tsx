@@ -11,8 +11,8 @@ const DebugInfo: React.FC = () => {
   return (
     <Stack fontSize="3xs" backgroundColor="#f5f5f5">
       <Text>Debug info</Text>
-      <Text>
-        Connection Status:
+      <Text>Connection Status:</Text>
+      <Text as="b">
         {connecting ? <> Re-connecting</> : null}
         {connected ? <> Connected</> : null}
       </Text>

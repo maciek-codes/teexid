@@ -75,7 +75,7 @@ export const PlayerList: React.FC = () => {
 
   // Create a list of players
   return (
-    <Box backgroundColor="red.100" m="5" p="5" width="sm">
+    <Box backgroundColor="red.200" m="5" p="5" width="lg">
       <List>
         {players.map((player: Player, idx: number) => {
           return (

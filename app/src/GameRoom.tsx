@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Stack, Text, Link, Box, Flex } from "@chakra-ui/react";
+import { Text, Box } from "@chakra-ui/react";
 
 import { GameFeed } from "./GameFeed";
 import { useSocket } from "./contexts/WebsocketContext";

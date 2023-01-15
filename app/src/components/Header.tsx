@@ -7,14 +7,14 @@ import { useRoom } from "../contexts/RoomContext";
 const Header: React.FC = () => {
   const { roomId } = useRoom();
   return (
-    <Heading size="xl" pt="10px" background="#48323A" px="0.5em" py="0.25em">
+    <Heading size="xl" pt="10px" background="#EAE0CC" px="0.5em" py="0.25em">
       <Flex
         flexDirection="row"
         alignItems="start"
         justifyItems="center"
         justifyContent="space-between"
       >
-        <Link as={RouterLink} to="/" color="#E7E2C1" mt="2">
+        <Link as={RouterLink} to="/" color="#0E0E0E" mt="2">
           TeeXid
         </Link>
 

@@ -9,7 +9,14 @@ import React, {
 import { useNavigate, useParams } from "react-router-dom";
 import Card from "../models/Card";
 import Player from "../models/Player";
-import { ResponseMsg, RoomState, TurnState } from "../types";
+import {
+  GameLogEntry,
+  GameLogEntryCards,
+  OnTurnResultPayload,
+  ResponseMsg,
+  RoomState,
+  TurnState,
+} from "../types";
 import { useSocket } from "./WebsocketContext";
 
 type JoinedState = "not_joined" | "joining" | "joined";
@@ -25,6 +32,7 @@ type CurrentRoomState = {
   storyCards: Card[];
   players: Player[];
   story: string;
+  gameLog: GameLogEntry[];
 };
 
 const defaultRoomState: CurrentRoomState = {
@@ -38,6 +46,7 @@ const defaultRoomState: CurrentRoomState = {
   storyCards: [],
   players: [],
   story: "",
+  gameLog: [],
 };
 
 const RoomContext = createContext<CurrentRoomState>(defaultRoomState);
@@ -64,6 +73,12 @@ const roomStateReducer = (
           return { cardId } as Card;
         }),
         joinedState: "joined",
+      };
+    }
+    case "on_turn_result": {
+      return {
+        ...prevState,
+        gameLog: [...prevState.gameLog, addGameLogEntry(payload)],
       };
     }
     case "on_room_state_updated": {
@@ -138,4 +153,38 @@ export const useRoom = (): CurrentRoomState => {
   const ctx = useContext(RoomContext);
   if (!ctx) throw new Error("RoomContextProvider required");
   return ctx;
+};
+
+const addGameLogEntry = (payload: OnTurnResultPayload): GameLogEntry => {
+  var logEntry = {
+    story: payload.story,
+    storyPlayerId: payload.storyPlayerId,
+    storyCard: payload.storyCard,
+    cardsSubmitted: new Map(),
+  } as GameLogEntry;
+
+  // Get all the cards that were submitted for the round
+  for (const card of payload.cardsSubmitted) {
+    logEntry.cardsSubmitted.set(card.cardId, {
+      playerSubmitted: card.playerId,
+      cardId: card.cardId,
+      playersVoted: [],
+    } as GameLogEntryCards);
+  }
+
+  // + story card
+  logEntry.cardsSubmitted.set(payload.storyCard, {
+    playerSubmitted: payload.storyPlayerId,
+    cardId: payload.storyCard,
+    playersVoted: [],
+  });
+
+  for (const vote of payload.votes) {
+    if (logEntry.cardsSubmitted.has(vote.cardId)) {
+      const card = logEntry.cardsSubmitted.get(vote.cardId)!;
+      card.playersVoted = [...card?.playersVoted, vote.voter.id];
+    }
+  }
+
+  return logEntry;
 };

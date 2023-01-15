@@ -12,7 +12,6 @@ import {
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
 import { useSocket } from "./contexts/WebsocketContext";
-import PlayerScores from "./PlayerScoreList";
 import { useRoom } from "./contexts/RoomContext";
 
 const MIN_PLAYERS = 2;
@@ -80,9 +79,8 @@ export const PlayerList: React.FC = () => {
       <List>
         {players.map((player: Player, idx: number) => {
           return (
-            <Box mt="10px">
+            <Box mt="10px" key={idx}>
               <PlayerItem
-                key={idx}
                 player={player}
                 currentPlayerId={id ?? ""}
                 onReadyClick={onReadyClick}

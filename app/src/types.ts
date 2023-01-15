@@ -16,8 +16,8 @@ export type ResponseMsg =
   | { type: "on_cards"; payload: OnCardsPayload }
   | { type: "error"; payload: ErrorPayload }
   | { type: "on_joined"; payload: OnJoinedPayload }
-  | { type: "on_players_updated"; payload: OnPlayersUpdatedPayload };
-
+  | { type: "on_players_updated"; payload: OnPlayersUpdatedPayload }
+  | { type: "on_turn_result"; payload: OnTurnResultPayload };
 type OnJoinedPayload = {
   roomId: string;
   ownerId: string;
@@ -29,6 +29,25 @@ type OnJoinedPayload = {
   story: string;
   cardsSubmitted: number[];
   players: Player[];
+};
+
+type Vote = {
+  voter: Player;
+  voted: Player;
+  cardId: number;
+};
+
+type CardSubmitted = {
+  playerId: string;
+  cardId: number;
+};
+
+export type OnTurnResultPayload = {
+  votes: Vote[];
+  cardsSubmitted: CardSubmitted[];
+  storyPlayerId: string;
+  storyCard: number;
+  story: string;
 };
 
 type OnRoomCreatedPayload = {
@@ -54,4 +73,17 @@ export type OnRoomStateUpdatedPayload = {
   storyPlayerId: string;
   story: string;
   cardsSubmitted: number[];
+};
+
+export type GameLogEntry = {
+  story: string;
+  storyPlayerId: string;
+  storyCard: number;
+  cardsSubmitted: Map<number, GameLogEntryCards>;
+};
+
+export type GameLogEntryCards = {
+  playerSubmitted: string;
+  cardId: number;
+  playersVoted: string[];
 };

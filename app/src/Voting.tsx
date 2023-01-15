@@ -6,6 +6,7 @@ import { CardPicker } from "./CardPicker";
 import { useSocket } from "./contexts/WebsocketContext";
 import Card from "./models/Card";
 import { useRoom } from "./contexts/RoomContext";
+import CardView from "./CardView";
 
 type VotingProps = {
   story: string;
@@ -19,7 +20,7 @@ export const Voting: React.FC<VotingProps> = ({
   storyCards,
 }: VotingProps) => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const [voted, setVoted] = useState<boolean>(false);
+  const [votedCardId, setVotedCardId] = useState<number | null>(null);
   const { roomId } = useRoom();
   const { sendCommand } = useSocket();
 
@@ -33,25 +34,30 @@ export const Voting: React.FC<VotingProps> = ({
         },
       });
       setSelectedCard(null);
-      setVoted(true);
+      setVotedCardId(selectedCard.cardId);
     }
-  }, [roomId, setVoted, sendCommand, selectedCard]);
+  }, [roomId, setVotedCardId, sendCommand, selectedCard]);
 
-  const content = voted ? (
-    <Text>Already voted</Text>
-  ) : (
-    <CardPicker
-      cards={storyCards.filter(
-        (card) => !playerCards.map((card) => card.cardId).includes(card.cardId)
-      )}
-      story={story}
-      selectedCard={selectedCard}
-      setSelectedCard={setSelectedCard}
-      promptText="Select the card you want to vote for"
-      buttonText="Vote"
-      onSelectedCard={voteForCard}
-    />
-  );
+  const content =
+    votedCardId !== null ? (
+      <>
+        <Text>You voted for:</Text>
+        <CardView card={{ cardId: votedCardId }} />
+      </>
+    ) : (
+      <CardPicker
+        cards={storyCards.filter(
+          (card) =>
+            !playerCards.map((card) => card.cardId).includes(card.cardId)
+        )}
+        story={story}
+        selectedCard={selectedCard}
+        setSelectedCard={setSelectedCard}
+        promptText="Select the card you want to vote for"
+        buttonText="Vote"
+        onSelectedCard={voteForCard}
+      />
+    );
 
   return content;
 };

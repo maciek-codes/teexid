@@ -1,81 +1,19 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
-import {
-  Box,
-  Button,
-  Center,
-  Flex,
-  Input,
-  Stack,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Center, Stack, Text } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
 import { useSocket } from "./contexts/WebsocketContext";
 import CardSelector from "./CardSelector";
 import Card from "./models/Card";
+import StoryInput from "./components/StoryInput";
 import Player from "./models/Player";
 import { CardPicker } from "./CardPicker";
 import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
 import GameLog from "./components/GameLog";
-
-type StoryPromptInputProps = {
-  cards: Array<Card>;
-  selectedCard: Card | null;
-  setSelectedCard: (c: Card | null) => void;
-};
-
-const StoryPromptInput: React.FC<StoryPromptInputProps> = ({
-  cards,
-  selectedCard,
-  setSelectedCard,
-}) => {
-  const { sendCommand } = useSocket();
-  const { roomId } = useRoom();
-  const [storyText, setStoryText] = useState<string>("");
-  const submitStory = useCallback(() => {
-    if (storyText !== "" && selectedCard !== null)
-      sendCommand({
-        type: "player/story",
-        data: {
-          roomId,
-          story: storyText,
-          cardId: selectedCard.cardId,
-        },
-      });
-  }, [roomId, sendCommand, storyText, selectedCard]);
-
-  return (
-    <Flex flexDirection="column" alignItems="start" justifyContent="start">
-      <Text fontSize="lg" mt={5} mb={10}>
-        Pick a card a and type your story:{" "}
-      </Text>
-      <CardSelector
-        cards={cards}
-        onSelected={(selectedCard) => {
-          setSelectedCard(selectedCard);
-        }}
-      />
-      <Input
-        type="text"
-        background="white"
-        placeholder="Be creative!"
-        onChange={(e) => setStoryText(e.currentTarget.value)}
-        mt={5}
-        mb={10}
-      />
-      <Button
-        isActive={storyText.trim() !== "" && selectedCard !== null}
-        isDisabled={storyText.trim() === "" || selectedCard === null}
-        onClick={() => submitStory()}
-      >
-        Submit story
-      </Button>
-    </Flex>
-  );
-};
+import CardView from "./CardView";
 
 type ScoreListProps = {
   players: Player[];
@@ -116,6 +54,13 @@ export const GameFeed: React.FC = () => {
   const isPlaying = roomState === "playing";
   const isVoting = turnState === "voting";
   const isScoring = turnState === "scoring";
+  const [submittedCard, setSubmittedCard] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isTellingStory && isVoting) {
+      setSubmittedCard(null);
+    }
+  }, []);
 
   const submitCardForStory = useCallback(() => {
     if (selectedCard !== null) {
@@ -127,20 +72,25 @@ export const GameFeed: React.FC = () => {
         },
       });
       setSelectedCard(null);
+      setSubmittedCard(selectedCard.cardId);
     }
   }, [roomId, sendCommand, selectedCard]);
 
   const storyUx =
     isPlaying && turnState === "waiting_for_story" && isTellingStory ? (
-      <StoryPromptInput
+      <StoryInput
         selectedCard={selectedCard}
         cards={cards}
         setSelectedCard={setSelectedCard}
+        onSubmitted={(cardId) => {
+          setSubmittedCard(cardId);
+        }}
       />
     ) : (
       <Center>
         <Text textAlign="center">
-          Waiting for {storyPlayerName} to write a story and pick a card.
+          Waiting for <Text as="b">{storyPlayerName}</Text> to write a story and
+          pick a card.
         </Text>
       </Center>
     );
@@ -154,7 +104,7 @@ export const GameFeed: React.FC = () => {
         </Text>
       )}
       {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
-      {isPlaying && turnState === "selecting_cards" && !isTellingStory ? (
+      {isPlaying && turnState === "selecting_cards" && !isTellingStory && (
         <CardPicker
           cards={cards}
           story={story}
@@ -164,21 +114,30 @@ export const GameFeed: React.FC = () => {
           buttonText="Submit a card"
           onSelectedCard={submitCardForStory}
         />
-      ) : null}
-      {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
-        <Box>
+      )}
+      {isPlaying && isTellingStory && (
+        <>
           <Text fontSize="lg" mb={5}>
-            Your story: {story}
+            You submitted the story: <Text as="em">{story}</Text>
           </Text>
-          <Text fontSize="md">Waiting for players to submit cards...</Text>
-        </Box>
+          <Text fontSize="lg" mb={5}>
+            Your story card:
+          </Text>
+          <CardView card={{ cardId: submittedCard ?? "-1" } as Card} />
+        </>
+      )}
+      {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
+        <Text fontSize="md">Waiting for players to submit cards...</Text>
       ) : null}
-      {isPlaying && isVoting && isTellingStory ? (
+      {isPlaying && isVoting && isTellingStory && (
         <Stack>
-          <Text fontSize="xl">Waiting for votes... Cards submitted:</Text>
-          <CardSelector onSelected={() => {}} cards={storyCards} />
+          <Text fontSize="xl">Waiting for votes... {"\n"}Cards submitted:</Text>
+          <CardSelector
+            onSelected={() => {}}
+            cards={storyCards.filter((c) => c.cardId !== submittedCard)}
+          />
         </Stack>
-      ) : null}
+      )}
       {isPlaying && isScoring && players ? (
         <ScoreList players={players} />
       ) : null}

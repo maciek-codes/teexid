@@ -33,9 +33,9 @@ type GameRoom interface {
 }
 
 type Vote struct {
-	Voter  *Player
-	Voted  *Player
-	CardId int
+	Voter  *Player `json:"voter"`
+	Voted  *Player `json:"voted"`
+	CardId int `json:"cardId"`
 }
 
 type Room struct {
@@ -64,8 +64,8 @@ type ReponseMessage struct {
 }
 
 type CardSubmitted struct {
-	playerId string
-	cardId   int
+	PlayerId string `json:"playerId"`
+	CardId   int  `json:"cardId"`
 }
 
 func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
@@ -132,8 +132,8 @@ func GetCardsForVoting(room *Room, player *Player) []int {
 	if room.TurnState == Voting {
 		for _, cardSubmitted := range room.cardsSubmitted {
 			// Send cards for voting except the one player submitted themselves
-			if cardSubmitted.playerId != player.Id.String() {
-				cardIds = append(cardIds, cardSubmitted.cardId)
+			if cardSubmitted.PlayerId != player.Id.String() {
+				cardIds = append(cardIds, cardSubmitted.CardId)
 			}
 		}
 		cardIds = append(cardIds, room.StoryCard)
@@ -359,14 +359,25 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 		submission := struct {
 			CardId int `json:"cardId"`
 		}{}
+
 		err := json.Unmarshal([]byte(command.Data), &submission)
 		if err != nil {
-			sendError(conn, "story_error", "Bad story: "+command.Data)
+			sendError(conn, "player/submitCard", "Bad card: "+command.Data)
 			return
 		}
+
+		// Maybe submitted already?
+		for _, alreadySubmittedCard := range(r.cardsSubmitted) {
+			if alreadySubmittedCard.PlayerId == string(p.Id.String()) {
+				sendError(conn, "player/submitCard", "Already submitted: " + command.Data)
+				return
+			}
+		}
+
+		// Add the card to submissions
 		r.cardsSubmitted = append(r.cardsSubmitted, CardSubmitted{
-			playerId: p.Id.String(),
-			cardId:   submission.CardId,
+			PlayerId: p.Id.String(),
+			CardId:   submission.CardId,
 		})
 		p.discardCard(r, submission.CardId)
 		if len(r.cardsSubmitted) == len(r.playerMap)-1 {
@@ -403,8 +414,8 @@ func (r *Room) handleVoteCommand(p *Player, commandData string) {
 	}
 
 	for _, cardSubmitted := range r.cardsSubmitted {
-		if cardSubmitted.cardId == vote.CardId {
-			var votedPlayer *Player = r.playerMap[cardSubmitted.playerId]
+		if cardSubmitted.CardId == vote.CardId {
+			var votedPlayer *Player = r.playerMap[cardSubmitted.PlayerId]
 			log.Printf("Player %s voted for submitted card %d from %s", p.Id.String(), vote.CardId, votedPlayer.Name)
 			r.votes = append(r.votes, Vote{p, votedPlayer, vote.CardId})
 			break
@@ -470,6 +481,9 @@ func (r *Room) scoreTurn() {
 		}
 	}
 
+	// Submit the votes to players, reveal the cards
+	r.revealTurnResults()
+
 	// Reset votes
 	r.votes = make([]Vote, 0)
 
@@ -486,6 +500,36 @@ func (r *Room) scoreTurn() {
 
 	r.BroadcastRoomState()
 	r.BroadcastPlayers()
+}
+
+func (r *Room) revealTurnResults() {
+	b, _ := json.Marshal(struct {
+		Votes []Vote `json:"votes"`
+		Submitted []CardSubmitted `json:"cardsSubmitted"`
+		StoryPlayerId string `json:"storyPlayerId"`
+		StoryCard int `json:"storyCard"`
+		Story string `json:"story"`
+	}{Votes: r.votes,
+		Submitted: r.cardsSubmitted, 
+		StoryCard: r.StoryCard, 
+		StoryPlayerId: r.StoryPlayerId.String(),
+		Story: r.Story,
+	})
+
+	payloadMessage := json.RawMessage(b)
+
+	message := ReponseMessage{
+		Type:    "on_turn_result",
+		Payload: &payloadMessage}
+
+	b, _ = json.Marshal(message)
+
+	log.Printf("Writing %s\n", string(b))
+	for _, playerConn := range r.conns {
+		if playerConn.ws != nil {
+			playerConn.ws.WriteMessage(websocket.TextMessage, b)
+		}
+	}
 }
 
 func (r *Room) endGame() {

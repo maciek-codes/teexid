@@ -9,7 +9,7 @@ import GameRoom from "./GameRoom";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
 import CreateRoomButton from "./CreateRoomButton";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { Box, Container, Flex, Stack } from "@chakra-ui/react";
+import { Box, Container, Stack } from "@chakra-ui/react";
 import Header from "./components/Header";
 import DebugInfo from "./components/DebugInfo";
 

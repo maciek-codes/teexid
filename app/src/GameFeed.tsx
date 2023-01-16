@@ -14,6 +14,7 @@ import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
 import GameLog from "./components/GameLog";
 import CardView from "./CardView";
+import DebugInfo from "./components/DebugInfo";
 
 type ScoreListProps = {
   players: Player[];
@@ -165,6 +166,7 @@ export const GameFeed: React.FC = () => {
       ) : null}
       <PlayerList />
       <GameLog />
+      <DebugInfo />
     </Stack>
   );
 };

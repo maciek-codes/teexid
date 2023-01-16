@@ -40,15 +40,8 @@ const joinRoom = (params: JoinArgs) => {
 
 export const useJoinRoom = (roomName: string) => {
   const joinQuery = useMutation(["join_room", roomName], joinRoom);
-  const { dispatch } = useRoom();
   if (joinQuery.isSuccess && joinQuery.data?.roomToken) {
     updateRoomToken(joinQuery.data.roomToken);
-    dispatch({
-      type: "on_joined",
-      payload: {
-        ...joinQuery.data,
-      },
-    });
   }
   return joinQuery;
 };

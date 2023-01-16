@@ -5,14 +5,12 @@ import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
 import { useJoinRoom } from "./queries/useJoinRoom";
 import PlayerName from "./PlayerName";
-import { QueryClient } from "@tanstack/react-query";
 import { GameFeed } from "./GameFeed";
-
-const queryClient = new QueryClient();
+import { WebSocketContextProvider } from "./contexts/WebsocketContext";
 
 const GameRoom: React.FC = () => {
   const player = usePlayer();
-  const { roomId, joinedState } = useRoom();
+  const { roomId, joinedState, dispatch } = useRoom();
   const joinRoomMutation = useJoinRoom(roomId);
 
   useEffect(() => {
@@ -28,19 +26,17 @@ const GameRoom: React.FC = () => {
     }
   }, [player, roomId]);
 
-  /*
-  Brandy Punch
-#DC8B32
+  useEffect(() => {
+    if (joinRoomMutation.isSuccess && joinedState !== "joined") {
+      dispatch({
+        type: "on_joined",
+        payload: {
+          ...joinRoomMutation.data,
+        },
+      });
+    }
+  }, [joinRoomMutation.isSuccess]);
 
-Ship Gray
-#433D4B
-
-Tana
-#D9D3B6
-
-Burnt Umber
-#843225
-*/
   if (joinRoomMutation.isError) {
     return <Text>{"Error connecting:" + joinRoomMutation.error}</Text>;
   }
@@ -58,7 +54,11 @@ Burnt Umber
     return <PlayerName />;
   }
 
-  return <GameFeed />;
+  return (
+    <WebSocketContextProvider>
+      <GameFeed />
+    </WebSocketContextProvider>
+  );
 };
 
 export default GameRoom;

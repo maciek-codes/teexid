@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from "react";
 
-import { Button, Flex, Input, Progress, Stack, Text } from "@chakra-ui/react";
+import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 
 import { usePlayer } from "./contexts/PlayerContext";
 import PlayerName from "./PlayerName";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 interface LobbyProps {}
 
 export const Lobby: React.FC<LobbyProps> = () => {
+  const location = useLocation();
   const [roomIdText, setRoomIdText] = useState("");
 
   const player = usePlayer();
@@ -18,6 +19,9 @@ export const Lobby: React.FC<LobbyProps> = () => {
     navigate("/rooms/" + roomIdText.toLowerCase());
   };
 
+  if (location.pathname.indexOf("/rooms/") === 0) {
+    return null;
+  }
   return (
     <Flex
       flexDirection="column"

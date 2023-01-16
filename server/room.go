@@ -27,10 +27,6 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-type GameRoom interface {
-	GetId() string
-	CanJoin() bool
-}
 
 type Vote struct {
 	Voter  *Player `json:"voter"`
@@ -43,7 +39,9 @@ type Room struct {
 	State          RoomState `json:"state,omitempty"`
 	OwnerId        uuid.UUID `json:"ownerId"`
 	playerMap      map[string]*Player
-	conns          map[string]playerConn
+	playerMapMutex    *sync.RWMutex
+	conns          map[string]*playerConn
+	connsMutex    *sync.RWMutex
 	cardIds        []int
 	discardCardIds []int
 	cardIdx        int
@@ -75,7 +73,9 @@ func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 	room := Room{Id: roomId,
 		State:          WaitingForPlayers,
 		playerMap:      make(map[string]*Player, 0),
-		conns:          make(map[string]playerConn, 0),
+		playerMapMutex: &sync.RWMutex{},
+		conns:          make(map[string]*playerConn, 0),
+		connsMutex:     &sync.RWMutex{},
 		TurnState:      NotStarted,
 		cardIds:        cardIds,
 		OwnerId:        playerId,
@@ -88,9 +88,6 @@ func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 	return &room
 }
 
-func (r *Room) CanJoin() bool {
-	return r.State == WaitingForPlayers
-}
 
 func (r *Room) Players() []*Player {
 	var players = make([]*Player, 0, len(r.playerMap))
@@ -117,12 +114,12 @@ func (r *Room) BroadcastPlayers() {
 		return
 	}
 
+	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 		log.Printf("Writing %s to %s\n", string(b), playerConn.player.Id)
-		if playerConn.ws != nil {
-			playerConn.ws.WriteMessage(websocket.TextMessage, b)
-		}
+		playerConn.SendText(b)
 	}
+	r.connsMutex.RUnlock()
 }
 
 // Return cards for voting
@@ -182,6 +179,7 @@ func GetPlayersWhoSubmitted(r *Room) []string {
 
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
+	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 
 		var lastSubmittedCard = FindLastSubmitted(r, playerConn.player.Id)
@@ -219,9 +217,9 @@ func (r *Room) BroadcastRoomState() {
 		}
 
 		log.Printf("Writing %s\n", string(b))
-
-		playerConn.ws.WriteMessage(websocket.TextMessage, b)
+		playerConn.SendText(b)
 	}
+	r.connsMutex.RUnlock()
 }
 
 func (r *Room) AddPlayer(p *Player) {
@@ -254,12 +252,14 @@ func (r *Room) nextPlayerToTellStory() {
 	// Reset submissions
 	r.cardsSubmitted = make([]CardSubmitted, 0)
 
+	r.playerMapMutex.RLock()
 	playerIds := make([]uuid.UUID, 0, len(r.playerMap))
 	currentPlayerId := r.StoryPlayerId
 
 	for _, player := range r.playerMap {
 		playerIds = append(playerIds, player.Id)
 	}
+	r.playerMapMutex.RUnlock()
 
 	// Sort players by ID
 	sort.Slice(playerIds, func(i, j int) bool {
@@ -286,11 +286,13 @@ func (r *Room) nextPlayerToTellStory() {
 }
 
 func (r *Room) findConn(p *Player) *websocket.Conn {
+	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 		if p == playerConn.player {
 			return playerConn.ws
 		}
 	}
+	r.connsMutex.RUnlock()
 	log.Panic("Can't find the connection")
 	return &websocket.Conn{}
 }
@@ -309,6 +311,7 @@ func (r *Room) sendCardsToEach(cardCount int) {
 	}
 
 	// Deal N cards to each player
+	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 		var player = playerConn.player
 
@@ -341,10 +344,9 @@ func (r *Room) sendCardsToEach(cardCount int) {
 		b, _ = json.Marshal(message)
 
 		log.Printf("Writing %s\n", string(b))
-		if playerConn.ws != nil {
-			playerConn.ws.WriteMessage(websocket.TextMessage, b)
-		}
+		playerConn.SendText(b)
 	}
+	r.connsMutex.RUnlock()
 }
 
 func (r *Room) HandleRoomCommand(p *Player, command Command) {
@@ -364,11 +366,14 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 		}
 		var allReady = true
 		var countReady = 0
+
+		r.playerMapMutex.RLock()
 		for _, player := range r.playerMap {
 			log.Printf("%s is ready", player.Id.String())
 			allReady = allReady && player.IsReady()
 			countReady += 1
 		}
+		r.playerMapMutex.RUnlock()
 		if allReady && countReady >= MinPlayers {
 			r.startGame()
 		}
@@ -566,11 +571,11 @@ func (r *Room) revealTurnResults() {
 	b, _ = json.Marshal(message)
 
 	log.Printf("Writing %s\n", string(b))
+	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
-		if playerConn.ws != nil {
-			playerConn.ws.WriteMessage(websocket.TextMessage, b)
-		}
+		playerConn.SendText(b)
 	}
+	r.connsMutex.RUnlock()
 }
 
 func (r *Room) endGame() {

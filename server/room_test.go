@@ -8,21 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCanJoin(t *testing.T) {
-	assert := assert.New(t)
-
-	room := NewRoom(make([]int, 0), uuid.UUID{}, "foobar")
-	assert.Equal(WaitingForPlayers, room.State)
-
-	// Start playing
-	room.State = PlayingGame
-	assert.False(room.CanJoin())
-
-	// Allow to join again
-	room.State = WaitingForPlayers
-	assert.True((room.CanJoin()))
-}
-
 func TestRoomHasPlayers(t *testing.T) {
 	assert := assert.New(t)
 

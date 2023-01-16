@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useReducer,
 } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import Card from "../models/Card";
 import Player from "../models/Player";
 import {
@@ -35,6 +35,7 @@ type CurrentRoomState = {
   story: string;
   gameLog: GameLogEntry[];
   submittedBy: string[];
+  dispatch: ({ type, payload }: ResponseMsg) => void;
 };
 
 const defaultRoomState: CurrentRoomState = {
@@ -51,6 +52,7 @@ const defaultRoomState: CurrentRoomState = {
   gameLog: [],
   lastSubmittedCard: -1,
   submittedBy: [],
+  dispatch: ({ type, payload }: ResponseMsg) => {},
 };
 
 const RoomContext = createContext<CurrentRoomState>(defaultRoomState);
@@ -106,46 +108,21 @@ const roomStateReducer = (
 };
 
 export const RoomContextProvider: React.FC<Props> = ({ children }: Props) => {
-  const { addMsgListener, removeMsgListener } = useSocket();
-  const navigate = useNavigate();
-  const roomId = useParams().roomId ?? "";
+  const params = useParams();
 
   const initialState: CurrentRoomState = {
     ...defaultRoomState,
-    roomId,
+    roomId: params.roomId ?? "",
   };
 
   const [state, dispatch] = useReducer(roomStateReducer, initialState);
-
-  const onMsg = useCallback(
-    (msg: ResponseMsg) => {
-      switch (msg.type) {
-        case "error": {
-          if (msg.payload.type === "room_not_found") {
-            navigate("/");
-          }
-          break;
-        }
-        default:
-          dispatch(msg);
-          break;
-      }
-    },
-    [navigate, dispatch]
-  );
-
-  useEffect(() => {
-    addMsgListener(onMsg);
-    return () => {
-      removeMsgListener(onMsg);
-    };
-  }, [addMsgListener, removeMsgListener, onMsg]);
 
   return (
     <RoomContext.Provider
       value={{
         ...state,
-        roomId: state.roomId === "" ? roomId : state.roomId,
+        roomId: params.roomId ?? "",
+        dispatch,
       }}
     >
       {children}

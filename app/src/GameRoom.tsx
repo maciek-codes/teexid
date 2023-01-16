@@ -1,31 +1,32 @@
 import React, { useEffect } from "react";
-import { Text, Box } from "@chakra-ui/react";
+import { Text, Progress } from "@chakra-ui/react";
 
-import { GameFeed } from "./GameFeed";
-import { useSocket } from "./contexts/WebsocketContext";
-import { useAuth } from "./hooks/useAuth";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
+import { useJoinRoom } from "./queries/useJoinRoom";
+import PlayerName from "./PlayerName";
+import { QueryClient } from "@tanstack/react-query";
+import { GameFeed } from "./GameFeed";
+
+const queryClient = new QueryClient();
 
 const GameRoom: React.FC = () => {
-  const { sendCommand } = useSocket();
-
-  const authQuery = useAuth();
-  const token = authQuery.data?.token;
   const player = usePlayer();
   const { roomId, joinedState } = useRoom();
+  const joinRoomMutation = useJoinRoom(roomId);
 
   useEffect(() => {
-    if (joinedState !== "joined" && (player?.name ?? "") !== "") {
-      sendCommand({
-        type: "join_room",
-        data: {
-          roomId: roomId,
-          playerName: player.name!,
-        },
+    if (joinRoomMutation.isIdle) {
+      // Create room
+      if (player?.name === null || player.name.trim() === "" || roomId === "") {
+        return;
+      }
+      joinRoomMutation.mutate({
+        playerName: player.name,
+        roomName: roomId,
       });
     }
-  }, [roomId, player, token, joinedState, sendCommand]);
+  }, [player, roomId]);
 
   /*
   Brandy Punch
@@ -40,15 +41,24 @@ Tana
 Burnt Umber
 #843225
 */
-  return (
-    <Box>
-      {joinedState === "joining" ? (
-        <Text>Joining the room {roomId}...</Text>
-      ) : (
-        <GameFeed />
-      )}
-    </Box>
-  );
+  if (joinRoomMutation.isError) {
+    return <Text>{"Error connecting:" + joinRoomMutation.error}</Text>;
+  }
+
+  if (joinRoomMutation.isLoading) {
+    return (
+      <>
+        <Text>Loading ...</Text>
+        <Progress size="xs" isIndeterminate />
+      </>
+    );
+  }
+
+  if (player?.name === null || player.name === "") {
+    return <PlayerName />;
+  }
+
+  return <GameFeed />;
 };
 
 export default GameRoom;

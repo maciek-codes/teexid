@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { getPlayerIdFromToken } from "../hooks/useAuth";
 import { useRoom } from "./RoomContext";
 
 interface PlayerData {
@@ -29,7 +29,6 @@ export const PlayerContextProvider: React.FC<Props> = ({ children }: Props) => {
     return window.sessionStorage.getItem(NAME_KEY) ?? "";
   }, []);
 
-  const auth = useAuth();
   const { ownerId } = useRoom();
   const [name, setName] = useState<string>(storedName);
 
@@ -44,9 +43,9 @@ export const PlayerContextProvider: React.FC<Props> = ({ children }: Props) => {
   return (
     <PlayerContext.Provider
       value={{
-        id: auth.data?.playerId ?? null,
+        id: getPlayerIdFromToken(),
         name,
-        isOwner: auth.data?.playerId === ownerId,
+        isOwner: getPlayerIdFromToken() === ownerId,
         setName: setNameCallback,
       }}
     >

@@ -32,8 +32,8 @@ func TestRoomHasPlayers(t *testing.T) {
 	assert.Len(room.Players(), 0)
 
 	p2 := NewPlayer("Bob", uuid.New())
-	room.AddPlayer(p1, nil)
-	room.AddPlayer(p2, nil)
+	room.AddPlayer(p1)
+	room.AddPlayer(p2)
 
 	assert.Len(room.Players(), 2)
 }
@@ -59,8 +59,8 @@ func TestDealCards(t *testing.T) {
 	assert.Len(room.Players(), 0)
 
 	p2 := NewPlayer("Bob", uuid.New())
-	room.AddPlayer(p1, nil)
-	room.AddPlayer(p2, nil)
+	room.AddPlayer(p1)
+	room.AddPlayer(p2)
 
 	assert.Len(room.Players(), 2)
 

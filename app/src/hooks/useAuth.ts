@@ -1,39 +1,37 @@
-import { useQuery } from "@tanstack/react-query";
-import { getHost } from "../utils/config";
+/**
+ *
+ * @returns token string identifying a connection to a room
+ */
+const TOKEN_NAME = "room_token";
 
-interface Token {
+type Token = {
   playerId: string;
-  token: string;
-}
-
-const getAuthToken = (): Promise<Token> => {
-  if (
-    window.sessionStorage.getItem("token") !== null &&
-    window.sessionStorage.getItem("playerId") !== null
-  ) {
-    return Promise.resolve({
-      token: window.sessionStorage.getItem("token")!,
-      playerId: window.sessionStorage.getItem("playerId")!,
-    } as Token);
-  }
-
-  window.sessionStorage.removeItem("token");
-  window.sessionStorage.removeItem("playerId");
-  return fetch(`${getHost()}/auth`, { method: "POST" }).then((response) => {
-    if (!response.ok) {
-      throw new Error("Can't auth " + response.status);
-    }
-
-    return response.json() as Promise<Token>;
-  });
+  roomId: string;
+  playerName: string;
 };
 
-export const useAuth = () => {
-  // Check session storage first
-  const authQuery = useQuery(["auth"], getAuthToken);
-  if (authQuery.isFetched && authQuery.data?.token) {
-    window.sessionStorage.setItem("playerId", authQuery.data.playerId);
-    window.sessionStorage.setItem("token", authQuery.data.token);
+export const getRoomToken = (): string => {
+  const roomToken = window.localStorage.getItem(TOKEN_NAME);
+  if (roomToken !== null && roomToken !== "") {
+    return roomToken;
   }
-  return authQuery;
+  return "";
+};
+
+/**
+ *
+ * @returns token string identifying a connection to a room
+ */
+export const updateRoomToken = (new_token: string) => {
+  window.localStorage.setItem(TOKEN_NAME, new_token);
+};
+
+export const getPlayerIdFromToken = (): string | null => {
+  const token = getRoomToken();
+  try {
+    const parsed = JSON.parse(atob(token.split(".")[1])) as Token;
+    return parsed.playerId;
+  } catch (e) {
+    return null;
+  }
 };

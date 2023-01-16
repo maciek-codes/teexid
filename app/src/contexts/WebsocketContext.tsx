@@ -1,4 +1,3 @@
-import { time } from "console";
 import React, {
   createContext,
   useCallback,
@@ -6,7 +5,7 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { useAuth } from "../hooks/useAuth";
+import { getRoomToken } from "../hooks/useAuth";
 import { ResponseMsg } from "../types";
 import { getWsHost } from "../utils/config";
 
@@ -28,14 +27,10 @@ const getReadyState = (): number => {
   return socket.readyState;
 };
 
-type CreateRoomCommandData = { playerName: string; roomId: string };
-type JoinCommandData = { roomId: string; playerName: string };
 type RoomCommandData = { roomId: string };
 type StoryCommandData = { roomId: string; story: string; cardId: number };
 type CardCommandData = { roomId: string; cardId: number };
 type Command =
-  | { type: "create_room"; data: CreateRoomCommandData }
-  | { type: "join_room"; data: JoinCommandData }
   | { type: "game/start"; data: RoomCommandData }
   | { type: "player/ready"; data: RoomCommandData }
   | { type: "player/story"; data: StoryCommandData }
@@ -64,8 +59,6 @@ let listeners: CallbackFn[] = [];
 export const WebSocketContextProvider: React.FC<
   WebSocketContextProviderProps
 > = ({ children }: WebSocketContextProviderProps) => {
-  const auth = useAuth();
-
   const [connected, setConnected] = useState(
     getReadyState() === WebSocket.OPEN
   );
@@ -113,21 +106,19 @@ export const WebSocketContextProvider: React.FC<
     };
   });
 
-  const sendCommand = useCallback(
-    ({ type, data }: Command) => {
-      if (getReadyState() !== getWs().OPEN) {
-        return;
-      }
-      getWs().send(
-        JSON.stringify({
-          token: auth.data?.token,
-          type: type,
-          data: JSON.stringify(data),
-        })
-      );
-    },
-    [auth]
-  );
+  const sendCommand = useCallback(({ type, data }: Command) => {
+    if (getReadyState() !== getWs().OPEN) {
+      return;
+    }
+
+    getWs().send(
+      JSON.stringify({
+        token: getRoomToken(),
+        type: type,
+        data: JSON.stringify(data),
+      })
+    );
+  }, []);
 
   // Try to reconnnect
   useEffect(() => {

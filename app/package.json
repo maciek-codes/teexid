@@ -55,6 +55,6 @@
     "@babel/core": "^7.16.0",
     "@tanstack/react-query": "^4.0.10",
     "prettier": "^2.7.1",
-    "react-router-dom": "^6.3.0"
+    "react-router-dom": "^6.6.2"
   }
 }

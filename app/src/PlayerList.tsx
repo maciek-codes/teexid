@@ -89,7 +89,7 @@ export const PlayerList: React.FC = () => {
       <List>
         {players.map((player: Player, idx: number) => {
           const hasSubmitted =
-            submittedBy.filter((sb) => sb === player.id).length == 1;
+            submittedBy.filter((sb) => sb === player.id).length === 1;
           return (
             <Box mt="10px" key={idx}>
               <PlayerItem

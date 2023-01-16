@@ -2,62 +2,21 @@ import React, { useEffect, useState } from "react";
 
 import { Button, Flex, Input, Progress, Stack, Text } from "@chakra-ui/react";
 
-import { useAuth } from "./hooks/useAuth";
-import { useSocket } from "./contexts/WebsocketContext";
 import { usePlayer } from "./contexts/PlayerContext";
 import PlayerName from "./PlayerName";
-import { useRoom } from "./contexts/RoomContext";
 import { useNavigate } from "react-router-dom";
 
-interface CreateRoomButtonProps {}
+interface LobbyProps {}
 
-const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
+export const Lobby: React.FC<LobbyProps> = () => {
   const [roomIdText, setRoomIdText] = useState("");
 
-  const auth = useAuth();
   const player = usePlayer();
-  const { roomId } = useRoom();
-  const [isJoining, setIsJoining] = useState<boolean>(false);
   const navigate = useNavigate();
-  const { sendCommand } = useSocket();
 
   const joinRoomClick = () => {
-    // Create room
-    if (player?.name === null || player.name.trim() === "") {
-      return;
-    }
-    sendCommand({
-      type: "create_room",
-      data: {
-        playerName: player.name,
-        roomId: roomIdText,
-      },
-    });
-    setIsJoining(true);
+    navigate("/rooms/" + roomIdText.toLowerCase());
   };
-
-  useEffect(() => {
-    if (roomId !== "") {
-      navigate(`/room/${roomId}`);
-    }
-  }, [roomId, navigate]);
-
-  if (auth.isError) {
-    return (
-      <>
-        <Text>Error connecting</Text>
-      </>
-    );
-  }
-
-  if (auth.isLoading) {
-    return (
-      <>
-        <Text>Loading ...</Text>
-        <Progress size="xs" isIndeterminate />
-      </>
-    );
-  }
 
   return (
     <Flex
@@ -82,21 +41,15 @@ const CreateRoomButton: React.FC<CreateRoomButtonProps> = () => {
             />
 
             <Button
-              isLoading={isJoining}
               className="rounded-full bg-purple-700 text-white"
-              isDisabled={
-                roomIdText.trim() === "" || auth.isLoading || isJoining
-              }
+              isDisabled={roomIdText.trim() === ""}
               onClick={joinRoomClick}
             >
               Join or start a room
             </Button>
           </Stack>
         )}
-        {isJoining ? <Text>Connecting...</Text> : null}
       </Stack>
     </Flex>
   );
 };
-
-export default CreateRoomButton;

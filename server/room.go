@@ -224,11 +224,9 @@ func (r *Room) BroadcastRoomState() {
 	}
 }
 
-func (r *Room) AddPlayer(p *Player, conn *websocket.Conn) playerConn {
+func (r *Room) AddPlayer(p *Player) {
 	r.playerMap[p.Id.String()] = p
-	r.conns[p.Id.String()] = NewPlayerConn(conn, p, r)
-	r.BroadcastPlayers()
-	return r.conns[p.Id.String()]
+	// TODO: Move to when ws in established
 }
 
 func (r *Room) RemovePlayer(p *Player) {

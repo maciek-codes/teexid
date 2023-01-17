@@ -66,6 +66,7 @@ type CardSubmitted struct {
 }
 
 func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
+	log.Printf("Creating a new room: %s\n", roomId)
 	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(cardIds), func(i, j int) {
 		cardIds[i], cardIds[j] = cardIds[j], cardIds[i]

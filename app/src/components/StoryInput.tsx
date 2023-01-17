@@ -1,6 +1,6 @@
 import { Button, Flex, Input, Text } from "@chakra-ui/react";
 import React, { useCallback, useState } from "react";
-import CardSelector from "../CardSelector";
+import CardSelector from "./CardSelector";
 import { useRoom } from "../contexts/RoomContext";
 import { useSocket } from "../contexts/WebsocketContext";
 import Card from "../models/Card";

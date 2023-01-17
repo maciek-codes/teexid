@@ -2,11 +2,11 @@ import React, { useCallback, useState } from "react";
 
 import { Text } from "@chakra-ui/react";
 
-import { CardPicker } from "./CardPicker";
+import { CardPicker } from "./components/CardPicker";
 import { useSocket } from "./contexts/WebsocketContext";
 import Card from "./models/Card";
 import { useRoom } from "./contexts/RoomContext";
-import CardView from "./CardView";
+import CardView from "./components/CardView";
 
 type VotingProps = {
   story: string;

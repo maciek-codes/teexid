@@ -5,15 +5,15 @@ import { PlayerList } from "./PlayerList";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
 import { useSocket } from "./contexts/WebsocketContext";
-import CardSelector from "./CardSelector";
+import CardSelector from "./components/CardSelector";
 import Card from "./models/Card";
 import StoryInput from "./components/StoryInput";
 import Player from "./models/Player";
-import { CardPicker } from "./CardPicker";
+import { CardPicker } from "./components/CardPicker";
 import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
 import GameLog from "./components/GameLog";
-import CardView from "./CardView";
+import CardView from "./components/CardView";
 import DebugInfo from "./components/DebugInfo";
 
 type ScoreListProps = {

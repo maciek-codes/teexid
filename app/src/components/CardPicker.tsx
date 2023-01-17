@@ -3,7 +3,7 @@ import React from "react";
 import { Button, Stack, Text } from "@chakra-ui/react";
 
 import CardSelector from "./CardSelector";
-import Card from "./models/Card";
+import Card from "../models/Card";
 
 type CardPickerProps = {
   story: string;

@@ -1,6 +1,6 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
 import React from "react";
-import CardView from "../CardView";
+import CardView from "./CardView";
 import { useRoom } from "../contexts/RoomContext";
 import Card from "../models/Card";
 import Player from "../models/Player";

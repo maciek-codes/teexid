@@ -26,7 +26,11 @@ func HandleJoinRoom(w http.ResponseWriter, req *http.Request) {
 	}
 
 	decoder := json.NewDecoder(req.Body)
-	var params joinRoomParams
+	var params struct {
+		PlayerName string    `json:"playerName"`
+		RoomName   string    `json:"roomName"`
+		PlayerId   uuid.UUID `json:"playerId"`
+	}
 	err = decoder.Decode(&params)
 	if err != nil {
 		log.Printf("Can't decode params: %s\n", err.Error())
@@ -36,12 +40,15 @@ func HandleJoinRoom(w http.ResponseWriter, req *http.Request) {
 
 	if params.PlayerId == uuid.Nil {
 		http.Error(w, "Invalid arg: playerId", http.StatusBadRequest)
+		return
 	}
 	if params.PlayerName == "" {
 		http.Error(w, "Invalid playerName", http.StatusBadRequest)
+		return
 	}
 	if params.RoomName == "" {
 		http.Error(w, "Invalid roomName", http.StatusBadRequest)
+		return
 	}
 
 	roomLock.Lock()

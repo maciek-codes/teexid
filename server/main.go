@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/websocket"
 	"github.com/rs/cors"
@@ -18,7 +17,7 @@ var addr = flag.String("addr", ":8080", "http service address")
 var roomMaxDurationMin = flag.Int("room-timeout", 5, "max room duration")
 var host = flag.String("host", "localhost", "")
 var port = flag.String("port", "8080", "")
-var origin = flag.String("allowed-origin", "*", "")
+var origin = flag.String("allowed-origin", "localhost:3000", "")
 
 // All the cards available
 var cardCount = flag.Int("card-count", 55, "How many cards")
@@ -75,12 +74,6 @@ func handleCommandFromClient(pconn *playerConn, room *Room, command *Command) {
 	}
 }
 
-type joinRoomParams struct {
-	PlayerName string    `json:"playerName"`
-	RoomName   string    `json:"roomName"`
-	PlayerId   uuid.UUID `json:"playerId"`
-}
-
 func createRoom(player *Player, roomName string) *Room {
 	room, foundRoom := roomById[roomName]
 
@@ -97,58 +90,32 @@ func createRoom(player *Player, roomName string) *Room {
 	return room
 }
 
-func sendError(conn *websocket.Conn, errorType string, errorMsg string) {
-	b, _ := json.Marshal(struct {
-		Type string `json:"type"`
-		Msg  string `json:"message"`
-	}{Type: errorType, Msg: errorMsg})
-
-	errorMessageJson := json.RawMessage(b)
-
-	message := ReponseMessage{
-		Type:    "error",
-		Payload: &errorMessageJson}
-
-	b, err := json.Marshal(&message)
-	if err != nil {
-		log.Println("Error marshalling", err)
-		return
-	}
-
-	log.Printf("Writing %s\n", string(b))
-
-	conn.WriteMessage(websocket.TextMessage, b)
-}
-
 func start() {
-	r := mux.NewRouter()
-	r.HandleFunc("/join_room", HandleJoinRoom)
-	r.HandleFunc("/game_command", HandleGameCommand)
-	r.HandleFunc("/ws", startSocket)
-	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	router := mux.NewRouter()
+	router.HandleFunc("/join_room", HandleJoinRoom)
+	router.HandleFunc("/game_command", HandleGameCommand)
+	router.HandleFunc("/ws", startSocket)
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		return
-	}).Methods("GET", "POST")
+	})
 
 	log.Printf("Host %s:%s\n", *host, *port)
 	log.Printf("Allowed origin: %s\n", config.allowedOrigin)
 
-	handler := cors.New(cors.Options{
-		AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
+	c := cors.New(cors.Options{
 		AllowedOrigins:     []string{config.allowedOrigin},
+		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowCredentials:   true,
-		AllowedHeaders:     []string{"Content-Type", "Bearer", "Bearer ", "content-type", "Origin", "Accept", "X-Game-Token"},
-		OptionsPassthrough: true,
-	}).Handler(r)
+		AllowedHeaders:     []string{
+			"Content-Type", "Bearer", "bearer", "content-type", "Origin", "Accept", 
+			"X-Game-Token", "x-game-token"},
+		AllowPrivateNetwork: true,
+		OptionsPassthrough: false,
+	})
+	handler := c.Handler(router)
 
-	srv := &http.Server{
-		Handler: handler,
-		Addr:    *addr,
-		// Good practice: enforce timeouts for servers you create!
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-
+	
 	roomCleanupTimer := time.NewTimer(2 * time.Second)
 	go func() {
 		<-roomCleanupTimer.C
@@ -160,10 +127,13 @@ func start() {
 				delete(roomById, val.Id)
 			}
 		}
-	}()
-
+		}()
+		
 	log.Printf(("Starting to listen"))
-	log.Fatal(srv.ListenAndServe())
+	err := http.ListenAndServe(":8080", handler)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {

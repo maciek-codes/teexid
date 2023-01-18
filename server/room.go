@@ -27,7 +27,6 @@ func randSeq(n int) string {
 	return string(b)
 }
 
-
 type Vote struct {
 	Voter  *Player `json:"voter"`
 	Voted  *Player `json:"voted"`
@@ -39,9 +38,10 @@ type Room struct {
 	State          RoomState `json:"state,omitempty"`
 	OwnerId        uuid.UUID `json:"ownerId"`
 	playerMap      map[string]*Player
-	playerMapMutex    *sync.RWMutex
+	roomLock       *sync.RWMutex
+	playerMapMutex *sync.RWMutex
 	conns          map[string]*playerConn
-	connsMutex    *sync.RWMutex
+	connsMutex     *sync.RWMutex
 	cardIds        []int
 	discardCardIds []int
 	cardIdx        int
@@ -74,6 +74,7 @@ func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 	room := Room{Id: roomId,
 		State:          WaitingForPlayers,
 		playerMap:      make(map[string]*Player, 0),
+		roomLock:       &sync.RWMutex{},
 		playerMapMutex: &sync.RWMutex{},
 		conns:          make(map[string]*playerConn, 0),
 		connsMutex:     &sync.RWMutex{},
@@ -88,7 +89,6 @@ func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 	}
 	return &room
 }
-
 
 func (r *Room) Players() []*Player {
 	var players = make([]*Player, 0, len(r.playerMap))
@@ -115,12 +115,10 @@ func (r *Room) BroadcastPlayers() {
 		return
 	}
 
-	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 		log.Printf("Writing %s to %s\n", string(b), playerConn.player.Id)
 		playerConn.SendText(b)
 	}
-	r.connsMutex.RUnlock()
 }
 
 // Return cards for voting
@@ -180,7 +178,6 @@ func GetPlayersWhoSubmitted(r *Room) []string {
 
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
-	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 
 		var lastSubmittedCard = FindLastSubmitted(r, playerConn.player.Id)
@@ -220,7 +217,6 @@ func (r *Room) BroadcastRoomState() {
 		log.Printf("Writing %s\n", string(b))
 		playerConn.SendText(b)
 	}
-	r.connsMutex.RUnlock()
 }
 
 func (r *Room) AddPlayer(p *Player) {
@@ -253,14 +249,12 @@ func (r *Room) nextPlayerToTellStory() {
 	// Reset submissions
 	r.cardsSubmitted = make([]CardSubmitted, 0)
 
-	r.playerMapMutex.RLock()
 	playerIds := make([]uuid.UUID, 0, len(r.playerMap))
 	currentPlayerId := r.StoryPlayerId
 
 	for _, player := range r.playerMap {
 		playerIds = append(playerIds, player.Id)
 	}
-	r.playerMapMutex.RUnlock()
 
 	// Sort players by ID
 	sort.Slice(playerIds, func(i, j int) bool {
@@ -287,13 +281,11 @@ func (r *Room) nextPlayerToTellStory() {
 }
 
 func (r *Room) findConn(p *Player) *websocket.Conn {
-	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 		if p == playerConn.player {
 			return playerConn.ws
 		}
 	}
-	r.connsMutex.RUnlock()
 	log.Panic("Can't find the connection")
 	return &websocket.Conn{}
 }
@@ -351,8 +343,6 @@ func (r *Room) sendCardsToEach(cardCount int) {
 }
 
 func (r *Room) HandleRoomCommand(p *Player, command Command) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
 	if command.Type == "player/updateName" {
 		var newName = command.Data
 		p.SetName(newName)
@@ -368,106 +358,15 @@ func (r *Room) HandleRoomCommand(p *Player, command Command) {
 		var allReady = true
 		var countReady = 0
 
-		r.playerMapMutex.RLock()
 		for _, player := range r.playerMap {
 			log.Printf("%s is ready", player.Id.String())
 			allReady = allReady && player.IsReady()
 			countReady += 1
 		}
-		r.playerMapMutex.RUnlock()
 		if allReady && countReady >= MinPlayers {
 			r.startGame()
 		}
-	} else if command.Type == "player/story" {
-		conn := r.findConn(p)
-		if p.Id != r.StoryPlayerId {
-			sendError(conn, "story_error", "Can't tell story now.")
-			return
-		}
-		story := struct {
-			Story string `json:"story"`
-			Card  int    `json:"cardId"`
-		}{}
-
-		err := json.Unmarshal([]byte(command.Data), &story)
-		if err != nil {
-			sendError(conn, "story_error", "Bad story: "+command.Data)
-			return
-		}
-
-		p.discardCard(r, story.Card)
-		r.Story = story.Story
-		r.StoryCard = story.Card
-		r.TurnState = SelectingCards
-		r.BroadcastRoomState()
-	} else if command.Type == "player/submitCard" {
-		conn := r.findConn(p)
-		submission := struct {
-			CardId int `json:"cardId"`
-		}{}
-
-		err := json.Unmarshal([]byte(command.Data), &submission)
-		if err != nil {
-			sendError(conn, "player/submitCard", "Bad card: "+command.Data)
-			return
-		}
-
-		// Maybe submitted already?
-		for _, alreadySubmittedCard := range r.cardsSubmitted {
-			if alreadySubmittedCard.PlayerId == string(p.Id.String()) {
-				sendError(conn, "player/submitCard", "Already submitted: "+command.Data)
-				return
-			}
-		}
-
-		// Add the card to submissions
-		r.cardsSubmitted = append(r.cardsSubmitted, CardSubmitted{
-			PlayerId: p.Id.String(),
-			CardId:   submission.CardId,
-		})
-		p.discardCard(r, submission.CardId)
-		if len(r.cardsSubmitted) == len(r.playerMap)-1 {
-			r.TurnState = Voting
-		}
-		r.BroadcastRoomState()
-	} else if command.Type == "player/vote" {
-		r.handleVoteCommand(p, command.Data)
-
-		// Last vote - all players voted except story teller
-		if len(r.votes) == len(r.Players())-1 {
-			r.scoreTurn()
-		}
 	}
-}
-
-func (r *Room) handleVoteCommand(p *Player, commandData string) {
-	vote := struct {
-		CardId int `json:"cardId"`
-	}{}
-
-	err := json.Unmarshal([]byte(commandData), &vote)
-	if err != nil {
-		sendError(r.findConn(p), "story_error", "Bad story: "+commandData)
-		return
-	}
-
-	if vote.CardId == r.StoryCard {
-		var votedPlayer *Player = r.playerMap[r.StoryPlayerId.String()]
-		log.Printf("Player %s voted for story card %d from %s", p.Id.String(), vote.CardId, votedPlayer.Name)
-
-		r.votes = append(r.votes, Vote{p, votedPlayer, vote.CardId})
-		return
-	}
-
-	for _, cardSubmitted := range r.cardsSubmitted {
-		if cardSubmitted.CardId == vote.CardId {
-			var votedPlayer *Player = r.playerMap[cardSubmitted.PlayerId]
-			log.Printf("Player %s voted for submitted card %d from %s", p.Id.String(), vote.CardId, votedPlayer.Name)
-			r.votes = append(r.votes, Vote{p, votedPlayer, vote.CardId})
-			break
-		}
-	}
-	r.BroadcastRoomState()
 }
 
 /*
@@ -572,11 +471,9 @@ func (r *Room) revealTurnResults() {
 	b, _ = json.Marshal(message)
 
 	log.Printf("Writing %s\n", string(b))
-	r.connsMutex.RLock()
 	for _, playerConn := range r.conns {
 		playerConn.SendText(b)
 	}
-	r.connsMutex.RUnlock()
 }
 
 func (r *Room) endGame() {

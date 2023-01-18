@@ -11,14 +11,14 @@ type playerConn struct {
 	room     *Room
 	player   *Player
 	ws       *websocket.Conn
-	mu      sync.Mutex
+	mu       sync.Mutex
 	lastPing time.Time
 }
 
 func (playerConn *playerConn) SendText(bytes []byte) {
 	playerConn.mu.Lock()
-    defer playerConn.mu.Unlock()
-	if (playerConn.ws != nil) {
+	defer playerConn.mu.Unlock()
+	if playerConn.ws != nil {
 		playerConn.ws.WriteMessage(websocket.TextMessage, bytes)
 	}
 }

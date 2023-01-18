@@ -47,8 +47,8 @@ func ParseJwt(tokenString string) (*Token, error) {
 
 func GenerateNewJWT(roomId string, playerId uuid.UUID, playerName string) (string, error) {
 	jwtToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"playerId": playerId.String(),
-		"roomId": roomId,
+		"playerId":   playerId.String(),
+		"roomId":     roomId,
 		"playerName": playerName,
 	})
 

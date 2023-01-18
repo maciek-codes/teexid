@@ -5,8 +5,6 @@ import (
 	"flag"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -41,25 +39,13 @@ var upgrader = websocket.Upgrader{
 var roomLock *sync.Mutex = &sync.Mutex{}
 var roomById map[string]*Room = make(map[string]*Room, 0)
 
-func startSocket(w http.ResponseWriter, req *http.Request) {
-
-	conn, err := upgrader.Upgrade(w, req, nil)
-
-	if err != nil {
-		log.Printf("Not a websocket handshake: %s\n", err.Error())
-		return
-	}
-
-	go receiveMessages(conn)
-}
-
-func receiveMessages(conn *websocket.Conn) {
+func receiveMessages(pconn *playerConn, room *Room) {
 	// Recieve messages from that connection in a coroutine
 	for {
-		if conn == nil {
+		if pconn.ws == nil {
 			break
 		}
-		_, payload, err := conn.ReadMessage()
+		_, payload, err := pconn.ws.ReadMessage()
 		if err != nil {
 			// TODO use ping/pong to detect real disconnect
 			log.Printf("Disconnected")
@@ -72,49 +58,22 @@ func receiveMessages(conn *websocket.Conn) {
 			log.Printf("Unknown message: %s", err.Error())
 			continue
 		}
-		handleCommandFromClient(conn, &command)
+		handleCommandFromClient(pconn, room, &command)
 	}
 
-	if conn != nil {
-		conn.Close()
+	if pconn.ws != nil {
+		pconn.ws.Close()
 	}
 }
 
-func handleCommandFromClient(conn *websocket.Conn, command *Command) {
-	token, err := ParseJwt(command.Token)
-	if err != nil {
-		log.Println("Invalid token: " + command.Token + ". Error:" + err.Error())
-		return
-	}
-
-	//log.Printf("Handling command for %s (%s) in %s\n", token.PlayerId, token.PlayerName, token.RoomId)
-	
-	// Try to find the room and the player
-	room, foundRoom := roomById[token.RoomId]
-	var player *Player
-	if foundRoom {
-		room.playerMapMutex.RLock()
-		player = room.playerMap[token.PlayerId.String()]
-		room.playerMapMutex.RUnlock()
-	}
-
-	// Make sure the socket is there
-	if player != nil {
-		room.connsMutex.Lock()
-		playerConn, foundConn := room.conns[player.Id.String()]
-		if !foundConn || playerConn.ws != conn {
-			room.conns[player.Id.String()] = NewPlayerConn(conn, player, room)
-		}
-		room.connsMutex.Unlock()
-	}
-
+func handleCommandFromClient(pconn *playerConn, room *Room, command *Command) {
 	if command.Type == "ping" {
 		// Update user's last ping time
 		roomLock.TryLock()
 		for _, room := range roomById {
 			room.connsMutex.Lock()
 			for _, conn := range room.conns {
-				if conn.player.Id == token.PlayerId {
+				if conn.player.Id == pconn.player.Id {
 					conn.lastPing = time.Now()
 				}
 			}
@@ -123,140 +82,18 @@ func handleCommandFromClient(conn *websocket.Conn, command *Command) {
 		roomLock.Unlock()
 		message := ReponseMessage{Type: "pong"}
 		b, _ := json.Marshal(message)
-		conn.WriteMessage(websocket.TextMessage, b)
+		pconn.ws.WriteMessage(websocket.TextMessage, b)
 	} else {
 		log.Printf("Got command %s from %s with data %s",
-			command.Type, token.PlayerId.String(), command.Data)
-
-		if foundRoom {
-			player := room.playerMap[token.PlayerId.String()]
-			if player != nil {
-				room.HandleRoomCommand(player, *command)
-				return
-			}
-		}
-		log.Println("Need room to handle " + command.Type)
+			command.Type, pconn.player.Name, command.Data)
+		room.HandleRoomCommand(pconn.player, *command)
 	}
 }
 
 type joinRoomParams struct {
-	PlayerName string `json:"playerName"`
-	RoomName   string `json:"roomName"`
+	PlayerName string    `json:"playerName"`
+	RoomName   string    `json:"roomName"`
 	PlayerId   uuid.UUID `json:"playerId"`
-}
-
-func handleJoinRoom(w http.ResponseWriter, req *http.Request) {
-	if (req.Method == http.MethodOptions) {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	roomToken := req.Header.Get("X-Game-Token")
-	token, err := ParseJwt(roomToken)
-	if (token != nil) {
-		log.Printf("Got token %s %s %s\n", token.PlayerId, token.PlayerName, token.RoomId)
-	} else {
-		log.Printf("No token\n")
-	}
-
-	decoder := json.NewDecoder(req.Body)
-	var params joinRoomParams
-	err = decoder.Decode(&params)
-	if err != nil {
-		log.Printf("Can't decode params: %s\n", err.Error())
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if params.PlayerId == uuid.Nil {
-		http.Error(w, "Invalid arg: playerId", http.StatusBadRequest)
-	}
-	if params.PlayerName == "" {
-		http.Error(w, "Invalid playerName", http.StatusBadRequest)
-	}
-	if params.RoomName == "" {
-		http.Error(w, "Invalid roomName", http.StatusBadRequest)
-	}
-
-	roomLock.Lock()
-	room, foundRoom := roomById[strings.ToLower(params.RoomName)]
-	log.Printf("Found room: %s %s\n", strconv.FormatBool(foundRoom), params.RoomName)
-
-	if (token != nil) {
-		log.Printf("Token room %s param room %s\n", token.RoomId, params.RoomName)
-	}
-
-	var player *Player
-	if foundRoom {
-		for _, p := range room.Players() {
-			if token != nil && params.PlayerId == p.Id {
-				player = p
-				break
-			}
-		}
-	}
-	
-	if !foundRoom {
-		log.Printf("Room not found, creating player & room\n")
-		player = NewPlayer(params.PlayerName, params.PlayerId)
-		room = createRoom(player, params.RoomName)
-		roomToken, err = GenerateNewJWT(room.Id, player.Id, player.Name)
-	} else if foundRoom && player == nil {
-		if room.State != WaitingForPlayers {
-			http.Error(w, "game in progress", http.StatusBadRequest)
-			return
-		}
-
-		log.Printf("Room found, but no player there - join\n")
-		player = NewPlayer(params.PlayerName, params.PlayerId)
-		room.AddPlayer(player)
-		roomToken, err = GenerateNewJWT(room.Id, player.Id, player.Name)
-	}
-		
-	roomLock.Unlock()
-
-	if room == nil || player == nil {
-		log.Printf("Sth went wrong, no room, no player\n")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-	}
-
-	// Send room state on join
-	res := struct {
-		Token             string    `json:"roomToken"`
-		RoomId            string    `json:"roomId"`
-		OwnerId           string    `json:"ownerId"`
-		PlayerId          string    `json:"playerId"`
-		PlayerCards       []int     `json:"cards"`
-		RoomState         RoomState `json:"roomState"`
-		TurnState         TurnState `json:"turnState"`
-		Players           []*Player `json:"players"`
-		Story             string    `json:"story"`
-		CardsSubmitted    []int     `json:"cardsSubmitted"`
-		StoryPlayerId     uuid.UUID `json:"storyPlayerId"`
-		LastSubmittedCard int       `json:"lastSubmittedCard"`
-	}{
-		Token: 			   roomToken,
-		RoomId:            room.Id,
-		OwnerId:           room.OwnerId.String(),
-		PlayerId:          player.Id.String(),
-		PlayerCards:       player.Cards,
-		RoomState:         room.State,
-		TurnState:         room.TurnState,
-		Players:           room.Players(),
-		Story:             room.Story,
-		StoryPlayerId:     room.StoryPlayerId,
-		CardsSubmitted:    GetCardsForVoting(room, player),
-		LastSubmittedCard: FindLastSubmitted(room, player.Id),
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(res)
-
-
-	// Tell other players that there is an update
-	room.BroadcastPlayers()
 }
 
 func createRoom(player *Player, roomName string) *Room {
@@ -300,7 +137,8 @@ func sendError(conn *websocket.Conn, errorType string, errorMsg string) {
 
 func start() {
 	r := mux.NewRouter()
-	r.HandleFunc("/join_room", handleJoinRoom)
+	r.HandleFunc("/join_room", HandleJoinRoom)
+	r.HandleFunc("/game_command", HandleGameCommand)
 	r.HandleFunc("/ws", startSocket)
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -311,10 +149,10 @@ func start() {
 	log.Printf("Allowed origin: %s\n", config.allowedOrigin)
 
 	handler := cors.New(cors.Options{
-		AllowedMethods: []string{"GET","POST", "OPTIONS"},
-		AllowedOrigins: []string{config.allowedOrigin},
-		AllowCredentials: true,
-		AllowedHeaders: []string{"Content-Type","Bearer","Bearer ","content-type","Origin","Accept", "X-Game-Token"},
+		AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowedOrigins:     []string{config.allowedOrigin},
+		AllowCredentials:   true,
+		AllowedHeaders:     []string{"Content-Type", "Bearer", "Bearer ", "content-type", "Origin", "Accept", "X-Game-Token"},
 		OptionsPassthrough: true,
 	}).Handler(r)
 
@@ -326,18 +164,17 @@ func start() {
 		ReadTimeout:  15 * time.Second,
 	}
 
-
 	roomCleanupTimer := time.NewTimer(2 * time.Second)
 	go func() {
 		<-roomCleanupTimer.C
 		roomLock.Lock()
+		defer roomLock.Unlock()
 		for _, val := range roomById {
 			diff := time.Since(val.CreatedAt)
 			if int(diff.Minutes()) >= *roomMaxDurationMin {
 				delete(roomById, val.Id)
 			}
 		}
-		roomLock.Unlock()
 	}()
 
 	log.Printf(("Starting to listen"))

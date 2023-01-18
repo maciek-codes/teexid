@@ -11,7 +11,7 @@ type Token = {
 };
 
 export const getRoomToken = (): string => {
-  const roomToken = window.localStorage.getItem(TOKEN_NAME);
+  const roomToken = window.sessionStorage.getItem(TOKEN_NAME);
   if (roomToken !== null && roomToken !== "") {
     return roomToken;
   }
@@ -23,7 +23,7 @@ export const getRoomToken = (): string => {
  * @returns token string identifying a connection to a room
  */
 export const updateRoomToken = (new_token: string) => {
-  window.localStorage.setItem(TOKEN_NAME, new_token);
+  window.sessionStorage.setItem(TOKEN_NAME, new_token);
 };
 
 export const getPlayerIdFromToken = (): string | null => {

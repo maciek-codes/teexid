@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Avatar,
   Box,
@@ -11,8 +11,9 @@ import {
 
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
-import { useSocket } from "./contexts/WebsocketContext";
 import { useRoom } from "./contexts/RoomContext";
+import { useReady } from "./queries/useReady";
+import { useStart } from "./queries/useStart";
 
 const MIN_PLAYERS = 2;
 
@@ -55,14 +56,15 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
 };
 export const PlayerList: React.FC = () => {
   const { id, isOwner } = usePlayer();
-  const { roomId, players, roomState, storyPlayerId, turnState, submittedBy } =
+  const { players, roomState, storyPlayerId, turnState, submittedBy } =
     useRoom();
-  const { sendCommand } = useSocket();
   const gameStarted = roomState !== "waiting";
+  const sendReadyQuery = useReady();
+  const startQuery = useStart();
 
-  const onReadyClick = useCallback(() => {
-    sendCommand({ type: "player/ready", data: { roomId } });
-  }, [roomId, sendCommand]);
+  const onReadyClick = () => {
+    sendReadyQuery.mutate();
+  };
 
   const canStart = useMemo(() => {
     return (
@@ -74,11 +76,11 @@ export const PlayerList: React.FC = () => {
     );
   }, [gameStarted, isOwner, players]);
 
-  const startGame = useCallback(() => {
+  const startGame = () => {
     if (isOwner) {
-      sendCommand({ type: "game/start", data: { roomId } });
+      startQuery.mutate();
     }
-  }, [roomId, isOwner, sendCommand]);
+  };
 
   const isVoting = turnState === "voting";
   const isSelectingCards = turnState === "selecting_cards";

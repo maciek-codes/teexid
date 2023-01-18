@@ -8,42 +8,16 @@ import React, {
 import { getRoomToken } from "../hooks/useAuth";
 import { ResponseMsg } from "../types";
 import { getWsHost } from "../utils/config";
+import { useRoom } from "./RoomContext";
 
 const SOCKET_HOST = getWsHost();
+const PING_SECS = 10;
+const NO_PONG_MAX_SECS = 45;
 
-let ws: WebSocket | null = null;
-let lastPong: number;
-
-const getWs = () => {
-  if (ws == null) {
-    ws = new WebSocket(SOCKET_HOST);
-    lastPong = Date.now();
-  }
-  return ws;
-};
-
-const getReadyState = (): number => {
-  const socket = getWs();
-  return socket.readyState;
-};
-
-type RoomCommandData = { roomId: string };
-type StoryCommandData = { roomId: string; story: string; cardId: number };
-type CardCommandData = { roomId: string; cardId: number };
-type Command =
-  | { type: "game/start"; data: RoomCommandData }
-  | { type: "player/ready"; data: RoomCommandData }
-  | { type: "player/story"; data: StoryCommandData }
-  | { type: "player/submitCard"; data: CardCommandData }
-  | { type: "player/vote"; data: CardCommandData }
-  | { type: "ping"; data: unknown };
-
-type CallbackFn = (msg: ResponseMsg) => void;
+type Command = { type: "ping" };
 
 interface SocketContextData {
   sendCommand: (cmd: Command) => void;
-  addMsgListener: (fn: CallbackFn) => void;
-  removeMsgListener: (fn: CallbackFn) => void;
   connecting: boolean;
   connected: boolean;
   error: Error | null;
@@ -54,38 +28,39 @@ interface WebSocketContextProviderProps {
   children: React.ReactNode;
 }
 
-let listeners: CallbackFn[] = [];
-
+let lastPongTimestamp = 0;
 export const WebSocketContextProvider: React.FC<
   WebSocketContextProviderProps
 > = ({ children }: WebSocketContextProviderProps) => {
-  const [connected, setConnected] = useState(
-    getReadyState() === WebSocket.OPEN
-  );
+  const [ws, setWs] = useState<WebSocket | null>(null);
+  const [connected, setConnected] = useState(ws?.readyState === WebSocket.OPEN);
   const [connecting, setConnecting] = useState(
-    getReadyState() !== WebSocket.OPEN
+    ws?.readyState !== WebSocket.OPEN
   );
 
+  useEffect(() => {
+    if (ws == null) {
+      setWs(new WebSocket(SOCKET_HOST + "?token=" + getRoomToken()));
+    }
+  }, [ws, setWs]);
+
   const [error, setError] = useState<Error | null>(
-    getReadyState() === WebSocket.CLOSED
+    ws?.readyState === WebSocket.CLOSED
       ? new Error("Couldn't connect to the server")
       : null
   );
 
-  const addMsgListener = useCallback((fn: CallbackFn) => {
-    listeners = [...listeners, fn];
-  }, []);
-
-  const removeMsgListener = useCallback((fn: CallbackFn) => {
-    listeners = listeners.filter((listener) => listener !== fn);
-  }, []);
+  const { dispatch } = useRoom();
 
   // Monitor connection state
   useEffect(() => {
     const timeoutId = setInterval(() => {
       const connectedState = ws?.readyState ?? -1;
       if (connectedState === WebSocket.OPEN) {
-        if (lastPong < Date.now() - 30 * 1000) {
+        if (
+          lastPongTimestamp > 0 &&
+          lastPongTimestamp < Date.now() - NO_PONG_MAX_SECS * 1000
+        ) {
           setConnected(false);
           setConnected(false);
           ws?.close();
@@ -106,56 +81,66 @@ export const WebSocketContextProvider: React.FC<
     };
   });
 
-  const sendCommand = useCallback(({ type, data }: Command) => {
-    if (getReadyState() !== getWs().OPEN) {
-      return;
-    }
+  const sendCommand = useCallback(
+    ({ type }: Command) => {
+      if (ws?.readyState !== WebSocket.OPEN) {
+        return;
+      }
 
-    getWs().send(
-      JSON.stringify({
-        token: getRoomToken(),
-        type: type,
-        data: JSON.stringify(data),
-      })
-    );
-  }, []);
+      ws?.send(
+        JSON.stringify({
+          type: type,
+        })
+      );
+    },
+    [ws]
+  );
 
   // Try to reconnnect
   useEffect(() => {
-    const timeoutId = setInterval(() => {
+    const intervalId = setInterval(() => {
       const readyState = ws?.readyState ?? -1;
-      console.log("Ready state: " + readyState);
       if (readyState !== WebSocket.OPEN) {
+        console.warn(`Socket not in open state: ${readyState}`);
         setConnected(false);
         setConnecting(true);
-        ws = new WebSocket(SOCKET_HOST);
+        setWs(new WebSocket(getWsHost() + "?token=" + getRoomToken()));
       } else if (readyState === WebSocket.OPEN) {
-        sendCommand({ type: "ping", data: null });
+        console.log("Ping");
+        sendCommand({ type: "ping" });
       }
-    }, 5000);
+    }, PING_SECS * 1000);
     return () => {
-      clearInterval(timeoutId);
+      clearInterval(intervalId);
     };
-  }, [sendCommand]);
+  }, [ws, sendCommand, setWs]);
 
-  const onMsg = useCallback((ev: MessageEvent<string>) => {
-    const msg = JSON.parse(ev.data) as ResponseMsg;
-    if (msg.type === "pong") {
-      setError(null);
-      lastPong = Date.now();
-      return;
-    }
-    listeners.forEach((listener) => listener(msg));
-  }, []);
+  const onMsg = useCallback(
+    (ev: MessageEvent<string>) => {
+      const msg = JSON.parse(ev.data) as ResponseMsg;
+      if (msg.type === "pong") {
+        console.log("Pong");
+        setError(null);
+        lastPongTimestamp = Date.now();
+        return;
+      } else {
+        dispatch(msg);
+      }
+    },
+    [setError, dispatch]
+  );
 
   useEffect(() => {
-    getWs().addEventListener("message", onMsg);
+    if (!ws) {
+      return;
+    }
+    ws.addEventListener("message", onMsg);
     const onMsgRef = onMsg;
-    const websocketRef = getWs();
+    const websocketRef = ws;
     return () => {
       websocketRef.removeEventListener("message", onMsgRef);
     };
-  }, [onMsg]);
+  }, [ws, onMsg]);
 
   const onError = useCallback(
     (ev: Event) => {
@@ -169,22 +154,21 @@ export const WebSocketContextProvider: React.FC<
   }, []);
 
   useEffect(() => {
-    getWs().addEventListener("error", onError);
-    getWs().addEventListener("open", onOpen);
+    if (!ws) return;
+    ws.addEventListener("error", onError);
+    ws.addEventListener("open", onOpen);
     const thisOnError = onError;
     const thisOnOpen = onOpen;
     return () => {
-      getWs().removeEventListener("error", thisOnError);
-      getWs().removeEventListener("open", thisOnOpen);
+      ws.removeEventListener("error", thisOnError);
+      ws.removeEventListener("open", thisOnOpen);
     };
-  }, [onOpen, onError]);
+  }, [ws, onOpen, onError]);
 
   return (
     <WebSocketContext.Provider
       value={{
         sendCommand,
-        addMsgListener,
-        removeMsgListener,
         error,
         connected,
         connecting,

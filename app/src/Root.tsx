@@ -4,7 +4,6 @@ import { Box, Container, Stack } from "@chakra-ui/react";
 import { PlayerContextProvider } from "./contexts/PlayerContext";
 import { RoomContextProvider } from "./contexts/RoomContext";
 import Header from "./components/Header";
-import DebugInfo from "./components/DebugInfo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Outlet } from "react-router-dom";
 import { Lobby } from "./Lobby";

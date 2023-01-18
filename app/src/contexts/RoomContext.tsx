@@ -17,7 +17,6 @@ import {
   RoomState,
   TurnState,
 } from "../types";
-import { useSocket } from "./WebsocketContext";
 
 type JoinedState = "not_joined" | "joining" | "joined";
 
@@ -36,7 +35,10 @@ type CurrentRoomState = {
   gameLog: GameLogEntry[];
   submittedBy: string[];
   dispatch: ({ type, payload }: ResponseMsg) => void;
+  joinRoom: (playerName: string) => void;
 };
+
+const NOOP = () => {};
 
 const defaultRoomState: CurrentRoomState = {
   roomId: "",
@@ -52,7 +54,8 @@ const defaultRoomState: CurrentRoomState = {
   gameLog: [],
   lastSubmittedCard: -1,
   submittedBy: [],
-  dispatch: ({ type, payload }: ResponseMsg) => {},
+  dispatch: NOOP,
+  joinRoom: NOOP,
 };
 
 const RoomContext = createContext<CurrentRoomState>(defaultRoomState);

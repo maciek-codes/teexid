@@ -1,13 +1,14 @@
-import { useMutation } from "@tanstack/react-query";
+import { MutationKey, useMutation } from "@tanstack/react-query";
 import { useRoom } from "../contexts/RoomContext";
 import { updateRoomToken } from "../hooks/useAuth";
 import Player from "../models/Player";
 import { RoomState, TurnState } from "../types";
-import { getHost } from "../utils/config";
+import { apiClient } from "../utils/apiClient";
 
 type JoinArgs = {
   roomName: string;
   playerName: string;
+  playerId: string;
 };
 
 type Response = {
@@ -25,23 +26,24 @@ type Response = {
   lastSubmittedCard: number;
 };
 
-const joinRoom = (params: JoinArgs) => {
-  return fetch(`${getHost()}/join_room`, {
-    method: "POST",
-    body: JSON.stringify(params),
-  }).then((response) => {
-    if (!response.ok) {
-      throw new Error("Can't auth " + response.status);
-    }
-
-    return response.json() as Promise<Response>;
-  });
+const joinRoom = async (params: JoinArgs) => {
+  console.log("Fetching data for ", params);
+  return await apiClient.post<Response>("/join_room", params, {});
 };
 
-export const useJoinRoom = (roomName: string) => {
-  const joinQuery = useMutation(["join_room", roomName], joinRoom);
-  if (joinQuery.isSuccess && joinQuery.data?.roomToken) {
-    updateRoomToken(joinQuery.data.roomToken);
-  }
-  return joinQuery;
+export const useJoinRoom = () => {
+  const { dispatch } = useRoom();
+  const key = ["join_room"] as MutationKey;
+  return useMutation(key, joinRoom, {
+    onSuccess: (response) => {
+      console.log("new data", response.data);
+      updateRoomToken(response.data.roomToken);
+      dispatch({
+        type: "on_joined",
+        payload: {
+          ...response.data,
+        },
+      });
+    },
+  });
 };

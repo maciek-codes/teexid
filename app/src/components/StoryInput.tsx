@@ -4,6 +4,7 @@ import CardSelector from "./CardSelector";
 import { useRoom } from "../contexts/RoomContext";
 import { useSocket } from "../contexts/WebsocketContext";
 import Card from "../models/Card";
+import { useSubmitStory } from "../queries/useSubmitStory";
 
 type StoryPromptInputProps = {
   cards: Array<Card>;
@@ -19,15 +20,12 @@ const StoryInput: React.FC<StoryPromptInputProps> = ({
   const { sendCommand } = useSocket();
   const { roomId } = useRoom();
   const [storyText, setStoryText] = useState<string>("");
+  const submitQuery = useSubmitStory();
   const submitStory = useCallback(() => {
     if (storyText !== "" && selectedCard !== null) {
-      sendCommand({
-        type: "player/story",
-        data: {
-          roomId,
-          story: storyText,
-          cardId: selectedCard.cardId,
-        },
+      submitQuery.mutate({
+        story: storyText,
+        cardId: selectedCard.cardId,
       });
     }
   }, [roomId, sendCommand, storyText, selectedCard]);

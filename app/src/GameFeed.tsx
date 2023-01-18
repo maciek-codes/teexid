@@ -15,6 +15,7 @@ import PlayerScores from "./PlayerScoreList";
 import GameLog from "./components/GameLog";
 import CardView from "./components/CardView";
 import DebugInfo from "./components/DebugInfo";
+import { useSubmitCard } from "./queries/useSubmitCard";
 
 type ScoreListProps = {
   players: Player[];
@@ -51,24 +52,20 @@ export const GameFeed: React.FC = () => {
     lastSubmittedCard,
   } = useRoom();
 
+  const submitQuery = useSubmitCard();
+
   const isTellingStory = storyPlayerId === player.id;
   const storyPlayerName = players.find((p) => p.id === storyPlayerId)?.name;
   const isPlaying = roomState === "playing";
   const isVoting = turnState === "voting";
   const isScoring = turnState === "scoring";
 
-  const submitCardForStory = useCallback(() => {
+  const submitCardForStory = () => {
     if (selectedCard !== null) {
-      sendCommand({
-        type: "player/submitCard",
-        data: {
-          roomId,
-          cardId: selectedCard.cardId,
-        },
-      });
+      submitQuery.mutate(selectedCard.cardId);
       setSelectedCard(null);
     }
-  }, [roomId, sendCommand, selectedCard]);
+  };
 
   const storyUx =
     isPlaying && turnState === "waiting_for_story" && isTellingStory ? (
@@ -98,7 +95,7 @@ export const GameFeed: React.FC = () => {
       {isPlaying &&
         turnState === "selecting_cards" &&
         !isTellingStory &&
-        lastSubmittedCard === -1 && (
+        submitQuery.isIdle && (
           <CardPicker
             cards={cards}
             story={story}
@@ -106,19 +103,21 @@ export const GameFeed: React.FC = () => {
             setSelectedCard={setSelectedCard}
             promptText="Submit a card for this story"
             buttonText="Submit a card"
-            onSelectedCard={submitCardForStory}
+            onSelectedCard={() => submitCardForStory()}
           />
         )}
       {isPlaying &&
         turnState === "selecting_cards" &&
         !isTellingStory &&
-        lastSubmittedCard !== -1 && (
+        submitQuery.isSuccess && (
           <>
             <Text fontSize="lg" mb={5}>
               You submitted this card for the "<Text as="em">{story}</Text>"
               story
             </Text>
-            <CardView card={{ cardId: lastSubmittedCard ?? "-1" } as Card} />
+            <CardView
+              card={{ cardId: submitQuery.data.submittedCard } as Card}
+            />
           </>
         )}
       {isPlaying && isTellingStory && (

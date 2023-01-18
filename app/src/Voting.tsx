@@ -1,12 +1,11 @@
 import React, { useCallback, useState } from "react";
 
-import { Text } from "@chakra-ui/react";
+import { Progress, Stack, Text } from "@chakra-ui/react";
 
 import { CardPicker } from "./components/CardPicker";
-import { useSocket } from "./contexts/WebsocketContext";
 import Card from "./models/Card";
-import { useRoom } from "./contexts/RoomContext";
 import CardView from "./components/CardView";
+import { useVote } from "./queries/useVote";
 
 type VotingProps = {
   story: string;
@@ -20,32 +19,36 @@ export const Voting: React.FC<VotingProps> = ({
   storyCards,
 }: VotingProps) => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const [voted, setVoted] = useState<boolean>(false);
-  const { roomId, lastSubmittedCard } = useRoom();
-  const { sendCommand } = useSocket();
+  const useVoteQuery = useVote();
 
   const voteForCard = useCallback(() => {
     if (selectedCard !== null) {
-      sendCommand({
-        type: "player/vote",
-        data: {
-          roomId,
-          cardId: selectedCard.cardId,
-        },
-      });
+      useVoteQuery.mutate({ cardId: selectedCard.cardId });
       setSelectedCard(null);
-      setVoted(true);
     }
-  }, [roomId, setVoted, sendCommand, selectedCard]);
+  }, [selectedCard]);
 
-  const content = voted ? (
-    <>
-      <Text>You voted for:</Text>
-      {lastSubmittedCard !== -1 && (
-        <CardView card={{ cardId: lastSubmittedCard }} />
-      )}
-    </>
-  ) : (
+  if (useVoteQuery.isSuccess) {
+    return (
+      <>
+        <Text>You voted for:</Text>
+        {useVoteQuery.data.cardId !== -1 && (
+          <CardView card={{ cardId: useVoteQuery.data.cardId }} />
+        )}
+      </>
+    );
+  }
+
+  if (useVoteQuery.isLoading) {
+    return (
+      <Stack>
+        <Text>Voting...</Text>
+        <Progress isIndeterminate={true} />
+      </Stack>
+    );
+  }
+
+  return (
     <CardPicker
       cards={storyCards.filter(
         (card) => !playerCards.map((card) => card.cardId).includes(card.cardId)
@@ -58,6 +61,4 @@ export const Voting: React.FC<VotingProps> = ({
       onSelectedCard={voteForCard}
     />
   );
-
-  return content;
 };

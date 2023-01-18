@@ -1,47 +1,44 @@
 import React, { useEffect } from "react";
 import { Text, Progress } from "@chakra-ui/react";
 
+import PlayerName from "./PlayerName";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
 import { useJoinRoom } from "./queries/useJoinRoom";
-import PlayerName from "./PlayerName";
 import { GameFeed } from "./GameFeed";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
 
 const GameRoom: React.FC = () => {
   const player = usePlayer();
-  const { roomId, joinedState, dispatch } = useRoom();
-  const joinRoomMutation = useJoinRoom(roomId);
+  const { roomId, joinedState } = useRoom();
+  const {
+    mutate: joinRoom,
+    isSuccess,
+    isLoading,
+    isIdle,
+    isError,
+    error,
+  } = useJoinRoom();
+  const hasPlayerName = (player.name ?? "") !== "";
 
   useEffect(() => {
-    if (joinRoomMutation.isIdle) {
-      // Create room
-      if (player?.name === null || player.name.trim() === "" || roomId === "") {
-        return;
+    // Join the room
+    if (player.name !== null && player.name !== "") {
+      if (isIdle && !isSuccess) {
+        joinRoom({
+          playerName: player.name,
+          playerId: player.id,
+          roomName: roomId,
+        });
       }
-      joinRoomMutation.mutate({
-        playerName: player.name,
-        roomName: roomId,
-      });
     }
-  }, [player, roomId]);
+  }, [player, roomId, joinRoom]);
 
-  useEffect(() => {
-    if (joinRoomMutation.isSuccess && joinedState !== "joined") {
-      dispatch({
-        type: "on_joined",
-        payload: {
-          ...joinRoomMutation.data,
-        },
-      });
-    }
-  }, [joinRoomMutation.isSuccess]);
-
-  if (joinRoomMutation.isError) {
-    return <Text>{"Error connecting:" + joinRoomMutation.error}</Text>;
+  if (isError) {
+    return <Text>{"Error connecting:" + error}</Text>;
   }
 
-  if (joinRoomMutation.isLoading) {
+  if (isLoading) {
     return (
       <>
         <Text>Loading ...</Text>
@@ -50,8 +47,19 @@ const GameRoom: React.FC = () => {
     );
   }
 
-  if (player?.name === null || player.name === "") {
+  if (!hasPlayerName) {
     return <PlayerName />;
+  }
+
+  if (joinedState !== "joined") {
+    return (
+      <>
+        <Text>Loading ...</Text>
+        <Progress isIndeterminate={true} isAnimated={true}>
+          Joining the room
+        </Progress>
+      </>
+    );
   }
 
   return (

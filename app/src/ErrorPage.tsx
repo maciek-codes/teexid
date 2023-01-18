@@ -1,4 +1,4 @@
-import { Alert, AlertIcon, AlertTitle, Box } from "@chakra-ui/react";
+import { Alert, AlertIcon, AlertTitle } from "@chakra-ui/react";
 import React from "react";
 import { useRouteError } from "react-router-dom";
 

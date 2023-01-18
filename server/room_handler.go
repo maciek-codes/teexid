@@ -173,6 +173,10 @@ func HandleGameCommand(w http.ResponseWriter, req *http.Request) {
 		res, err = HandleSubmitStoryCommand(room, player, &command.Payload)	
 	} else if (command.Command == "vote") {
 		res, err = HandleVoteCommand(room, player, &command.Payload)	
+	} else if (command.Command == "ready") {
+		res, err = HandleReadyCommand(room, player, &command.Payload)	
+	} else if (command.Command == "start") {
+		res, err = HandleStartCommand(room, player, &command.Payload)	
 	}
 		
 	if err != nil {
@@ -243,6 +247,32 @@ func HandleSubmitCardCommand(room *Room, player *Player, payload *json.RawMessag
 		}{
 			SubmittedCard: submission.CardId,
 			}, nil
+}
+
+func HandleReadyCommand(room *Room, player *Player, payload *json.RawMessage) (interface{}, error) {
+	player.SetReady()
+	room.BroadcastPlayers()
+	return payload, nil
+}
+
+func HandleStartCommand(room *Room, player *Player, payload *json.RawMessage) (interface{}, error) {
+	if player.Id != room.OwnerId {
+		return nil, errors.New("Not room owner")
+	} 
+	if room.State != WaitingForPlayers {
+		return nil, errors.New("Already started")
+	} 
+	var allReady = true
+	var countReady = 0
+
+	for _, player := range room.Players() {
+		allReady = allReady && player.IsReady()
+		countReady += 1
+	}
+	if allReady && countReady >= MinPlayers {
+		room.startGame()
+	}
+	return payload, nil
 }
 
 func HandleVoteCommand(room *Room, player *Player, payload *json.RawMessage) (interface{}, error) {

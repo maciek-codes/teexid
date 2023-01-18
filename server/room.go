@@ -342,33 +342,6 @@ func (r *Room) sendCardsToEach(cardCount int) {
 	r.connsMutex.RUnlock()
 }
 
-func (r *Room) HandleRoomCommand(p *Player, command Command) {
-	if command.Type == "player/updateName" {
-		var newName = command.Data
-		p.SetName(newName)
-		r.BroadcastPlayers()
-	} else if command.Type == "player/ready" {
-		p.SetReady()
-		r.BroadcastPlayers()
-	} else if command.Type == "game/start" {
-		if p.Id != r.OwnerId {
-			log.Printf("Not room owner: %s", p.Id.String())
-			return
-		}
-		var allReady = true
-		var countReady = 0
-
-		for _, player := range r.playerMap {
-			log.Printf("%s is ready", player.Id.String())
-			allReady = allReady && player.IsReady()
-			countReady += 1
-		}
-		if allReady && countReady >= MinPlayers {
-			r.startGame()
-		}
-	}
-}
-
 /*
 From: http://www.itsyourmoveoakland.com/game-library-cd/dixit
 

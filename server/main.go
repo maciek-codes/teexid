@@ -47,8 +47,7 @@ func receiveMessages(pconn *playerConn, room *Room) {
 		}
 		_, payload, err := pconn.ws.ReadMessage()
 		if err != nil {
-			// TODO use ping/pong to detect real disconnect
-			log.Printf("Disconnected")
+			log.Printf("%s disconnected from %s", pconn.player.Name, room.Id)
 			break
 		}
 
@@ -69,24 +68,10 @@ func receiveMessages(pconn *playerConn, room *Room) {
 func handleCommandFromClient(pconn *playerConn, room *Room, command *Command) {
 	if command.Type == "ping" {
 		// Update user's last ping time
-		roomLock.TryLock()
-		for _, room := range roomById {
-			room.connsMutex.Lock()
-			for _, conn := range room.conns {
-				if conn.player.Id == pconn.player.Id {
-					conn.lastPing = time.Now()
-				}
-			}
-			room.connsMutex.Unlock()
-		}
-		roomLock.Unlock()
+		pconn.lastPing = time.Now()
 		message := ReponseMessage{Type: "pong"}
 		b, _ := json.Marshal(message)
 		pconn.ws.WriteMessage(websocket.TextMessage, b)
-	} else {
-		log.Printf("Got command %s from %s with data %s",
-			command.Type, pconn.player.Name, command.Data)
-		room.HandleRoomCommand(pconn.player, *command)
 	}
 }
 

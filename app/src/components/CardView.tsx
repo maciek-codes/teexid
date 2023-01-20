@@ -26,13 +26,15 @@ const CardView = ({ card, selected, onClick }: CardViewProps) => {
       <Image
         src={imageUrl}
         alt="Card"
+        fit="cover"
+        cursor="pointer"
         border={selected ?? false ? "2px" : "0px"}
         transition="all .25s ease"
         filter={selected ?? false ? "brightness(110%)" : "brightness(90%)"}
         _hover={{ transform: "scale(1.1)" }}
         transform={selected ?? false ? "scale(1.1)" : "auto"}
         width="150px"
-        maxHeight="180px"
+        height="180px"
         margin="0"
       />
     </Box>

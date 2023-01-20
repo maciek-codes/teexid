@@ -63,16 +63,24 @@ export const StoryInput: React.FC = () => {
         background="white"
         placeholder="Be creative!"
         onChange={(e) => setStoryText(e.currentTarget.value)}
-        mt={5}
-        mb={10}
+        my={5}
       />
       <Button
+        alignSelf="center"
+        background="gray.200"
         isActive={storyText.trim() !== "" && selectedCard !== null}
+        isLoading={submitQuery.isLoading}
         isDisabled={storyText.trim() === "" || selectedCard === null}
         onClick={() => submitStory()}
+        mb={5}
       >
         Submit story
       </Button>
+      {submitQuery.isError && (
+        <Text>
+          Something went wrong: {(submitQuery.error as Error).toString()}
+        </Text>
+      )}
     </Flex>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Text, Progress } from "@chakra-ui/react";
+import { Text, Progress, Stack } from "@chakra-ui/react";
 
 import PlayerName from "./PlayerName";
 import { usePlayer } from "./contexts/PlayerContext";
@@ -7,38 +7,56 @@ import { useRoom } from "./contexts/RoomContext";
 import { useJoinRoom } from "./queries/useJoinRoom";
 import { GameFeed } from "./GameFeed";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
+import { AxiosError } from "axios";
 
 const GameRoom: React.FC = () => {
   const player = usePlayer();
   const { roomId, joinedState } = useRoom();
-  const {
-    mutate: joinRoom,
-    isSuccess,
-    isLoading,
-    isIdle,
-    isError,
-    error,
-  } = useJoinRoom();
+  const joinRoomQuery = useJoinRoom();
   const hasPlayerName = (player.name ?? "") !== "";
 
   useEffect(() => {
     // Join the room
     if (player.name !== null && player.name !== "") {
-      if (isIdle && !isSuccess) {
-        joinRoom({
+      if (joinRoomQuery.isIdle && !joinRoomQuery.isSuccess) {
+        joinRoomQuery.mutate({
           playerName: player.name,
           playerId: player.id,
           roomName: roomId.toLowerCase().trim(),
         });
       }
     }
-  }, [player, roomId, joinRoom]);
+  }, [
+    player,
+    roomId,
+    joinRoomQuery.isIdle,
+    joinRoomQuery.isSuccess,
+    joinRoomQuery.mutate,
+  ]);
 
-  if (isError) {
-    return <Text>{"Error connecting:" + error}</Text>;
+  if (
+    joinRoomQuery.isError &&
+    (joinRoomQuery.error as AxiosError).code === AxiosError.ERR_NETWORK
+  ) {
+    return (
+      <Stack>
+        <Text size="lg">Ooops! The server seems to be down.</Text>
+      </Stack>
+    );
   }
 
-  if (isLoading) {
+  if (joinRoomQuery.isError) {
+    return (
+      <Stack>
+        <Text size="lg">Error connecting!</Text>
+        <Text>
+          {((joinRoomQuery.error as AxiosError).code as string) ?? ""}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (joinRoomQuery.isLoading) {
     return (
       <>
         <Text>Loading ...</Text>

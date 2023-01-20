@@ -24,7 +24,7 @@ func (playerConn *playerConn) SendText(bytes []byte) {
 }
 
 type Command struct {
-	Type  string `json:"type"`
+	Type string `json:"type"`
 }
 
 func NewPlayerConn(ws *websocket.Conn, player *Player, room *Room) *playerConn {

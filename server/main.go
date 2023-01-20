@@ -14,10 +14,10 @@ import (
 )
 
 var addr = flag.String("addr", ":8080", "http service address")
-var roomMaxDurationMin = flag.Int("room-timeout", 5, "max room duration")
+var roomMaxDurationMin = flag.Int("room-timeout", 30, "max room duration")
 var host = flag.String("host", "localhost", "")
 var port = flag.String("port", "8080", "")
-var origin = flag.String("allowed-origin", "localhost:3000", "")
+var origin = flag.String("allowed-origin", "http://localhost:3000", "")
 
 // All the cards available
 var cardCount = flag.Int("card-count", 55, "How many cards")
@@ -29,7 +29,6 @@ var upgrader = websocket.Upgrader{
 			return true
 		}
 		var origin = r.Header.Get("Origin")
-		log.Printf("Origin: %s\n", origin)
 		return origin == config.allowedOrigin
 	},
 } // use mostly default options
@@ -103,21 +102,19 @@ func start() {
 	log.Printf("Host %s:%s\n", *host, *port)
 	log.Printf("Allowed origin: %s\n", config.allowedOrigin)
 
-	
 	c := cors.New(cors.Options{
-		Debug: true,
-		AllowedOrigins:     []string{config.allowedOrigin},
-		AllowedMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowCredentials:   true,
-		AllowedHeaders:     []string{
-			"Content-Type", "Bearer", "bearer", "content-type", "Origin", "Accept", 
+		Debug: false,
+		AllowedOrigins:   []string{config.allowedOrigin},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowCredentials: true,
+		AllowedHeaders: []string{
+			"Content-Type", "Bearer", "bearer", "content-type", "Origin", "Accept",
 			"X-Game-Token", "x-game-token"},
 		AllowPrivateNetwork: true,
-		OptionsPassthrough: false,
+		OptionsPassthrough:  false,
 	})
 	handler := c.Handler(router)
 
-	
 	roomCleanupTimer := time.NewTimer(2 * time.Second)
 	go func() {
 		<-roomCleanupTimer.C
@@ -129,8 +126,8 @@ func start() {
 				delete(roomById, val.Id)
 			}
 		}
-		}()
-		
+	}()
+
 	log.Printf(("Starting to listen"))
 	err := http.ListenAndServe(":8080", handler)
 	if err != nil {

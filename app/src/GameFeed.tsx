@@ -1,13 +1,10 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useState } from "react";
 
 import { Box, Center, Stack, Text } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
-import { useSocket } from "./contexts/WebsocketContext";
-import CardSelector from "./components/CardSelector";
 import Card from "./models/Card";
-import StoryInput from "./components/StoryInput";
 import Player from "./models/Player";
 import { CardPicker } from "./components/CardPicker";
 import { Voting } from "./Voting";
@@ -16,6 +13,7 @@ import GameLog from "./components/GameLog";
 import CardView from "./components/CardView";
 import DebugInfo from "./components/DebugInfo";
 import { useSubmitCard } from "./queries/useSubmitCard";
+import { StoryInput } from "./components/StoryInput";
 
 type ScoreListProps = {
   players: Player[];
@@ -38,10 +36,8 @@ const ScoreList: React.FC<ScoreListProps> = ({ players }: ScoreListProps) => {
 
 export const GameFeed: React.FC = () => {
   const player = usePlayer();
-  const { sendCommand } = useSocket();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const {
-    roomId,
     story,
     players,
     cards,
@@ -49,7 +45,6 @@ export const GameFeed: React.FC = () => {
     storyPlayerId,
     roomState,
     turnState,
-    lastSubmittedCard,
   } = useRoom();
 
   const submitQuery = useSubmitCard();
@@ -67,31 +62,26 @@ export const GameFeed: React.FC = () => {
     }
   };
 
-  const storyUx =
-    isPlaying && turnState === "waiting_for_story" && isTellingStory ? (
-      <StoryInput
-        selectedCard={selectedCard}
-        cards={cards}
-        setSelectedCard={setSelectedCard}
-      />
-    ) : (
-      <Center>
-        <Text textAlign="center">
-          Waiting for <Text as="b">{storyPlayerName}</Text> to write a story and
-          pick a card.
-        </Text>
-      </Center>
-    );
+  const storyUx = (
+    <Center>
+      <Text textAlign="center">
+        Waiting for <Text as="b">{storyPlayerName}</Text> to write a story and
+        pick a card.
+      </Text>
+    </Center>
+  );
 
   return (
     <Stack>
       {roomState === "waiting" && (
         <Text flexGrow={2} align="center" fontSize="xl">
-          {" "}
           Wait for players to join...
         </Text>
       )}
-      {isPlaying && turnState === "waiting_for_story" ? storyUx : null}
+      {isPlaying &&
+        !isTellingStory &&
+        turnState === "waiting_for_story" &&
+        storyUx}
       {isPlaying &&
         turnState === "selecting_cards" &&
         !isTellingStory &&
@@ -120,36 +110,8 @@ export const GameFeed: React.FC = () => {
             />
           </>
         )}
-      {isPlaying && isTellingStory && (
-        <>
-          <Text fontSize="lg" mb={5}>
-            You submitted the story: <Text as="em">{story}</Text>
-          </Text>
-          {lastSubmittedCard !== -1 && (
-            <>
-              <Text fontSize="lg" mb={5}>
-                Your story card:
-              </Text>
-              <CardView card={{ cardId: lastSubmittedCard ?? "-1" } as Card} />
-            </>
-          )}
-        </>
-      )}
-      {isPlaying && turnState === "selecting_cards" && isTellingStory ? (
-        <Text fontSize="md">Waiting for players to submit cards...</Text>
-      ) : null}
-      {isPlaying && isVoting && isTellingStory && (
-        <>
-          <Text fontSize="xl">Waiting for votes... {"\n"}Cards submitted:</Text>
-          <CardSelector
-            onSelected={() => {}}
-            cards={storyCards.filter((c) => c.cardId !== lastSubmittedCard)}
-          />
-        </>
-      )}
-      {isPlaying && isScoring && players ? (
-        <ScoreList players={players} />
-      ) : null}
+      {isPlaying && isTellingStory && <StoryInput />}
+      {isPlaying && isScoring && players && <ScoreList players={players} />}
       {roomState === "ended" && (
         <Box>
           <Text fontSize="xl">Game ended!</Text>

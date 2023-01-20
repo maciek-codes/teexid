@@ -33,7 +33,7 @@ func HandleJoinRoom(w http.ResponseWriter, req *http.Request) {
 	}
 	err = decoder.Decode(&params)
 	if err != nil {
-		log.Printf("Can't decode params: %s\n", err.Error())
+		log.Printf("Can't decode params: %s %s\n", err.Error(), req.Body)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -57,7 +57,7 @@ func HandleJoinRoom(w http.ResponseWriter, req *http.Request) {
 	log.Printf("Found room: %s %s\n", strconv.FormatBool(foundRoom), params.RoomName)
 
 	if token != nil {
-		log.Printf("Token room %s param room %s\n", token.RoomId, params.RoomName)
+		log.Printf("Token roomId: %s, roomName: %s\n", token.RoomId, params.RoomName)
 	}
 
 	var player *Player
@@ -71,7 +71,7 @@ func HandleJoinRoom(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if !foundRoom {
-		log.Printf("Room not found, creating player & room\n")
+		log.Printf("Room %s not found, creating player %s & room\n", params.RoomName, params.PlayerName)
 		player = NewPlayer(params.PlayerName, params.PlayerId)
 		room = createRoom(player, params.RoomName)
 		roomToken, err = GenerateNewJWT(room.Id, player.Id, player.Name)
@@ -82,7 +82,7 @@ func HandleJoinRoom(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		log.Printf("Room found, but no player there - join\n")
+		log.Printf("Room %s found, but %s not in there - join\n", params.RoomName, params.PlayerName)
 		player = NewPlayer(params.PlayerName, params.PlayerId)
 		room.AddPlayer(player)
 		roomToken, err = GenerateNewJWT(room.Id, player.Id, player.Name)
@@ -154,6 +154,17 @@ func findRoomAndPlayerFromToken(req *http.Request) (*Room, *Player, error) {
 	return room, player, nil
 }
 
+type HandlerFn func(*Room, *Player, *json.RawMessage) (interface{}, error)
+type HandlerMap map[string]HandlerFn
+
+var handlerByCommand = HandlerMap{
+	"submit_card":  HandleSubmitCardCommand,
+	"submit_story": HandleSubmitStoryCommand,
+	"vote":         HandleVoteCommand,
+	"ready":        HandleReadyCommand,
+	"start":        HandleStartCommand,
+}
+
 func HandleGameCommand(w http.ResponseWriter, req *http.Request) {
 	if req.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -166,7 +177,7 @@ func HandleGameCommand(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var command struct {
-		Command string `json:"command"`
+		Command string          `json:"command"`
 		Payload json.RawMessage `json:"payload"`
 	}
 
@@ -174,18 +185,12 @@ func HandleGameCommand(w http.ResponseWriter, req *http.Request) {
 	decoder.Decode(&command)
 
 	var res interface{}
-	if (command.Command == "submit_card") {
-		res, err = HandleSubmitCardCommand(room, player, &command.Payload)
-	} else if (command.Command == "submit_story") {
-		res, err = HandleSubmitStoryCommand(room, player, &command.Payload)	
-	} else if (command.Command == "vote") {
-		res, err = HandleVoteCommand(room, player, &command.Payload)	
-	} else if (command.Command == "ready") {
-		res, err = HandleReadyCommand(room, player, &command.Payload)	
-	} else if (command.Command == "start") {
-		res, err = HandleStartCommand(room, player, &command.Payload)	
+	handler, foundHandler := handlerByCommand[command.Command]
+	if !foundHandler {
+		http.Error(w, "Can't find that command", http.StatusBadRequest)
+		return
 	}
-		
+	res, err = handler(room, player, &command.Payload)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -227,7 +232,7 @@ func HandleSubmitCardCommand(room *Room, player *Player, payload *json.RawMessag
 	if err != nil {
 		return nil, err
 	}
-	
+
 	room.roomLock.Lock()
 	defer room.roomLock.Unlock()
 	// Maybe submitted already?
@@ -236,7 +241,7 @@ func HandleSubmitCardCommand(room *Room, player *Player, payload *json.RawMessag
 			return nil, errors.New("Already submitted the card")
 		}
 	}
-	
+
 	// Add the card to submissions
 	room.cardsSubmitted = append(room.cardsSubmitted, CardSubmitted{
 		PlayerId: player.Id.String(),
@@ -247,13 +252,13 @@ func HandleSubmitCardCommand(room *Room, player *Player, payload *json.RawMessag
 		room.TurnState = Voting
 	}
 	room.BroadcastRoomState()
-	
+
 	// Write response
 	return struct {
 		SubmittedCard int `json:"submittedCard"`
-		}{
-			SubmittedCard: submission.CardId,
-			}, nil
+	}{
+		SubmittedCard: submission.CardId,
+	}, nil
 }
 
 func HandleReadyCommand(room *Room, player *Player, payload *json.RawMessage) (interface{}, error) {
@@ -265,10 +270,10 @@ func HandleReadyCommand(room *Room, player *Player, payload *json.RawMessage) (i
 func HandleStartCommand(room *Room, player *Player, payload *json.RawMessage) (interface{}, error) {
 	if player.Id != room.OwnerId {
 		return nil, errors.New("Not room owner")
-	} 
+	}
 	if room.State != WaitingForPlayers {
 		return nil, errors.New("Already started")
-	} 
+	}
 	var allReady = true
 	var countReady = 0
 
@@ -297,23 +302,24 @@ func HandleVoteCommand(room *Room, player *Player, payload *json.RawMessage) (in
 	}
 
 	var voteObj Vote
-	var foundVote bool
+	var foundVoteCard bool
 	if vote.CardId == room.StoryCard {
 		var votedPlayer *Player = room.playerMap[room.StoryPlayerId.String()]
 		voteObj = Vote{player, votedPlayer, vote.CardId}
-		foundVote = true
-	} else {	
+		foundVoteCard = true
+	} else {
 		for _, cardSubmitted := range room.cardsSubmitted {
-			if cardSubmitted.CardId == vote.CardId {
+			if cardSubmitted.CardId == vote.CardId &&
+				cardSubmitted.PlayerId != player.Id.String() {
 				var votedPlayer *Player = room.playerMap[cardSubmitted.PlayerId]
 				voteObj = Vote{player, votedPlayer, vote.CardId}
-				foundVote = true
+				foundVoteCard = true
 				break
 			}
 		}
 	}
 
-	if !foundVote {
+	if !foundVoteCard {
 		return nil, errors.New("Invalid vote")
 	}
 

@@ -28,7 +28,6 @@ type CurrentRoomState = {
   roomState: RoomState;
   storyPlayerId: string;
   cards: Card[];
-  lastSubmittedCard: number;
   storyCards: Card[];
   players: Player[];
   story: string;
@@ -52,7 +51,6 @@ const defaultRoomState: CurrentRoomState = {
   players: [],
   story: "",
   gameLog: [],
-  lastSubmittedCard: -1,
   submittedBy: [],
   dispatch: NOOP,
   joinRoom: NOOP,

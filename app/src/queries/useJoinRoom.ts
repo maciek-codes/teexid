@@ -1,9 +1,9 @@
 import { MutationKey, useMutation } from "@tanstack/react-query";
 import { useRoom } from "../contexts/RoomContext";
-import { updateRoomToken } from "../hooks/useAuth";
+import { getRoomToken, updateRoomToken } from "../hooks/useAuth";
 import Player from "../models/Player";
 import { RoomState, TurnState } from "../types";
-import { apiClient } from "../utils/apiClient";
+import apiClient from "../utils/apiClient";
 
 type JoinArgs = {
   roomName: string;
@@ -23,12 +23,15 @@ type Response = {
   story: string;
   cardsSubmitted: number[];
   storyPlayerId: string;
-  lastSubmittedCard: number;
 };
 
 const joinRoom = async (params: JoinArgs) => {
   console.log("Fetching data for ", params);
-  return await apiClient.post<Response>("/join_room", params, {});
+  return await apiClient.post<Response>("/join_room", params, {
+    headers: {
+      "X-Game-Token": getRoomToken(),
+    },
+  });
 };
 
 export const useJoinRoom = () => {

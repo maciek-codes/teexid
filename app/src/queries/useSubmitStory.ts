@@ -1,5 +1,6 @@
 import { MutationKey, useMutation } from "@tanstack/react-query";
-import { apiClient } from "../utils/apiClient";
+import { getRoomToken } from "../hooks/useAuth";
+import apiClient from "../utils/apiClient";
 
 type SubmitStoryArgs = {
   story: string;
@@ -12,12 +13,20 @@ type SubmitResponse = {
 };
 
 const submitStory = async (args: SubmitStoryArgs) => {
-  const response = await apiClient.post<SubmitResponse>("/game_command", {
-    command: "submit_story",
-    payload: {
-      ...args,
+  const response = await apiClient.post<SubmitResponse>(
+    "/game_command",
+    {
+      command: "submit_story",
+      payload: {
+        ...args,
+      },
     },
-  });
+    {
+      headers: {
+        "X-Game-Token": getRoomToken(),
+      },
+    }
+  );
   return response.data;
 };
 

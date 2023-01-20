@@ -1,13 +1,22 @@
 import { MutationKey, useMutation } from "@tanstack/react-query";
-import { apiClient } from "../utils/apiClient";
+import { getRoomToken } from "../hooks/useAuth";
+import apiClient from "../utils/apiClient";
 
 type ReadyResponse = {};
 
 const Ready = async () => {
-  const response = await apiClient.post<ReadyResponse>("/game_command", {
-    command: "ready",
-    payload: {},
-  });
+  const response = await apiClient.post<ReadyResponse>(
+    "/game_command",
+    {
+      command: "ready",
+      payload: {},
+    },
+    {
+      headers: {
+        "X-Game-Token": getRoomToken(),
+      },
+    }
+  );
   return response.data;
 };
 

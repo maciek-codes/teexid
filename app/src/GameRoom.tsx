@@ -28,7 +28,7 @@ const GameRoom: React.FC = () => {
         joinRoom({
           playerName: player.name,
           playerId: player.id,
-          roomName: roomId,
+          roomName: roomId.toLowerCase().trim(),
         });
       }
     }

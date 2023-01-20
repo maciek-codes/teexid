@@ -1,26 +1,19 @@
-import { Button, Flex, Input, Text } from "@chakra-ui/react";
+import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import React, { useCallback, useState } from "react";
 import CardSelector from "./CardSelector";
 import { useRoom } from "../contexts/RoomContext";
 import { useSocket } from "../contexts/WebsocketContext";
 import Card from "../models/Card";
 import { useSubmitStory } from "../queries/useSubmitStory";
+import CardView from "./CardView";
 
-type StoryPromptInputProps = {
-  cards: Array<Card>;
-  selectedCard: Card | null;
-  setSelectedCard: (c: Card | null) => void;
-};
-
-const StoryInput: React.FC<StoryPromptInputProps> = ({
-  cards,
-  selectedCard,
-  setSelectedCard,
-}) => {
+export const StoryInput: React.FC = () => {
   const { sendCommand } = useSocket();
-  const { roomId } = useRoom();
+  const { roomId, turnState, cards, storyCards } = useRoom();
   const [storyText, setStoryText] = useState<string>("");
   const submitQuery = useSubmitStory();
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+
   const submitStory = useCallback(() => {
     if (storyText !== "" && selectedCard !== null) {
       submitQuery.mutate({
@@ -29,6 +22,30 @@ const StoryInput: React.FC<StoryPromptInputProps> = ({
       });
     }
   }, [roomId, sendCommand, storyText, selectedCard]);
+
+  if (submitQuery.isSuccess) {
+    return (
+      <Stack>
+        <Text fontSize="lg" mb={5}>
+          You submitted the story: <Text as="em">{submitQuery.data.story}</Text>
+        </Text>
+        <Text fontSize="lg" mb={5}>
+          Your story card:
+        </Text>
+        <CardView card={{ cardId: submitQuery.data.cardId } as Card} />
+        {turnState === "selecting_cards" && (
+          <Text fontSize="lg" mb={5}>
+            Waiting for others to submit the cards
+          </Text>
+        )}
+        {turnState === "voting" && (
+          <Text fontSize="lg" mb={5}>
+            Waiting for others to vote...
+          </Text>
+        )}
+      </Stack>
+    );
+  }
 
   return (
     <Flex flexDirection="column" alignItems="start" justifyContent="start">
@@ -59,5 +76,3 @@ const StoryInput: React.FC<StoryPromptInputProps> = ({
     </Flex>
   );
 };
-
-export default StoryInput;

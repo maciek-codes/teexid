@@ -1,25 +1,39 @@
 import React, { useState } from "react";
-import { Box, Button, Input, Stack, Text } from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  Input,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Stack,
+  Text,
+  useDisclosure,
+} from "@chakra-ui/react";
 
 import { usePlayer } from "./contexts/PlayerContext";
 
-const PlayerName: React.FC = () => {
+interface PlayerEditProps {
+  onClose?: () => void;
+}
+
+export const PlayerEdit: React.FC<PlayerEditProps> = ({ onClose }) => {
   const { name, setName } = usePlayer();
-
   const [value, setValue] = useState<string>(name ?? "");
-
-  const [isEditingName, setIsEditingName] = useState(
-    name === "" || name === null
-  );
 
   const updateName = () => {
     if (value?.trim() !== "") {
-      setIsEditingName(false);
       setName(value);
+    }
+    if (onClose) {
+      onClose();
     }
   };
 
-  return isEditingName ? (
+  return (
     <Stack>
       <Text>What is your player's name?</Text>
       <Input
@@ -30,9 +44,33 @@ const PlayerName: React.FC = () => {
       />
       <Button onClick={updateName}>Done</Button>
     </Stack>
-  ) : (
+  );
+};
+
+export const PlayerName: React.FC = () => {
+  const { name } = usePlayer();
+  const [isEditingName, setIsEditingName] = useState<boolean>(false);
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  if (isEditingName) {
+    return <PlayerEdit onClose={() => setIsEditingName(false)} />;
+  }
+
+  return (
     <Box>
-      👋 Hello {name} <button onClick={() => setIsEditingName(true)}>✏️</button>
+      <Button onClick={() => onOpen()}>
+        {name} <Box ml={2}>&#128100;</Box>
+      </Button>
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Update name</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <PlayerEdit onClose={() => onClose()} />
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

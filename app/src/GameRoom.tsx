@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { Text, Progress, Stack } from "@chakra-ui/react";
 
-import PlayerName from "./PlayerName";
+import PlayerName, { PlayerEdit } from "./PlayerName";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
 import { useJoinRoom } from "./queries/useJoinRoom";
@@ -13,7 +13,7 @@ const GameRoom: React.FC = () => {
   const player = usePlayer();
   const { roomId, joinedState } = useRoom();
   const joinRoomQuery = useJoinRoom();
-  const hasPlayerName = (player.name ?? "") !== "";
+  const hasPlayerName = player.name !== "";
 
   useEffect(() => {
     // Join the room
@@ -66,7 +66,7 @@ const GameRoom: React.FC = () => {
   }
 
   if (!hasPlayerName) {
-    return <PlayerName />;
+    return <PlayerEdit />;
   }
 
   if (joinedState !== "joined") {

@@ -9,7 +9,7 @@ import { useRoom } from "./RoomContext";
 
 interface PlayerData {
   id: string;
-  name: string | null;
+  name: string;
   isOwner: boolean;
   setName: (name: string) => void;
 }

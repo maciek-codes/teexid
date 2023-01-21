@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 
 import { usePlayer } from "./contexts/PlayerContext";
-import PlayerName from "./PlayerName";
+import { PlayerEdit } from "./PlayerName";
 import { useLocation, useNavigate } from "react-router-dom";
 
 interface LobbyProps {}
@@ -30,8 +30,8 @@ export const Lobby: React.FC<LobbyProps> = () => {
       margin="auto"
     >
       <Stack flexDir="column">
-        <PlayerName />
-        {(player?.name ?? "") !== "" && (
+        {player.name === "" && <PlayerEdit />}
+        {player.name !== "" && (
           <Stack pt="5px">
             <Text fontSize="smaller">
               Enter the room name to start a new room or type in the room name

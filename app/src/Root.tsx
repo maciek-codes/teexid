@@ -15,7 +15,7 @@ const Root: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <RoomContextProvider>
         <PlayerContextProvider>
-          <Box background="#efefef">
+          <Box background="gray.200">
             <Header />
             <Container
               h="100vh"

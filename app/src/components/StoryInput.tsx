@@ -9,7 +9,7 @@ import CardView from "./CardView";
 
 export const StoryInput: React.FC = () => {
   const { sendCommand } = useSocket();
-  const { roomId, turnState, cards, storyCards } = useRoom();
+  const { roomId, turnState, cards } = useRoom();
   const [storyText, setStoryText] = useState<string>("");
   const submitQuery = useSubmitStory();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);

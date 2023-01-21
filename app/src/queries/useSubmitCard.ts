@@ -2,13 +2,6 @@ import { MutationKey, useMutation } from "@tanstack/react-query";
 import { getRoomToken } from "../hooks/useAuth";
 import apiClient from "../utils/apiClient";
 
-type SubmitArgs = {
-  command: string;
-  payload: {
-    cardId: number;
-  };
-};
-
 type SubmitResponse = {
   submittedCard: number;
 };

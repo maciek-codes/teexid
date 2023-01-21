@@ -1,13 +1,5 @@
 import React, { useMemo } from "react";
-import {
-  Avatar,
-  Box,
-  Button,
-  HStack,
-  List,
-  ListItem,
-  Text,
-} from "@chakra-ui/react";
+import { Avatar, Box, Button, List, ListItem, Text } from "@chakra-ui/react";
 
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
@@ -37,20 +29,45 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
   const isSelf = player.id === currentPlayerId;
   return (
     <ListItem mt="1">
-      <HStack>
-        <Avatar name={player.name} />
-        <Text color={isSelf ? "green.700 " : "black"}>{player.name}</Text>
-        {!player.ready ? <Text> (not ready)</Text> : null}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        justifyItems="center"
+        placeItems="center"
+        flexDir="row"
+      >
+        <Box
+          display="flex"
+          flexDir="row"
+          alignItems="center"
+          justifyItems="center"
+        >
+          <Avatar name={player.name} />
+          <Text
+            ml={4}
+            color={isSelf ? "green.700 " : "black"}
+            alignSelf="self-start"
+            justifySelf="left"
+          >
+            {player.name}
+            {isTellingStory ? (
+              <Box display="inline" ml="2px">
+                {" "}
+                ✍
+              </Box>
+            ) : null}
+            {hasSubmittedCard ? <i> &#127183;</i> : null}
+            {hasVoted ? <i> &#128499;</i> : null}
+          </Text>
+          {!player.ready && <Text> (not ready)</Text>}
+        </Box>
         <Text color={isSelf ? "green.700 " : "black"}>
           - {player.points} pt
-          {isTellingStory ? <i> &#128211;</i> : null}
-          {hasSubmittedCard ? <i> &#127183;</i> : null}
-          {hasVoted ? <i> &#128499;</i> : null}
         </Text>
         {isSelf && !player.ready ? (
           <Button onClick={onReadyClick}>I'm ready</Button>
         ) : null}
-      </HStack>
+      </Box>
     </ListItem>
   );
 };
@@ -87,7 +104,7 @@ export const PlayerList: React.FC = () => {
 
   // Create a list of players
   return (
-    <Box backgroundColor="red.200" m="5" p="5" width="lg">
+    <Box rounded="3xl" backgroundColor="pink.300" m="5" p="5" minWidth="sm">
       <List>
         {players.map((player: Player, idx: number) => {
           const hasSubmitted =

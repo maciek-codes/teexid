@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 
 import CardSelector from "./CardSelector";
 import Card from "../models/Card";
@@ -26,18 +26,20 @@ export const CardPicker: React.FC<CardPickerProps> = ({
 }: CardPickerProps) => {
   return (
     <Stack>
-      <Text fontSize="xl" fontWeight={600}>
+      <Text fontSize="xl" fontWeight={400}>
         Story: {story}
       </Text>
       <Text>{promptText}</Text>
-      <CardSelector
-        cards={cards}
-        onSelected={(card) => {
-          setSelectedCard(card);
-        }}
-      />
+      <Box my="100px">
+        <CardSelector
+          cards={cards}
+          onSelected={(card) => {
+            setSelectedCard(card);
+          }}
+        />
+      </Box>
       <Button
-        mt={20}
+        mt={150}
         isActive={selectedCard !== null}
         isDisabled={selectedCard === null}
         onClick={() => onSelectedCard()}

@@ -1,13 +1,14 @@
 import React, { useEffect } from "react";
+
+import { AxiosError } from "axios";
 import { Text, Progress, Stack } from "@chakra-ui/react";
 
-import PlayerName, { PlayerEdit } from "./PlayerName";
+import { PlayerEdit } from "./PlayerName";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
 import { useJoinRoom } from "./queries/useJoinRoom";
 import { GameFeed } from "./GameFeed";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
-import { AxiosError } from "axios";
 
 const GameRoom: React.FC = () => {
   const player = usePlayer();
@@ -26,13 +27,7 @@ const GameRoom: React.FC = () => {
         });
       }
     }
-  }, [
-    player,
-    roomId,
-    joinRoomQuery.isIdle,
-    joinRoomQuery.isSuccess,
-    joinRoomQuery.mutate,
-  ]);
+  }, [player, roomId, joinRoomQuery]);
 
   if (
     joinRoomQuery.isError &&

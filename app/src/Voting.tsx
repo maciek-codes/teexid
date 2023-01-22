@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useState } from "react";
 
 import { Progress, Stack, Text } from "@chakra-ui/react";
 
@@ -21,12 +21,12 @@ export const Voting: React.FC<VotingProps> = ({
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const useVoteQuery = useVote();
 
-  const voteForCard = useCallback(() => {
+  const voteForCard = () => {
     if (selectedCard !== null) {
       useVoteQuery.mutate({ cardId: selectedCard.cardId });
       setSelectedCard(null);
     }
-  }, [selectedCard]);
+  };
 
   if (useVoteQuery.isSuccess) {
     return (

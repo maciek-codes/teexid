@@ -71,14 +71,15 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/t
 
 # Colors
 
-Brandy Punch
-`#DC8B32`
+#AE9DC1 light purple
 
-Ship Gray
-`#433D4B`
+#537CB9 blue
 
-Tana
-`#D9D3B6`
+#9A3CB0 more purple
+#ac4fc2
 
-Burnt Umber
-`#843225`
+#B0CC69 green
+
+#F2F3ED white
+
+https://colors.muz.li/palette/ac4fc2/5e3788/ebd9ff/c2b94f/888237

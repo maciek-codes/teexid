@@ -29,11 +29,18 @@ export const Lobby: React.FC<LobbyProps> = () => {
       justifyContent="center"
       margin="auto"
     >
-      <Stack flexDir="column">
+      <Stack
+        flexDir="column"
+        width={["sm", "md"]}
+        backgroundColor="#537CB9"
+        color="#F2F3ED"
+        padding={2}
+        borderRadius={10}
+      >
         {player.name === "" && <PlayerEdit />}
         {player.name !== "" && (
           <Stack pt="5px">
-            <Text fontSize="smaller">
+            <Text fontSize="md">
               Enter the room name to start a new room or type in the room name
               that someone shared with you
             </Text>
@@ -41,6 +48,7 @@ export const Lobby: React.FC<LobbyProps> = () => {
               type="text"
               placeholder="Room name"
               background="white"
+              color="black"
               onChange={(e) => setRoomIdText(e.target.value)}
             />
 
@@ -48,6 +56,7 @@ export const Lobby: React.FC<LobbyProps> = () => {
               className="rounded-full bg-purple-700 text-white"
               isDisabled={roomIdText.trim() === ""}
               onClick={joinRoomClick}
+              backgroundColor="#B0CC69"
             >
               Join or start a room
             </Button>

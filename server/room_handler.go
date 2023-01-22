@@ -98,31 +98,29 @@ func HandleJoinRoom(w http.ResponseWriter, req *http.Request) {
 
 	// Send room state on join
 	res := struct {
-		Token             string    `json:"roomToken"`
-		RoomId            string    `json:"roomId"`
-		OwnerId           string    `json:"ownerId"`
-		PlayerId          string    `json:"playerId"`
-		PlayerCards       []int     `json:"cards"`
-		RoomState         RoomState `json:"roomState"`
-		TurnState         TurnState `json:"turnState"`
-		Players           []*Player `json:"players"`
-		Story             string    `json:"story"`
-		CardsSubmitted    []int     `json:"cardsSubmitted"`
-		StoryPlayerId     uuid.UUID `json:"storyPlayerId"`
-		LastSubmittedCard int       `json:"lastSubmittedCard"`
+		Token          string    `json:"roomToken"`
+		RoomId         string    `json:"roomId"`
+		OwnerId        string    `json:"ownerId"`
+		PlayerId       string    `json:"playerId"`
+		PlayerCards    []int     `json:"cards"`
+		RoomState      RoomState `json:"roomState"`
+		TurnState      TurnState `json:"turnState"`
+		Players        []*Player `json:"players"`
+		Story          string    `json:"story"`
+		CardsSubmitted []int     `json:"cardsSubmitted"`
+		StoryPlayerId  uuid.UUID `json:"storyPlayerId"`
 	}{
-		Token:             roomToken,
-		RoomId:            room.Id,
-		OwnerId:           room.OwnerId.String(),
-		PlayerId:          player.Id.String(),
-		PlayerCards:       player.Cards,
-		RoomState:         room.State,
-		TurnState:         room.TurnState,
-		Players:           room.Players(),
-		Story:             room.Story,
-		StoryPlayerId:     room.StoryPlayerId,
-		CardsSubmitted:    GetCardsForVoting(room, player),
-		LastSubmittedCard: FindLastSubmitted(room, player.Id),
+		Token:          roomToken,
+		RoomId:         room.Id,
+		OwnerId:        room.OwnerId.String(),
+		PlayerId:       player.Id.String(),
+		PlayerCards:    player.Cards,
+		RoomState:      room.State,
+		TurnState:      room.TurnState,
+		Players:        room.Players(),
+		Story:          room.Story,
+		StoryPlayerId:  room.StoryPlayerId,
+		CardsSubmitted: GetCardsForVoting(room, player),
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -262,8 +260,10 @@ func HandleSubmitCardCommand(room *Room, player *Player, payload *json.RawMessag
 }
 
 func HandleReadyCommand(room *Room, player *Player, payload *json.RawMessage) (interface{}, error) {
-	player.SetReady()
-	room.BroadcastPlayers()
+	if !player.IsReady() {
+		player.SetReady()
+		room.BroadcastPlayers()
+	}
 	return payload, nil
 }
 

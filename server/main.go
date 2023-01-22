@@ -103,7 +103,7 @@ func start() {
 	log.Printf("Allowed origin: %s\n", config.allowedOrigin)
 
 	c := cors.New(cors.Options{
-		Debug: false,
+		Debug:            false,
 		AllowedOrigins:   []string{config.allowedOrigin},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowCredentials: true,

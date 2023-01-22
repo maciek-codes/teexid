@@ -14,10 +14,7 @@ const SOCKET_HOST = getWsHost();
 const PING_SECS = 10;
 const NO_PONG_MAX_SECS = 45;
 
-type Command = { type: "ping" };
-
 interface SocketContextData {
-  sendCommand: (cmd: Command) => void;
   connecting: boolean;
   connected: boolean;
   error: Error | null;
@@ -81,21 +78,6 @@ export const WebSocketContextProvider: React.FC<
     };
   });
 
-  const sendCommand = useCallback(
-    ({ type }: Command) => {
-      if (ws?.readyState !== WebSocket.OPEN) {
-        return;
-      }
-
-      ws?.send(
-        JSON.stringify({
-          type: type,
-        })
-      );
-    },
-    [ws]
-  );
-
   // Try to reconnnect
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -106,14 +88,13 @@ export const WebSocketContextProvider: React.FC<
         setConnecting(true);
         setWs(new WebSocket(getWsHost() + "?token=" + getRoomToken()));
       } else if (readyState === WebSocket.OPEN) {
-        console.log("Ping");
-        sendCommand({ type: "ping" });
+        ws?.send(JSON.stringify({ type: "ping" }));
       }
     }, PING_SECS * 1000);
     return () => {
       clearInterval(intervalId);
     };
-  }, [ws, sendCommand, setWs]);
+  }, [ws, setWs]);
 
   const onMsg = useCallback(
     (ev: MessageEvent<string>) => {
@@ -168,7 +149,6 @@ export const WebSocketContextProvider: React.FC<
   return (
     <WebSocketContext.Provider
       value={{
-        sendCommand,
         error,
         connected,
         connecting,

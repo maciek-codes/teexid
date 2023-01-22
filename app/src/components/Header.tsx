@@ -9,14 +9,14 @@ const Header: React.FC = () => {
   const { roomId } = useRoom();
   const player = usePlayer();
   return (
-    <Heading size="xl" pt="10px" background="#EAE0CC" px="0.5em" py="0.25em">
+    <Heading size="xl" pt="10px" background="#ac4fc2" px="0.5em" py="0.25em">
       <Flex
         flexDirection="row"
         alignItems="start"
         justifyItems="center"
         justifyContent="space-between"
       >
-        <Link as={RouterLink} to="/" color="#0E0E0E" mt="2">
+        <Link as={RouterLink} to="/" color="#F2F3ED" mt="2">
           TeeXid
         </Link>
 

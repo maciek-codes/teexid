@@ -1,27 +1,25 @@
-import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
-import React, { useCallback, useState } from "react";
+import { Button, Flex, FormLabel, Input, Stack, Text } from "@chakra-ui/react";
+import React, { useState } from "react";
 import CardSelector from "./CardSelector";
 import { useRoom } from "../contexts/RoomContext";
-import { useSocket } from "../contexts/WebsocketContext";
 import Card from "../models/Card";
 import { useSubmitStory } from "../queries/useSubmitStory";
 import CardView from "./CardView";
 
 export const StoryInput: React.FC = () => {
-  const { sendCommand } = useSocket();
-  const { roomId, turnState, cards } = useRoom();
+  const { turnState, cards } = useRoom();
   const [storyText, setStoryText] = useState<string>("");
   const submitQuery = useSubmitStory();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
-  const submitStory = useCallback(() => {
+  const submitStory = () => {
     if (storyText !== "" && selectedCard !== null) {
       submitQuery.mutate({
         story: storyText,
         cardId: selectedCard.cardId,
       });
     }
-  }, [roomId, sendCommand, storyText, selectedCard]);
+  };
 
   if (submitQuery.isSuccess) {
     return (
@@ -49,21 +47,21 @@ export const StoryInput: React.FC = () => {
 
   return (
     <Flex flexDirection="column" alignItems="start" justifyContent="start">
-      <Text fontSize="lg" mt={5} mb={10}>
-        Pick a card and type your story:
-      </Text>
       <CardSelector
         cards={cards}
         onSelected={(selectedCard) => {
           setSelectedCard(selectedCard);
         }}
       />
+      <FormLabel mt={5} htmlFor="storyText">
+        Type your story here:
+      </FormLabel>
       <Input
+        id="storyText"
         type="text"
         background="white"
         placeholder="Be creative!"
         onChange={(e) => setStoryText(e.currentTarget.value)}
-        my={5}
       />
       <Button
         alignSelf="center"
@@ -72,7 +70,7 @@ export const StoryInput: React.FC = () => {
         isLoading={submitQuery.isLoading}
         isDisabled={storyText.trim() === "" || selectedCard === null}
         onClick={() => submitStory()}
-        mb={5}
+        my={5}
       >
         Submit story
       </Button>

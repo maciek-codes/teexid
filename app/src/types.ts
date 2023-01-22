@@ -13,7 +13,6 @@ export type TurnState =
 export type ResponseMsg =
   | { type: "on_room_created"; payload: OnRoomCreatedPayload }
   | { type: "on_room_state_updated"; payload: OnRoomStateUpdatedPayload }
-  | { type: "on_cards"; payload: OnCardsPayload }
   | { type: "error"; payload: ErrorPayload }
   | { type: "pong"; payload: unknown }
   | { type: "on_joined"; payload: OnJoinedPayload }
@@ -74,17 +73,20 @@ export type OnRoomStateUpdatedPayload = {
   storyPlayerId: string;
   story: string;
   cardsSubmitted: number[];
+  cards: number[];
+};
+
+export type GameLogEntryCard = {
+  playerSubmitted: string;
+  cardId: number;
+  playersVoted: string[];
 };
 
 export type GameLogEntry = {
   story: string;
   storyPlayerId: string;
   storyCard: number;
-  cardsSubmitted: Map<number, GameLogEntryCards>;
-};
-
-export type GameLogEntryCards = {
-  playerSubmitted: string;
-  cardId: number;
-  playersVoted: string[];
+  cardsSubmitted: Map<number, GameLogEntryCard>;
+  allVotesForStory: boolean;
+  noVotesForStory: boolean;
 };

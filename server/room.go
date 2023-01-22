@@ -49,6 +49,7 @@ type Room struct {
 	cardsSubmitted []CardSubmitted
 	mu             sync.Mutex
 	TurnState      TurnState `json:"turnState"`
+	TurnNumber     int       `json:"turnNumber"`
 	StoryPlayerId  uuid.UUID `json:"storyPlayerId"`
 	Story          string    `json:"story"`
 	StoryCard      int       `json:"-"`
@@ -79,6 +80,7 @@ func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 		conns:          make(map[string]*playerConn, 0),
 		connsMutex:     &sync.RWMutex{},
 		TurnState:      NotStarted,
+		TurnNumber:     1,
 		cardIds:        cardIds,
 		OwnerId:        playerId,
 		StoryCard:      -1,
@@ -142,26 +144,6 @@ func GetCardsForVoting(room *Room, player *Player) []int {
 	return cardIds
 }
 
-func FindLastSubmitted(r *Room, playerId uuid.UUID) int {
-	var lastSubmittedCard = -1
-	if playerId == r.StoryPlayerId {
-		lastSubmittedCard = r.StoryCard
-	} else if r.TurnState == Voting {
-		for _, vote := range r.votes {
-			if playerId == vote.Voter.Id {
-				lastSubmittedCard = vote.CardId
-			}
-		}
-	} else if r.TurnState == SelectingCards {
-		for _, cardSubmitted := range r.cardsSubmitted {
-			if playerId.String() == cardSubmitted.PlayerId {
-				lastSubmittedCard = cardSubmitted.CardId
-			}
-		}
-	}
-	return lastSubmittedCard
-}
-
 func GetPlayersWhoSubmitted(r *Room) []string {
 	var submittedBy = make([]string, 0)
 	if r.TurnState == Voting {
@@ -180,26 +162,25 @@ func GetPlayersWhoSubmitted(r *Room) []string {
 func (r *Room) BroadcastRoomState() {
 	for _, playerConn := range r.conns {
 
-		var lastSubmittedCard = FindLastSubmitted(r, playerConn.player.Id)
-
 		b, _ := json.Marshal(struct {
-			Id                string    `json:"id"`
-			RoomState         RoomState `json:"roomState"`
-			TurnState         TurnState `json:"turnState"`
-			StoryPlayerId     string    `json:"storyPlayerId"`
-			LastSubmittedCard int       `json:"lastSubmittedCard"`
-			Story             string    `json:"story"`
-			CardsSubmitted    []int     `json:"cardsSubmitted"`
-			Submitted         []string  `json:"submittedBy"`
+			Id             string    `json:"id"`
+			RoomState      RoomState `json:"roomState"`
+			TurnState      TurnState `json:"turnState"`
+			TurnNumber     int       `json:"turnNumber"`
+			StoryPlayerId  string    `json:"storyPlayerId"`
+			Story          string    `json:"story"`
+			CardsSubmitted []int     `json:"cardsSubmitted"`
+			Cards          []int     `json:"cards"`
+			Submitted      []string  `json:"submittedBy"`
 		}{
-			Id:                r.Id,
-			RoomState:         r.State,
-			TurnState:         r.TurnState,
-			StoryPlayerId:     r.StoryPlayerId.String(),
-			LastSubmittedCard: lastSubmittedCard,
-			Story:             r.Story,
-			CardsSubmitted:    GetCardsForVoting(r, playerConn.player),
-			Submitted:         GetPlayersWhoSubmitted(r),
+			Id:             r.Id,
+			RoomState:      r.State,
+			TurnState:      r.TurnState,
+			StoryPlayerId:  r.StoryPlayerId.String(),
+			Story:          r.Story,
+			Cards:          playerConn.player.Cards,
+			CardsSubmitted: GetCardsForVoting(r, playerConn.player),
+			Submitted:      GetPlayersWhoSubmitted(r),
 		})
 
 		payloadMessage := json.RawMessage(b)
@@ -291,7 +272,7 @@ func (r *Room) findConn(p *Player) *websocket.Conn {
 }
 
 func (r *Room) sendCardsToEach(cardCount int) {
-	var playerCount = len(r.conns)
+	var playerCount = len(r.Players())
 	if len(r.cardIds) < playerCount {
 		log.Print("Need to shuffle discard pile")
 		// shuffle discard and move all to cards
@@ -302,12 +283,7 @@ func (r *Room) sendCardsToEach(cardCount int) {
 		r.cardIds = append(r.cardIds, r.discardCardIds...)
 		r.discardCardIds = make([]int, 0)
 	}
-
-	// Deal N cards to each player
-	r.connsMutex.RLock()
-	for _, playerConn := range r.conns {
-		var player = playerConn.player
-
+	for _, player := range r.Players() {
 		// Calculate N cards from the end
 		var startIndex = len(r.cardIds)
 		var i = 0
@@ -323,23 +299,7 @@ func (r *Room) sendCardsToEach(cardCount int) {
 		if len(player.Cards) == 0 {
 			return
 		}
-
-		b, _ := json.Marshal(struct {
-			CardIds []int `json:"cards"`
-		}{CardIds: player.Cards})
-
-		payloadMessage := json.RawMessage(b)
-
-		message := ReponseMessage{
-			Type:    "on_cards",
-			Payload: &payloadMessage}
-
-		b, _ = json.Marshal(message)
-
-		log.Printf("Writing %s\n", string(b))
-		playerConn.SendText(b)
 	}
-	r.connsMutex.RUnlock()
 }
 
 /*
@@ -410,6 +370,8 @@ func (r *Room) scoreTurn() {
 		r.endGame()
 		return
 	}
+
+	r.TurnNumber += 1
 
 	// Deal new card to each player
 	r.sendCardsToEach(1)

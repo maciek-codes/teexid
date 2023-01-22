@@ -52,19 +52,19 @@ func TestDealCards(t *testing.T) {
 	room.cardIds = append(room.cardIds, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 
 	room.sendCardsToEach(2)
-	assert.Equal(len(p1.Cards), 2)
-	assert.Equal(len(p2.Cards), 2)
+	assert.Equal(2, len(p1.Cards))
+	assert.Equal(2, len(p2.Cards))
 
 	room.sendCardsToEach(1)
-	assert.Equal(len(p1.Cards), 3)
-	assert.Equal(len(p2.Cards), 3)
+	assert.Equal(3, len(p1.Cards))
+	assert.Equal(3, len(p2.Cards))
 
 	room.sendCardsToEach(3)
-	assert.Equal(len(p1.Cards), 6)
-	assert.Equal(len(p2.Cards), 5)
+	assert.Equal(6, len(p1.Cards))
+	assert.Equal(5, len(p2.Cards))
 
 	room.sendCardsToEach(3)
-	assert.Equal(len(p1.Cards), 6)
-	assert.Equal(len(p2.Cards), 5)
+	assert.Equal(6, len(p1.Cards))
+	assert.Equal(5, len(p2.Cards))
 
 }

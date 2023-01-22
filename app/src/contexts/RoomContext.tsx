@@ -1,10 +1,12 @@
 import React, { createContext, ReactNode, useContext, useReducer } from "react";
 import { useParams } from "react-router-dom";
+import { QueryClient, useQueryClient } from "@tanstack/react-query";
+
 import Card from "../models/Card";
 import Player from "../models/Player";
 import {
   GameLogEntry,
-  GameLogEntryCards,
+  GameLogEntryCard,
   OnTurnResultPayload,
   ResponseMsg,
   RoomState,
@@ -55,15 +57,27 @@ type Props = { children: ReactNode };
 
 const roomStateReducer = (
   prevState: CurrentRoomState,
-  { type, payload }: ResponseMsg
+  { type, payload }: ResponseMsg,
+  queryClient: QueryClient
 ): CurrentRoomState => {
   switch (type) {
-    case "on_room_created":
-    case "on_players_updated":
+    case "on_room_created": {
       return {
         ...prevState,
         ...payload,
       };
+    }
+    case "on_players_updated": {
+      payload.players.sort((a, b) => {
+        if (a.name > b.name) return 1;
+        if (a.name === b.name) return 0;
+        return -1;
+      });
+      return {
+        ...prevState,
+        ...payload,
+      };
+    }
     case "on_joined": {
       return {
         ...prevState,
@@ -82,18 +96,16 @@ const roomStateReducer = (
       };
     }
     case "on_room_state_updated": {
+      if (prevState.turnState !== payload.turnState) {
+        queryClient.invalidateQueries();
+      }
       return {
         ...prevState,
         ...payload,
+        cards: payload.cards.map((cardId) => ({ cardId } as Card)),
         storyCards: payload.cardsSubmitted.map((cardId) => {
           return { cardId } as Card;
         }),
-      };
-    }
-    case "on_cards": {
-      return {
-        ...prevState,
-        cards: payload.cards.map((cardId) => ({ cardId } as Card)),
       };
     }
     default:
@@ -109,7 +121,13 @@ export const RoomContextProvider: React.FC<Props> = ({ children }: Props) => {
     roomId: params.roomId ?? "",
   };
 
-  const [state, dispatch] = useReducer(roomStateReducer, initialState);
+  const queryClient = useQueryClient();
+  const [state, dispatch] = useReducer(
+    (prev: CurrentRoomState, msg: ResponseMsg) => {
+      return roomStateReducer(prev, msg, queryClient);
+    },
+    initialState
+  );
 
   return (
     <RoomContext.Provider
@@ -136,6 +154,8 @@ const addGameLogEntry = (payload: OnTurnResultPayload): GameLogEntry => {
     storyPlayerId: payload.storyPlayerId,
     storyCard: payload.storyCard,
     cardsSubmitted: new Map(),
+    allVotesForStory: false,
+    noVotesForStory: false,
   } as GameLogEntry;
 
   // Get all the cards that were submitted for the round
@@ -144,7 +164,7 @@ const addGameLogEntry = (payload: OnTurnResultPayload): GameLogEntry => {
       playerSubmitted: card.playerId,
       cardId: card.cardId,
       playersVoted: [],
-    } as GameLogEntryCards);
+    } as GameLogEntryCard);
   }
 
   // + story card
@@ -153,6 +173,14 @@ const addGameLogEntry = (payload: OnTurnResultPayload): GameLogEntry => {
     cardId: payload.storyCard,
     playersVoted: [],
   });
+
+  // Have all players or none players voted for the story
+  const votesForStoryCard = payload.votes.filter(
+    (v) => v.cardId === payload.storyCard
+  ).length;
+
+  logEntry.allVotesForStory = votesForStoryCard == payload.votes.length;
+  logEntry.noVotesForStory = votesForStoryCard == 0;
 
   for (const vote of payload.votes) {
     if (logEntry.cardsSubmitted.has(vote.cardId)) {

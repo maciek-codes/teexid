@@ -15,10 +15,10 @@ const Root: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <RoomContextProvider>
         <PlayerContextProvider>
-          <Box background="gray.200">
+          <Box background="#5e3788" minH="100vh">
             <Header />
             <Container
-              h="100vh"
+              minH="100vh"
               maxW="1366px"
               margin="0px auto"
               padding={0}

@@ -42,11 +42,14 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
           alignItems="center"
           justifyItems="center"
         >
-          <Avatar name={player.name} />
+          <Avatar
+            name={player.name}
+            backgroundColor="#B0CC69"
+            color="#F2F3ED"
+          />
           <Text
             ml={4}
-            color={isSelf ? "green.700 " : "black"}
-            alignSelf="self-start"
+            color={isSelf ? "green.100 " : "#F2F3ED"}
             justifySelf="left"
           >
             {player.name}
@@ -59,11 +62,14 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
             {hasSubmittedCard ? <i> &#127183;</i> : null}
             {hasVoted ? <i> &#128499;</i> : null}
           </Text>
-          {!player.ready && <Text> (not ready)</Text>}
+          {!player.ready && (
+            <Text ml={2} color={"#F2F3ED"}>
+              {" "}
+              (not ready)
+            </Text>
+          )}
         </Box>
-        <Text color={isSelf ? "green.700 " : "black"}>
-          - {player.points} pt
-        </Text>
+        <Text color={isSelf ? "green.100" : "#F2F3ED"}>{player.points} pt</Text>
         {isSelf && !player.ready ? (
           <Button onClick={onReadyClick}>I'm ready</Button>
         ) : null}
@@ -104,7 +110,14 @@ export const PlayerList: React.FC = () => {
 
   // Create a list of players
   return (
-    <Box rounded="3xl" backgroundColor="pink.300" m="5" p="5" minWidth="sm">
+    <Box
+      rounded="3xl"
+      backgroundColor="#537CB9"
+      color="F2F3ED"
+      m="5"
+      p="5"
+      minWidth={["sm", "780px"]}
+    >
       <List>
         {players.map((player: Player, idx: number) => {
           const hasSubmitted =

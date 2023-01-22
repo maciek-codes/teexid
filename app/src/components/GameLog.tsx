@@ -22,13 +22,17 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
     const players = card.playersVoted
       .map((playerId) => playerMap.get(playerId)?.name ?? "???")
       .join(", ");
+
+    // Is Story player?
+    const storyPlayersCard = logEntry.storyPlayerId == card.playerSubmitted;
+
     return (
-      <Box mt="1em" backgroundColor="orange.300">
+      <Box mt="1em">
         <Text>
           <Text as="b">
             {playerMap.get(card.playerSubmitted)?.name ?? "???"}
           </Text>{" "}
-          submitted:
+          submitted card:
         </Text>
         <CardView card={{ cardId: card.cardId } as Card} />
         {players.length === 0 ? (
@@ -40,8 +44,10 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
     );
   });
 
+  const storyPlayerName = playerMap.get(logEntry.storyPlayerId)?.name ?? "???";
+
   return (
-    <Stack backgroundColor="orange.200" my="15px">
+    <Stack my="15px">
       <Text textAlign="center" fontSize="xl">
         Round #{roundNo}
       </Text>
@@ -49,7 +55,19 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
         <Text as="b">
           {playerMap.get(logEntry.storyPlayerId)?.name ?? "???"}
         </Text>{" "}
-        submitted story {logEntry.story}
+        submitted story:{" "}
+        <Text as="em" fontSize="xl">
+          {logEntry.story}
+        </Text>
+        <Text>
+          {logEntry.allVotesForStory &&
+            `Everyone voted for ${storyPlayerName}.`}
+          {logEntry.noVotesForStory && "Nobody voted for {storyPlayerName}. "}
+        </Text>
+        <Text>
+          {(logEntry.allVotesForStory || logEntry.noVotesForStory) &&
+            `No points for ${storyPlayerName}, +2 points everyone else.`}
+        </Text>
       </Text>
       {cardVotes}
     </Stack>
@@ -77,7 +95,7 @@ const GameLog: React.FC = () => {
     return null;
   }
   return (
-    <Stack px={5} py={3} mt={10}>
+    <Stack backgroundColor="#c2b94f" px={5} py={3} mt={10} borderRadius={10}>
       <Text>History: </Text>
       {logItems}
     </Stack>

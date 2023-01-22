@@ -92,7 +92,7 @@ const roomStateReducer = (
     case "on_turn_result": {
       return {
         ...prevState,
-        gameLog: [...prevState.gameLog, addGameLogEntry(payload)],
+        gameLog: [addGameLogEntry(payload), ...prevState.gameLog],
       };
     }
     case "on_room_state_updated": {
@@ -167,20 +167,13 @@ const addGameLogEntry = (payload: OnTurnResultPayload): GameLogEntry => {
     } as GameLogEntryCard);
   }
 
-  // + story card
-  logEntry.cardsSubmitted.set(payload.storyCard, {
-    playerSubmitted: payload.storyPlayerId,
-    cardId: payload.storyCard,
-    playersVoted: [],
-  });
-
   // Have all players or none players voted for the story
   const votesForStoryCard = payload.votes.filter(
     (v) => v.cardId === payload.storyCard
   ).length;
 
-  logEntry.allVotesForStory = votesForStoryCard == payload.votes.length;
-  logEntry.noVotesForStory = votesForStoryCard == 0;
+  logEntry.allVotesForStory = votesForStoryCard === payload.votes.length;
+  logEntry.noVotesForStory = votesForStoryCard === 0;
 
   for (const vote of payload.votes) {
     if (logEntry.cardsSubmitted.has(vote.cardId)) {

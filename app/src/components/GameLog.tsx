@@ -1,4 +1,4 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import React from "react";
 import CardView from "./CardView";
 import { useRoom } from "../contexts/RoomContext";
@@ -17,28 +17,39 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
   playerMap,
   roundNo,
 }: GameLogItemProps) => {
-  const cardVotes = Array.from(logEntry.cardsSubmitted.values()).map((card) => {
-    // Check who voted for this card
-    const players = card.playersVoted
-      .map((playerId) => playerMap.get(playerId)?.name ?? "???")
-      .join(", ");
+  const cards = Array.from(logEntry.cardsSubmitted.values());
 
-    // Is Story player?
-    const storyPlayersCard = logEntry.storyPlayerId == card.playerSubmitted;
+  const cardVotes = cards.map((card) => {
+    if (card.playerSubmitted === logEntry.storyPlayerId) {
+      return null;
+    }
+
+    // Check who voted for this card
+    const playerSubmitted = playerMap.get(card.playerSubmitted)?.name ?? "???";
+    const players = card.playersVoted.map(
+      (playerId) => playerMap.get(playerId)?.name ?? "???"
+    );
+    const addPointsForVotes = !logEntry.allVotesForStory;
 
     return (
-      <Box mt="1em">
-        <Text>
-          <Text as="b">
-            {playerMap.get(card.playerSubmitted)?.name ?? "???"}
-          </Text>{" "}
-          submitted card:
-        </Text>
+      <Box pt={10}>
+        <HStack>
+          <Text as="b">{playerSubmitted}</Text>
+          <Text ml={1}>submitted card:</Text>
+        </HStack>
         <CardView card={{ cardId: card.cardId } as Card} />
         {players.length === 0 ? (
-          <Text>no votes.</Text>
+          <Text>no votes. 0 extra points.</Text>
         ) : (
-          <Text>{players} voted.</Text>
+          <Stack>
+            <Text>{players.join(", ")} voted for this card.</Text>
+            {addPointsForVotes && (
+              <Text>
+                {playerSubmitted} gets +{players.length}{" "}
+                {players.length == 1 ? "point" : "points"}.
+              </Text>
+            )}
+          </Stack>
         )}
       </Box>
     );
@@ -46,28 +57,45 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
 
   const storyPlayerName = playerMap.get(logEntry.storyPlayerId)?.name ?? "???";
 
+  const storyVotes =
+    logEntry.cardsSubmitted.get(logEntry.storyCard)?.playersVoted ?? [];
+  const otherStoryVotes = storyVotes.map(
+    (votePlayerId) => playerMap.get(votePlayerId)?.name ?? "???"
+  );
+
   return (
     <Stack my="15px">
       <Text textAlign="center" fontSize="xl">
         Round #{roundNo}
       </Text>
-      <Text>
+      <HStack>
         <Text as="b">
-          {playerMap.get(logEntry.storyPlayerId)?.name ?? "???"}
-        </Text>{" "}
-        submitted story:{" "}
+          {playerMap.get(logEntry.storyPlayerId)?.name + " " ?? "???"}
+        </Text>
+        <Text>submitted story</Text>
         <Text as="em" fontSize="xl">
           {logEntry.story}
         </Text>
-        <Text>
-          {logEntry.allVotesForStory &&
-            `Everyone voted for ${storyPlayerName}.`}
-          {logEntry.noVotesForStory && "Nobody voted for {storyPlayerName}. "}
-        </Text>
-        <Text>
-          {(logEntry.allVotesForStory || logEntry.noVotesForStory) &&
-            `No points for ${storyPlayerName}, +2 points everyone else.`}
-        </Text>
+        <Text>with card:</Text>
+      </HStack>
+      <CardView card={{ cardId: logEntry.storyCard } as Card} />
+      <Text>
+        {logEntry.allVotesForStory && `Everyone guessed the story card.`}
+        {logEntry.noVotesForStory && `Nobody guessed the story card.`}
+      </Text>
+      {otherStoryVotes.length > 0 && (
+        <Text>{otherStoryVotes?.join(", ") ?? ""} guessed the story card.</Text>
+      )}
+      <Text>
+        {!logEntry.allVotesForStory &&
+          !logEntry.noVotesForStory &&
+          `${storyPlayerName}, ${
+            otherStoryVotes.join(", ") ?? ""
+          } each get +3 points`}
+      </Text>
+      <Text>
+        {(logEntry.allVotesForStory || logEntry.noVotesForStory) &&
+          `${storyPlayerName} gets 0 points, everyone else gets 2 points.`}
       </Text>
       {cardVotes}
     </Stack>

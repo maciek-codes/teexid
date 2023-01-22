@@ -1,5 +1,4 @@
 import axios from "axios";
-import { getRoomToken } from "../hooks/useAuth";
 import { getHost } from "./config";
 
 const apiClient = axios.create({

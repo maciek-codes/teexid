@@ -5,7 +5,6 @@ import { PlayerList } from "./PlayerList";
 import { usePlayer } from "./contexts/PlayerContext";
 import { useRoom } from "./contexts/RoomContext";
 import Card from "./models/Card";
-import Player from "./models/Player";
 import { CardPicker } from "./components/CardPicker";
 import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
@@ -34,7 +33,6 @@ export const GameFeed: React.FC = () => {
   const storyPlayerName = players.find((p) => p.id === storyPlayerId)?.name;
   const isPlaying = roomState === "playing";
   const isVoting = turnState === "voting";
-  const isScoring = turnState === "scoring";
 
   const submitCardForStory = () => {
     if (selectedCard !== null) {

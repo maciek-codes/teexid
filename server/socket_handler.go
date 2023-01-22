@@ -20,11 +20,13 @@ func startSocket(w http.ResponseWriter, req *http.Request) {
 
 	room, foundRoom := roomById[token.RoomId]
 	if !foundRoom {
+		log.Printf("ws: Room not found");
 		http.Error(w, "bad room", http.StatusBadRequest)
 		return
 	}
 	player, foundPlayer := room.playerMap[token.PlayerId.String()]
 	if !foundPlayer {
+		log.Printf("ws: Not found player with token in the room");
 		http.Error(w, "bad room", http.StatusBadRequest)
 		return
 	}
@@ -34,11 +36,11 @@ func startSocket(w http.ResponseWriter, req *http.Request) {
 	room.conns[token.PlayerId.String()] = playerConn
 
 	if err != nil {
-		log.Printf("Not a websocket handshake: %s\n", err.Error())
+		log.Printf("ws: Not a websocket handshake: %s\n", err.Error())
 		http.Error(w, "bad token", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("Reciving messages for %s\n", token.PlayerName)
+	log.Printf("ws: Reciving messages for %s\n", token.PlayerName)
 	go receiveMessages(playerConn, room)
 }

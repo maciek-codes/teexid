@@ -123,7 +123,14 @@ const GameLog: React.FC = () => {
     return null;
   }
   return (
-    <Stack backgroundColor="#c2b94f" px={5} py={3} mt={10} borderRadius={10}>
+    <Stack
+      backgroundColor="#B0CC69"
+      color="F2F3ED"
+      px={5}
+      py={3}
+      mt={10}
+      borderRadius={10}
+    >
       <Text>History: </Text>
       {logItems}
     </Stack>

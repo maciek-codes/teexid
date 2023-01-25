@@ -19,7 +19,7 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
 }: GameLogItemProps) => {
   const cards = Array.from(logEntry.cardsSubmitted.values());
 
-  const cardVotes = cards.map((card) => {
+  const cardVotes = cards.map((card, cardIdx) => {
     if (card.playerSubmitted === logEntry.storyPlayerId) {
       return null;
     }
@@ -32,7 +32,7 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
     const addPointsForVotes = !logEntry.allVotesForStory;
 
     return (
-      <Box pt={10}>
+      <Box pt={10} key={cardIdx}>
         <HStack>
           <Text as="b">{playerSubmitted}</Text>
           <Text ml={1}>submitted card:</Text>
@@ -46,7 +46,7 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
             {addPointsForVotes && (
               <Text>
                 {playerSubmitted} gets +{players.length}{" "}
-                {players.length == 1 ? "point" : "points"}.
+                {players.length === 1 ? "point" : "points"}.
               </Text>
             )}
           </Stack>

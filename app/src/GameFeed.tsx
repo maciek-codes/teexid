@@ -25,9 +25,10 @@ export const GameFeed: React.FC = () => {
     storyPlayerId,
     roomState,
     turnState,
+    turnNumber,
   } = useRoom();
 
-  const submitQuery = useSubmitCard();
+  const submitQuery = useSubmitCard(turnNumber);
 
   const isTellingStory = storyPlayerId === player.id;
   const storyPlayerName = players.find((p) => p.id === storyPlayerId)?.name;
@@ -55,6 +56,11 @@ export const GameFeed: React.FC = () => {
         {roomState === "waiting" && (
           <Text flexGrow={2} align="center" fontSize="xl">
             Wait for players to join...
+          </Text>
+        )}
+        {isPlaying && turnState !== "not_started" && (
+          <Text fontSize="x-large" align="center">
+            Turn {turnNumber}:
           </Text>
         )}
         {isPlaying && isTellingStory && turnState === "waiting_for_story" && (
@@ -115,7 +121,12 @@ export const GameFeed: React.FC = () => {
           !isTellingStory &&
           storyCards &&
           storyCards?.length !== null && (
-            <Voting story={story} playerCards={cards} storyCards={storyCards} />
+            <Voting
+              story={story}
+              playerCards={cards}
+              storyCards={storyCards}
+              turnNumber={turnNumber}
+            />
           )}
       </Box>
       {roomState === "ended" && (

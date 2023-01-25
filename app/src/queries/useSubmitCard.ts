@@ -24,7 +24,7 @@ const submitCard = async (cardId: number) => {
   return response.data;
 };
 
-export const useSubmitCard = () => {
-  const key = ["submit_card"] as MutationKey;
+export const useSubmitCard = (turnNumber: number) => {
+  const key = ["submit_card", turnNumber] as MutationKey;
   return useMutation(key, submitCard);
 };

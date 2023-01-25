@@ -1,69 +1,36 @@
-package main
+package room
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/websocket"
+	"github.com/macqm/teexid/game/cards"
+	"github.com/macqm/teexid/game/config"
+	"github.com/macqm/teexid/game/player"
+	"github.com/macqm/teexid/game/vote"
 )
-
-const MinPlayers = 2
-
-var randGenSource = rand.NewSource(time.Now().UnixNano())
-var randGen = rand.New(randGenSource)
-
-var letters = []rune("abcdefghijklmnopqrstuvwxyz")
-
-func randSeq(n int) string {
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letters[randGen.Intn(len(letters))]
-	}
-	return string(b)
-}
-
-type Vote struct {
-	Voter  *Player `json:"voter"`
-	Voted  *Player `json:"voted"`
-	CardId int     `json:"cardId"`
-}
 
 type Room struct {
 	Id             string    `json:"id"`
 	State          RoomState `json:"state,omitempty"`
 	OwnerId        uuid.UUID `json:"ownerId"`
-	playerMap      map[string]*Player
+	PlayerMap      map[string]*player.Player
 	roomLock       *sync.RWMutex
 	playerMapMutex *sync.RWMutex
-	conns          map[string]*playerConn
+	Conns          map[string]*PlayerConn
 	connsMutex     *sync.RWMutex
 	cardIds        []int
 	discardCardIds []int
-	cardIdx        int
-	votes          []Vote
-	cardsSubmitted []CardSubmitted
-	mu             sync.Mutex
-	TurnState      TurnState `json:"turnState"`
-	TurnNumber     int       `json:"turnNumber"`
-	StoryPlayerId  uuid.UUID `json:"storyPlayerId"`
-	Story          string    `json:"story"`
-	StoryCard      int       `json:"-"`
+	Turns          []*Turn
+	CurrentTurn    *Turn
 	CreatedAt      time.Time `json:"createdAt"`
-}
-
-type ReponseMessage struct {
-	Type    string           `json:"type"`
-	Payload *json.RawMessage `json:"payload"`
-}
-
-type CardSubmitted struct {
-	PlayerId string `json:"playerId"`
-	CardId   int    `json:"cardId"`
 }
 
 func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
@@ -74,27 +41,23 @@ func NewRoom(cardIds []int, playerId uuid.UUID, roomId string) *Room {
 	})
 	room := Room{Id: roomId,
 		State:          WaitingForPlayers,
-		playerMap:      make(map[string]*Player, 0),
+		PlayerMap:      make(map[string]*player.Player, 0),
 		roomLock:       &sync.RWMutex{},
 		playerMapMutex: &sync.RWMutex{},
-		conns:          make(map[string]*playerConn, 0),
+		Conns:          make(map[string]*PlayerConn, 0),
 		connsMutex:     &sync.RWMutex{},
-		TurnState:      NotStarted,
-		TurnNumber:     1,
+		Turns:          make([]*Turn, 0),
+		CurrentTurn:    nil,
 		cardIds:        cardIds,
 		OwnerId:        playerId,
-		StoryCard:      -1,
-		StoryPlayerId:  uuid.Nil,
-		Story:          "",
-		votes:          make([]Vote, 0),
-		cardsSubmitted: make([]CardSubmitted, 0),
+		CreatedAt:      time.Now(),
 	}
 	return &room
 }
 
-func (r *Room) Players() []*Player {
-	var players = make([]*Player, 0, len(r.playerMap))
-	for _, val := range r.playerMap {
+func (r *Room) Players() []*player.Player {
+	var players = make([]*player.Player, 0, len(r.PlayerMap))
+	for _, val := range r.PlayerMap {
 		players = append(players, val)
 	}
 	return players
@@ -102,7 +65,7 @@ func (r *Room) Players() []*Player {
 
 func (r *Room) BroadcastPlayers() {
 	b, _ := json.Marshal(struct {
-		Players []*Player `json:"players"`
+		Players []*player.Player `json:"players"`
 	}{Players: r.Players()})
 
 	playersMessage := json.RawMessage(b)
@@ -117,41 +80,43 @@ func (r *Room) BroadcastPlayers() {
 		return
 	}
 
-	for _, playerConn := range r.conns {
-		log.Printf("Writing %s to %s\n", string(b), playerConn.player.Id)
+	for _, playerConn := range r.Conns {
+		log.Printf("Writing %s to %s\n", string(b), playerConn.Player.Id)
 		playerConn.SendText(b)
 	}
 }
 
 // Return cards for voting
-func GetCardsForVoting(room *Room, player *Player) []int {
+func GetCardsForVoting(room *Room, p *player.Player) []int {
 	cardIds := make([]int, 0)
-	if room.TurnState == Voting {
-		for _, cardSubmitted := range room.cardsSubmitted {
+	if room.CurrentTurn != nil && room.CurrentTurn.TurnState == Voting {
+		for _, cardSubmitted := range room.CurrentTurn.CardsSubmitted {
 			// Send cards for voting except the one player submitted themselves
-			if cardSubmitted.PlayerId != player.Id.String() {
+			if cardSubmitted.PlayerId != p.Id.String() {
 				cardIds = append(cardIds, cardSubmitted.CardId)
 			}
 		}
-		if room.StoryCard != -1 {
-			cardIds = append(cardIds, room.StoryCard)
+		if room.CurrentTurn.StoryCard != -1 {
+			cardIds = append(cardIds, room.CurrentTurn.StoryCard)
 		}
 
 		// Shuffle
 		rand.Seed(time.Now().UnixNano())
-		rand.Shuffle(len(cardIds), func(i, j int) { cardIds[i], cardIds[j] = cardIds[j], cardIds[i] })
+		rand.Shuffle(len(cardIds), func(i, j int) {
+			cardIds[i], cardIds[j] = cardIds[j], cardIds[i]
+		})
 	}
 	return cardIds
 }
 
 func GetPlayersWhoSubmitted(r *Room) []string {
 	var submittedBy = make([]string, 0)
-	if r.TurnState == Voting {
-		for _, vote := range r.votes {
+	if r.CurrentTurn.TurnState == Voting {
+		for _, vote := range r.CurrentTurn.Votes {
 			submittedBy = append(submittedBy, vote.Voter.Id.String())
 		}
-	} else if r.TurnState == SelectingCards {
-		for _, cardSubmitted := range r.cardsSubmitted {
+	} else if r.CurrentTurn.TurnState == SelectingCards {
+		for _, cardSubmitted := range r.CurrentTurn.CardsSubmitted {
 			submittedBy = append(submittedBy, cardSubmitted.PlayerId)
 		}
 	}
@@ -160,7 +125,13 @@ func GetPlayersWhoSubmitted(r *Room) []string {
 
 // Send room status change to all players
 func (r *Room) BroadcastRoomState() {
-	for _, playerConn := range r.conns {
+	for _, playerConn := range r.Conns {
+
+		// Only reveal the story card to the story player
+		storyCard := 0
+		if r.CurrentTurn.StoryPlayerId == playerConn.Player.Id {
+			storyCard = r.CurrentTurn.StoryCard
+		}
 
 		b, _ := json.Marshal(struct {
 			Id             string    `json:"id"`
@@ -172,15 +143,18 @@ func (r *Room) BroadcastRoomState() {
 			CardsSubmitted []int     `json:"cardsSubmitted"`
 			Cards          []int     `json:"cards"`
 			Submitted      []string  `json:"submittedBy"`
+			StoryCard      int       `json:"storyCard,omitempty"`
 		}{
 			Id:             r.Id,
 			RoomState:      r.State,
-			TurnState:      r.TurnState,
-			StoryPlayerId:  r.StoryPlayerId.String(),
-			Story:          r.Story,
-			Cards:          playerConn.player.Cards,
-			CardsSubmitted: GetCardsForVoting(r, playerConn.player),
+			TurnState:      r.CurrentTurn.TurnState,
+			TurnNumber:     len(r.Turns),
+			StoryPlayerId:  r.CurrentTurn.StoryPlayerId.String(),
+			Story:          r.CurrentTurn.Story,
+			Cards:          playerConn.Player.Cards,
+			CardsSubmitted: GetCardsForVoting(r, playerConn.Player),
 			Submitted:      GetPlayersWhoSubmitted(r),
+			StoryCard:      storyCard,
 		})
 
 		payloadMessage := json.RawMessage(b)
@@ -200,75 +174,85 @@ func (r *Room) BroadcastRoomState() {
 	}
 }
 
-func (r *Room) AddPlayer(p *Player) {
-	r.playerMap[p.Id.String()] = p
+func (r *Room) AddPlayer(p *player.Player) {
+	r.PlayerMap[p.Id.String()] = p
 	// TODO: Move to when ws in established
 }
 
-func (r *Room) RemovePlayer(p *Player) {
-	delete(r.playerMap, p.Id.String())
+func (r *Room) RemovePlayer(p *player.Player) {
+	delete(r.PlayerMap, p.Id.String())
 	r.BroadcastPlayers()
 }
 
-func (r *Room) startGame() {
+func (r *Room) StartGame() {
 	r.State = PlayingGame
 
 	// Deal cards to each player
 	r.sendCardsToEach(5)
 
 	// Next player tells the story
-	r.nextPlayerToTellStory()
+	r.nextTurn()
 
 	// Update the room
 	r.BroadcastRoomState()
 }
 
-func (r *Room) nextPlayerToTellStory() {
-	// Update the turn state
-	r.TurnState = WaitingForStory
+func (r *Room) DiscardCard(p *player.Player, cardId int) {
+	// Remove from player, move to discard pile
+	r.discardCardIds = append(r.discardCardIds, cardId)
 
-	// Reset submissions
-	r.cardsSubmitted = make([]CardSubmitted, 0)
-
-	playerIds := make([]uuid.UUID, 0, len(r.playerMap))
-	currentPlayerId := r.StoryPlayerId
-
-	for _, player := range r.playerMap {
-		playerIds = append(playerIds, player.Id)
+	// Find index of the card to remove
+	var idxToRemove = -1
+	for index, card := range p.Cards {
+		if card == cardId {
+			idxToRemove = index
+			break
+		}
+	}
+	if idxToRemove == -1 {
+		log.Printf("Can't discard %d, not in hand", cardId)
+		return
 	}
 
+	// Swap the card with the last
+	var cardsInHand = len(p.Cards)
+	var lastCard = cardsInHand - 1
+	p.Cards[idxToRemove] = p.Cards[lastCard]
+	p.Cards = p.Cards[:lastCard]
+	log.Printf("Discarding card %d, cards %s", cardId,
+		strings.Trim(
+			strings.Join(strings.Fields(fmt.Sprint(p.Cards)), ","), "[]"))
+}
+
+func (r *Room) nextTurn() {
+	nextTurn := NewTurn(r)
+	r.Turns = append(r.Turns, nextTurn)
+
+	playerIds := make([]uuid.UUID, 0, len(r.PlayerMap))
+	for _, player := range r.PlayerMap {
+		playerIds = append(playerIds, player.Id)
+	}
 	// Sort players by ID
 	sort.Slice(playerIds, func(i, j int) bool {
 		return playerIds[i].String() < playerIds[j].String()
 	})
 
-	// First player if choosing for the first time
-	if currentPlayerId == uuid.Nil {
-		r.StoryPlayerId = playerIds[0]
-		return
-	}
-
-	// Find the next player
-	for idx, playerId := range playerIds {
-		if currentPlayerId == playerId {
-			if idx+1 >= len(playerIds) {
-				r.StoryPlayerId = playerIds[0]
-			} else {
-				r.StoryPlayerId = playerIds[idx+1]
+	if r.CurrentTurn == nil {
+		nextTurn.StoryPlayerId = playerIds[0]
+	} else {
+		// Find the next player
+		for idx, playerId := range playerIds {
+			if r.CurrentTurn.StoryPlayerId == playerId {
+				if idx+1 >= len(playerIds) {
+					nextTurn.StoryPlayerId = playerIds[0]
+				} else {
+					nextTurn.StoryPlayerId = playerIds[idx+1]
+				}
+				break
 			}
-			return
 		}
 	}
-}
-
-func (r *Room) findConn(p *Player) *websocket.Conn {
-	for _, playerConn := range r.conns {
-		if p == playerConn.player {
-			return playerConn.ws
-		}
-	}
-	log.Panic("Can't find the connection")
-	return &websocket.Conn{}
+	r.CurrentTurn = nextTurn
 }
 
 func (r *Room) sendCardsToEach(cardCount int) {
@@ -310,51 +294,55 @@ From: http://www.itsyourmoveoakland.com/game-library-cd/dixit
 	Otherwise the storyteller and whoever found the correct answer score 3.
 	Players score 1 point for every vote for their own card.
 */
-func (r *Room) scoreTurn() {
-	r.TurnState = Scoring
+func (r *Room) ScoreTurn() {
+	if !r.CurrentTurn.HasAllVotes() {
+		return
+	}
+
+	r.CurrentTurn.TurnState = Scoring
 	var votesForStoryPlayer = 0
-	for _, vote := range r.votes {
-		if vote.Voted.Id == r.StoryPlayerId {
+	for _, vote := range r.CurrentTurn.Votes {
+		if vote.Voted.Id == r.CurrentTurn.StoryPlayerId {
 			votesForStoryPlayer += 1
 		}
 	}
 
-	var allRightOrAllWrong = votesForStoryPlayer == 0 || votesForStoryPlayer == len(r.playerMap)-1
+	var allRightOrAllWrong = votesForStoryPlayer == 0 || votesForStoryPlayer == len(r.PlayerMap)-1
 
 	if allRightOrAllWrong {
 		// Storyplayer gets 0 points, everyone else gets 2
-		for _, player := range r.playerMap {
-			if player.Id != r.StoryPlayerId {
+		for _, player := range r.PlayerMap {
+			if player.Id != r.CurrentTurn.StoryPlayerId {
 				player.Points += 2
 			}
 		}
 	} else {
 		// Story player gets 3 points
-		r.playerMap[r.StoryPlayerId.String()].Points += 3
+		r.PlayerMap[r.CurrentTurn.StoryPlayerId.String()].Points += 3
 
 		// Players who voted for the storyteller’s card also score 3
-		for _, vote := range r.votes {
+		for _, vote := range r.CurrentTurn.Votes {
 			log.Printf("Player %s voted for %s (3p)", vote.Voter.Name, vote.Voted.Name)
-			if vote.Voted.Id == r.StoryPlayerId {
-				r.playerMap[vote.Voter.Id.String()].Points += 3
+			if vote.Voted.Id == r.CurrentTurn.StoryPlayerId {
+				r.PlayerMap[vote.Voter.Id.String()].Points += 3
 			}
 		}
 	}
 
 	// In addition, each player (except the storyteller) scores
 	// 1 bonus for each vote received on their own card.
-	for _, vote := range r.votes {
+	for _, vote := range r.CurrentTurn.Votes {
 		log.Printf("Player %s voted for %s (1p)", vote.Voter.Name, vote.Voted.Name)
-		if vote.Voted.Id != r.StoryPlayerId {
-			r.playerMap[vote.Voted.Id.String()].Points += 1
+		if vote.Voted.Id != r.CurrentTurn.StoryPlayerId {
+			r.PlayerMap[vote.Voted.Id.String()].Points += 1
 		}
 	}
 
 	// Check if any has 30 points
-	var maxScorePlayer *Player = nil
+	var maxScorePlayer *player.Player = nil
 	for _, player := range r.Players() {
 
-		if player.Points >= config.GetMaxScore() &&
+		if player.Points >= config.Cfg.GetMaxScore() &&
 			(maxScorePlayer == nil || maxScorePlayer.Points < player.Points) {
 			maxScorePlayer = player
 		}
@@ -363,21 +351,17 @@ func (r *Room) scoreTurn() {
 	// Submit the votes to players, reveal the cards
 	r.revealTurnResults()
 
-	// Reset votes
-	r.votes = make([]Vote, 0)
-
 	if maxScorePlayer != nil {
 		r.endGame()
 		return
 	}
 
-	r.TurnNumber += 1
-
 	// Deal new card to each player
 	r.sendCardsToEach(1)
 
 	// Next player tells the story
-	r.nextPlayerToTellStory()
+	log.Print("Next turn")
+	r.nextTurn()
 
 	r.BroadcastRoomState()
 	r.BroadcastPlayers()
@@ -385,16 +369,17 @@ func (r *Room) scoreTurn() {
 
 func (r *Room) revealTurnResults() {
 	b, _ := json.Marshal(struct {
-		Votes         []Vote          `json:"votes"`
-		Submitted     []CardSubmitted `json:"cardsSubmitted"`
-		StoryPlayerId string          `json:"storyPlayerId"`
-		StoryCard     int             `json:"storyCard"`
-		Story         string          `json:"story"`
-	}{Votes: r.votes,
-		Submitted:     r.cardsSubmitted,
-		StoryCard:     r.StoryCard,
-		StoryPlayerId: r.StoryPlayerId.String(),
-		Story:         r.Story,
+		Votes         []*vote.Vote          `json:"votes"`
+		Submitted     []cards.CardSubmitted `json:"cardsSubmitted"`
+		StoryPlayerId string                `json:"storyPlayerId"`
+		StoryCard     int                   `json:"storyCard"`
+		Story         string                `json:"story"`
+	}{
+		Votes:         r.CurrentTurn.Votes,
+		Submitted:     r.CurrentTurn.CardsSubmitted,
+		StoryCard:     r.CurrentTurn.StoryCard,
+		StoryPlayerId: r.CurrentTurn.StoryPlayerId.String(),
+		Story:         r.CurrentTurn.Story,
 	})
 
 	payloadMessage := json.RawMessage(b)
@@ -406,7 +391,7 @@ func (r *Room) revealTurnResults() {
 	b, _ = json.Marshal(message)
 
 	log.Printf("Writing %s\n", string(b))
-	for _, playerConn := range r.conns {
+	for _, playerConn := range r.Conns {
 		playerConn.SendText(b)
 	}
 }

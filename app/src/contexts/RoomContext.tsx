@@ -20,7 +20,9 @@ type CurrentRoomState = {
   ownerId: string;
   joinedState: JoinedState;
   turnState: TurnState;
+  turnNumber: number;
   roomState: RoomState;
+  storyCard: number;
   storyPlayerId: string;
   cards: Card[];
   storyCards: Card[];
@@ -37,11 +39,13 @@ const NOOP = () => {};
 const defaultRoomState: CurrentRoomState = {
   roomId: "",
   turnState: "not_started",
+  turnNumber: 1,
   roomState: "waiting",
   ownerId: "",
   joinedState: "not_joined",
   cards: [],
   storyPlayerId: "",
+  storyCard: -1,
   storyCards: [],
   players: [],
   story: "",
@@ -96,7 +100,7 @@ const roomStateReducer = (
       };
     }
     case "on_room_state_updated": {
-      if (prevState.turnState !== payload.turnState) {
+      if (prevState.turnNumber !== payload.turnNumber) {
         queryClient.invalidateQueries();
       }
       return {

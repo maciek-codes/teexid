@@ -1,26 +1,27 @@
-package main
+package room
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/macqm/teexid/game/player"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRoomHasPlayers(t *testing.T) {
 	assert := assert.New(t)
 
-	p1 := NewPlayer("Alice", uuid.New())
+	p1 := player.NewPlayer("Alice", uuid.New())
 
-	room := NewRoom(make([]int, 0), p1.Id, "room-1")
-	assert.Len(room.Players(), 0)
+	r := NewRoom(make([]int, 0), p1.Id, "room-1")
+	assert.Len(r.Players(), 0)
 
-	p2 := NewPlayer("Bob", uuid.New())
-	room.AddPlayer(p1)
-	room.AddPlayer(p2)
+	p2 := player.NewPlayer("Bob", uuid.New())
+	r.AddPlayer(p1)
+	r.AddPlayer(p2)
 
-	assert.Len(room.Players(), 2)
+	assert.Len(r.Players(), 2)
 }
 
 func TestMarshalToJson(t *testing.T) {
@@ -38,12 +39,12 @@ func TestDealCards(t *testing.T) {
 
 	assert := assert.New(t)
 
-	p1 := NewPlayer("Alice", uuid.New())
+	p1 := player.NewPlayer("Alice", uuid.New())
 
 	room := NewRoom(make([]int, 0), p1.Id, "room-1")
 	assert.Len(room.Players(), 0)
 
-	p2 := NewPlayer("Bob", uuid.New())
+	p2 := player.NewPlayer("Bob", uuid.New())
 	room.AddPlayer(p1)
 	room.AddPlayer(p2)
 

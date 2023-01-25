@@ -1,5 +1,13 @@
 import React, { useMemo } from "react";
-import { Avatar, Box, Button, List, ListItem, Text } from "@chakra-ui/react";
+import {
+  Avatar,
+  Box,
+  Button,
+  HStack,
+  List,
+  ListItem,
+  Text,
+} from "@chakra-ui/react";
 
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
@@ -47,12 +55,14 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
             backgroundColor="#B0CC69"
             color="#F2F3ED"
           />
-          <Text
-            ml={4}
-            color={isSelf ? "green.100 " : "#F2F3ED"}
-            justifySelf="left"
-          >
-            {player.name}
+          <HStack>
+            <Text
+              ml={4}
+              color={isSelf ? "green.100 " : "#F2F3ED"}
+              justifySelf="left"
+            >
+              {player.name}
+            </Text>
             {isTellingStory ? (
               <Box display="inline" ml="2px">
                 {" "}
@@ -61,7 +71,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
             ) : null}
             {hasSubmittedCard ? <i> &#127183;</i> : null}
             {hasVoted ? <i> &#128499;</i> : null}
-          </Text>
+          </HStack>
           {!player.ready && (
             <Text ml={2} color={"#F2F3ED"}>
               {" "}

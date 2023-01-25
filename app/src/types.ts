@@ -70,6 +70,7 @@ export type OnPlayersUpdatedPayload = {
 export type OnRoomStateUpdatedPayload = {
   roomState: RoomState;
   turnState: TurnState;
+  turnNumber: number;
   storyPlayerId: string;
   story: string;
   cardsSubmitted: number[];

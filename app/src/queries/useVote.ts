@@ -28,7 +28,7 @@ const vote = async (args: VoteArgs) => {
   return response.data;
 };
 
-export const useVote = () => {
-  const key = ["vote"] as MutationKey;
+export const useVote = (turnNumber: number) => {
+  const key = ["vote", turnNumber] as MutationKey;
   return useMutation(key, vote);
 };

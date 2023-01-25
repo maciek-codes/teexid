@@ -5,7 +5,7 @@ import Card from "../models/Card";
 
 interface CardSelectorProps {
   cards: Array<Card>;
-  onSelected: (selectedCard: Card | null) => void;
+  onSelected?: (selectedCard: Card | null) => void;
 }
 
 const CardSelector = ({ cards, onSelected }: CardSelectorProps) => {
@@ -18,11 +18,15 @@ const CardSelector = ({ cards, onSelected }: CardSelectorProps) => {
         onClick={(selectedCard: Card) => {
           if (selectedId === selectedCard.cardId) {
             setSelectedId(-1);
-            onSelected(null);
+            if (onSelected) {
+              onSelected(null);
+            }
             return;
           }
           setSelectedId(selectedCard.cardId);
-          onSelected(selectedCard);
+          if (onSelected) {
+            onSelected(selectedCard);
+          }
         }}
         key={idx}
         selected={card.cardId === selectedId}

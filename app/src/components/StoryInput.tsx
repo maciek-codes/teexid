@@ -7,39 +7,48 @@ import { useSubmitStory } from "../queries/useSubmitStory";
 import CardView from "./CardView";
 
 export const StoryInput: React.FC = () => {
-  const { turnState, cards } = useRoom();
+  const { turnState, turnNumber, cards, storyCards, storyCard, story } =
+    useRoom();
   const [storyText, setStoryText] = useState<string>("");
-  const submitQuery = useSubmitStory();
+  const submitStoryQuery = useSubmitStory(turnNumber);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
 
   const submitStory = () => {
     if (storyText !== "" && selectedCard !== null) {
-      submitQuery.mutate({
+      submitStoryQuery.mutate({
         story: storyText,
         cardId: selectedCard.cardId,
       });
     }
   };
 
-  if (submitQuery.isSuccess) {
+  if (submitStoryQuery.isSuccess || story) {
+    const storySubmitted = submitStoryQuery.data?.story || story;
+    const storyCardSubmitted = submitStoryQuery.data?.cardId || storyCard;
     return (
       <Stack>
         <Text fontSize="lg" mb={5}>
-          You submitted the story: <Text as="em">{submitQuery.data.story}</Text>
+          You submitted the story: <Text as="em">{storySubmitted}</Text>
         </Text>
         <Text fontSize="lg" mb={5}>
           Your story card:
         </Text>
-        <CardView card={{ cardId: submitQuery.data.cardId } as Card} />
+        <CardView card={{ cardId: storyCardSubmitted } as Card} />
         {turnState === "selecting_cards" && (
           <Text fontSize="lg" mb={5}>
             Waiting for others to submit the cards
           </Text>
         )}
         {turnState === "voting" && (
-          <Text fontSize="lg" mb={5}>
-            Waiting for others to vote...
-          </Text>
+          <>
+            <Text fontSize="lg" mb={5}>
+              Waiting for others to vote...
+            </Text>
+            <Text>Others submitted:</Text>
+            <CardSelector
+              cards={storyCards.filter((c) => c.cardId !== storyCardSubmitted)}
+            />
+          </>
         )}
       </Stack>
     );
@@ -67,16 +76,16 @@ export const StoryInput: React.FC = () => {
         alignSelf="center"
         background="gray.200"
         isActive={storyText.trim() !== "" && selectedCard !== null}
-        isLoading={submitQuery.isLoading}
+        isLoading={submitStoryQuery.isLoading}
         isDisabled={storyText.trim() === "" || selectedCard === null}
         onClick={() => submitStory()}
         my={5}
       >
         Submit story
       </Button>
-      {submitQuery.isError && (
+      {submitStoryQuery.isError && (
         <Text>
-          Something went wrong: {(submitQuery.error as Error).toString()}
+          Something went wrong: {(submitStoryQuery.error as Error).toString()}
         </Text>
       )}
     </Flex>

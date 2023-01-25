@@ -11,15 +11,17 @@ type VotingProps = {
   story: string;
   playerCards: Card[];
   storyCards: Card[];
+  turnNumber: number;
 };
 
 export const Voting: React.FC<VotingProps> = ({
   story,
   playerCards,
   storyCards,
+  turnNumber,
 }: VotingProps) => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const useVoteQuery = useVote();
+  const useVoteQuery = useVote(turnNumber);
 
   const voteForCard = () => {
     if (selectedCard !== null) {

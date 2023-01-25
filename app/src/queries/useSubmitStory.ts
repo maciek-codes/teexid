@@ -30,7 +30,7 @@ const submitStory = async (args: SubmitStoryArgs) => {
   return response.data;
 };
 
-export const useSubmitStory = () => {
-  const key = ["submit_story"] as MutationKey;
+export const useSubmitStory = (turnNumber: number) => {
+  const key = ["submit_story", turnNumber] as MutationKey;
   return useMutation(key, submitStory);
 };

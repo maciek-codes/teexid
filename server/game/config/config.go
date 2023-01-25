@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"os"
@@ -8,26 +8,31 @@ import (
 
 type Config struct {
 	configOnce    sync.Once
-	maxScore      int
-	cardCount     int
-	allowedOrigin string
+	MaxScore      int
+	CardCount     int
+	MinPlayers    int
+	AllowedOrigin string
 }
 
-func NewConfig(allowedOrigin string, cardCount int) *Config {
-	return &Config{
-		allowedOrigin: allowedOrigin,
-		cardCount:     cardCount,
+// Global config
+var Cfg *Config
+
+func InitConfig(allowedOrigin string, cardCount int, minPlayers int) {
+	Cfg = &Config{
+		AllowedOrigin: allowedOrigin,
+		CardCount:     cardCount,
+		MinPlayers:    minPlayers,
 	}
 }
 
 func (c *Config) GetMaxScore() int {
 	c.lazyInit()
-	return c.maxScore
+	return c.MaxScore
 }
 
 func (c *Config) lazyInit() {
 	c.configOnce.Do(func() {
-		c.maxScore = getIntFromEnv("GAME_MAX_SCORE", 30)
+		c.MaxScore = getIntFromEnv("GAME_MAX_SCORE", 30)
 	})
 }
 

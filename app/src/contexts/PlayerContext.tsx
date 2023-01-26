@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-import { useRoom } from "./RoomContext";
+import { useRoomStore } from "../stores/RoomStore";
 
 interface PlayerData {
   id: string;
@@ -43,7 +43,7 @@ export const PlayerContextProvider: React.FC<Props> = ({ children }: Props) => {
     return window.localStorage.getItem(NAME_KEY) ?? "";
   }, []);
 
-  const { ownerId } = useRoom();
+  const ownerId = useRoomStore((state) => state.ownerId);
   const [name, setName] = useState<string>(storedName);
 
   const setNameCallback = useCallback(

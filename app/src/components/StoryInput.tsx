@@ -1,14 +1,18 @@
 import { Button, Flex, FormLabel, Input, Stack, Text } from "@chakra-ui/react";
 import React, { useState } from "react";
 import CardSelector from "./CardSelector";
-import { useRoom } from "../contexts/RoomContext";
+import { useRoomStore } from "../stores/RoomStore";
 import Card from "../models/Card";
 import { useSubmitStory } from "../queries/useSubmitStory";
 import CardView from "./CardView";
 
 export const StoryInput: React.FC = () => {
-  const { turnState, turnNumber, cards, storyCards, storyCard, story } =
-    useRoom();
+  const turnState = useRoomStore((state) => state.turnState);
+  const turnNumber = useRoomStore((state) => state.turnNumber);
+  const cards = useRoomStore((state) => state.cards);
+  const storyCards = useRoomStore((state) => state.storyCards);
+  const storyCard = useRoomStore((state) => state.storyCard);
+  const story = useRoomStore((state) => state.story);
   const [storyText, setStoryText] = useState<string>("");
   const submitStoryQuery = useSubmitStory(turnNumber);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);

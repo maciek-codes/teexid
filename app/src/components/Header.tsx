@@ -1,12 +1,12 @@
 import { Flex, Heading, Link, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 import React from "react";
-import { useRoom } from "../contexts/RoomContext";
+import { useRoomStore } from "../stores/RoomStore";
 import PlayerName from "../PlayerName";
 import { usePlayer } from "../contexts/PlayerContext";
 
 const Header: React.FC = () => {
-  const { roomId } = useRoom();
+  const roomId = useRoomStore((state) => state.roomId);
   const player = usePlayer();
   return (
     <Heading size="xl" pt="10px" background="#ac4fc2" px="0.5em" py="0.25em">

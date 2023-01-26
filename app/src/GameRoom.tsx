@@ -5,15 +5,20 @@ import { Text, Progress, Stack } from "@chakra-ui/react";
 
 import { PlayerEdit } from "./PlayerName";
 import { usePlayer } from "./contexts/PlayerContext";
-import { useRoom } from "./contexts/RoomContext";
+import { useRoomStore } from "./stores/RoomStore";
 import { useJoinRoom } from "./queries/useJoinRoom";
 import { GameFeed } from "./GameFeed";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
 import { useGameCommand } from "./queries/useGameCommand";
+import { useParams } from "react-router-dom";
 
 const GameRoom: React.FC = () => {
   const player = usePlayer();
-  const { roomId, joinedState } = useRoom();
+
+  const roomId = useRoomStore((state) => state.roomId);
+  const params = useParams();
+  const joinedState = useRoomStore((state) => state.joinedState);
+
   const joinRoomQuery = useJoinRoom();
   const fetchHistoryQuery = useGameCommand("fetch_history");
   const hasPlayerName = player.name !== "";
@@ -25,7 +30,7 @@ const GameRoom: React.FC = () => {
         joinRoomQuery.mutate({
           playerName: player.name,
           playerId: player.id,
-          roomName: roomId.toLowerCase().trim(),
+          roomName: params.roomId?.toLowerCase().trim() ?? "",
         });
       }
     }

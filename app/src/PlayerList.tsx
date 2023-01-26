@@ -11,7 +11,7 @@ import {
 
 import { usePlayer } from "./contexts/PlayerContext";
 import Player from "./models/Player";
-import { useRoom } from "./contexts/RoomContext";
+import { useRoomStore } from "./stores/RoomStore";
 import { useReady } from "./queries/useReady";
 import { useStart } from "./queries/useStart";
 
@@ -89,8 +89,11 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
 };
 export const PlayerList: React.FC = () => {
   const { id, isOwner } = usePlayer();
-  const { players, roomState, storyPlayerId, turnState, submittedBy } =
-    useRoom();
+  const players = useRoomStore((state) => state.players);
+  const roomState = useRoomStore((state) => state.roomState);
+  const storyPlayerId = useRoomStore((state) => state.storyPlayerId);
+  const turnState = useRoomStore((state) => state.turnState);
+  const submittedBy = useRoomStore((state) => state.submittedBy);
   const gameStarted = roomState !== "waiting";
   const sendReadyQuery = useReady();
   const startQuery = useStart();

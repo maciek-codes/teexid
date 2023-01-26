@@ -1,5 +1,5 @@
 import { MutationKey, useMutation } from "@tanstack/react-query";
-import { useRoom } from "../contexts/RoomContext";
+import { useRoomStore } from "../stores/RoomStore";
 import { getRoomToken, updateRoomToken } from "../hooks/useAuth";
 import Player from "../models/Player";
 import { RoomState, TurnState } from "../types";
@@ -35,13 +35,13 @@ const joinRoom = async (params: JoinArgs) => {
 };
 
 export const useJoinRoom = () => {
-  const { dispatch } = useRoom();
+  const { handleRoomCommand } = useRoomStore();
   const key = ["join_room"] as MutationKey;
   return useMutation(key, joinRoom, {
     onSuccess: (response) => {
       console.log("new data", response.data);
       updateRoomToken(response.data.roomToken);
-      dispatch({
+      handleRoomCommand({
         type: "on_joined",
         payload: {
           ...response.data,

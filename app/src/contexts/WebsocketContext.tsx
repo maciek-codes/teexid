@@ -8,7 +8,7 @@ import React, {
 import { getRoomToken } from "../hooks/useAuth";
 import { ResponseMsg } from "../types";
 import { getWsHost } from "../utils/config";
-import { useRoom } from "./RoomContext";
+import { useRoomStore } from "../stores/RoomStore";
 
 const SOCKET_HOST = getWsHost();
 const PING_SECS = 10;
@@ -47,7 +47,7 @@ export const WebSocketContextProvider: React.FC<
       : null
   );
 
-  const { dispatch } = useRoom();
+  const { handleRoomCommand } = useRoomStore();
 
   // Monitor connection state
   useEffect(() => {
@@ -105,10 +105,10 @@ export const WebSocketContextProvider: React.FC<
         lastPongTimestamp = Date.now();
         return;
       } else {
-        dispatch(msg);
+        handleRoomCommand(msg);
       }
     },
-    [setError, dispatch]
+    [setError, handleRoomCommand]
   );
 
   useEffect(() => {

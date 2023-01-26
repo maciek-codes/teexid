@@ -1,7 +1,7 @@
 import { Box, HStack, Stack, Text } from "@chakra-ui/react";
 import React from "react";
 import CardView from "./CardView";
-import { useRoom } from "../contexts/RoomContext";
+import { useRoomStore } from "../stores/RoomStore";
 import Card from "../models/Card";
 import Player from "../models/Player";
 import { GameLogEntry } from "../types";
@@ -103,7 +103,8 @@ const GameLogItem: React.FC<GameLogItemProps> = ({
 };
 
 const GameLog: React.FC = () => {
-  const { gameLog, players } = useRoom();
+  const gameLog = useRoomStore((state) => state.gameLog);
+  const players = useRoomStore((state) => state.players);
   const playerMap = players.reduce((map, player) => {
     map.set(player.id, player);
     return map;

@@ -8,7 +8,7 @@ import (
 
 type Config struct {
 	configOnce    sync.Once
-	MaxScore      int
+	maxScore      int
 	CardCount     int
 	MinPlayers    int
 	AllowedOrigin string
@@ -27,12 +27,12 @@ func InitConfig(allowedOrigin string, cardCount int, minPlayers int) {
 
 func (c *Config) GetMaxScore() int {
 	c.lazyInit()
-	return c.MaxScore
+	return c.maxScore
 }
 
 func (c *Config) lazyInit() {
 	c.configOnce.Do(func() {
-		c.MaxScore = getIntFromEnv("GAME_MAX_SCORE", 30)
+		c.maxScore = getIntFromEnv("GAME_MAX_SCORE", 30)
 	})
 }
 

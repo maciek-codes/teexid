@@ -10,9 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/macqm/teexid/game"
 	"github.com/macqm/teexid/game/auth"
+	"github.com/macqm/teexid/game/cards"
 	"github.com/macqm/teexid/game/config"
 	"github.com/macqm/teexid/game/player"
 	"github.com/macqm/teexid/game/room"
+	"github.com/macqm/teexid/game/vote"
 )
 
 func HandleJoinRoom(w http.ResponseWriter, req *http.Request, game *game.Game) {
@@ -180,11 +182,12 @@ type HandlerFn func(*room.Room, *player.Player, *game.Game, *json.RawMessage) (i
 type HandlerMap map[string]HandlerFn
 
 var handlerByCommand = HandlerMap{
-	"submit_card":  HandleSubmitCardCommand,
-	"submit_story": HandleSubmitStoryCommand,
-	"vote":         HandleVoteCommand,
-	"ready":        HandleReadyCommand,
-	"start":        HandleStartCommand,
+	"submit_card":   HandleSubmitCardCommand,
+	"submit_story":  HandleSubmitStoryCommand,
+	"vote":          HandleVoteCommand,
+	"ready":         HandleReadyCommand,
+	"start":         HandleStartCommand,
+	"fetch_history": HandleFetchHistoryCommand,
 }
 
 func HandleGameCommand(w http.ResponseWriter, req *http.Request, game *game.Game) {
@@ -325,4 +328,46 @@ func HandleVoteCommand(r *room.Room, p *player.Player, game *game.Game, payload 
 
 	r.BroadcastRoomState()
 	return vote, nil
+}
+
+func HandleFetchHistoryCommand(r *room.Room, p *player.Player, game *game.Game, payload *json.RawMessage) (interface{}, error) {
+	type Turndata struct {
+		Votes         []*vote.Vote          `json:"votes"`
+		Submitted     []cards.CardSubmitted `json:"cardsSubmitted"`
+		StoryPlayerId string                `json:"storyPlayerId"`
+		StoryCard     int                   `json:"storyCard"`
+		Story         string                `json:"story"`
+		TurnNumber    int                   `json:"turnNumber"`
+	}
+
+	var turns []Turndata
+	var err error
+	if len(r.Turns) <= 1 {
+		turns = make([]Turndata, 0)
+	} else {
+		turns := make([]Turndata, len(r.Turns)-1)
+
+		for i := 0; i < len(r.Turns)-1; i++ {
+			turns[i] = Turndata{
+				Votes:         r.CurrentTurn.Votes,
+				Submitted:     r.CurrentTurn.CardsSubmitted,
+				StoryCard:     r.CurrentTurn.StoryCard,
+				StoryPlayerId: r.CurrentTurn.StoryPlayerId.String(),
+				Story:         r.CurrentTurn.Story,
+				TurnNumber:    i,
+			}
+		}
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp := struct {
+		Turns []Turndata `json:"turns"`
+	}{
+		Turns: turns,
+	}
+
+	return resp, nil
 }

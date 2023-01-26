@@ -9,11 +9,13 @@ import { useRoom } from "./contexts/RoomContext";
 import { useJoinRoom } from "./queries/useJoinRoom";
 import { GameFeed } from "./GameFeed";
 import { WebSocketContextProvider } from "./contexts/WebsocketContext";
+import { useGameCommand } from "./queries/useGameCommand";
 
 const GameRoom: React.FC = () => {
   const player = usePlayer();
   const { roomId, joinedState } = useRoom();
   const joinRoomQuery = useJoinRoom();
+  const fetchHistoryQuery = useGameCommand("fetch_history");
   const hasPlayerName = player.name !== "";
 
   useEffect(() => {
@@ -28,6 +30,14 @@ const GameRoom: React.FC = () => {
       }
     }
   }, [player, roomId, joinRoomQuery]);
+
+  if (joinRoomQuery.isSuccess && fetchHistoryQuery.isIdle) {
+    fetchHistoryQuery.mutate({});
+  }
+
+  if (fetchHistoryQuery.isSuccess) {
+    console.log("History", fetchHistoryQuery.data);
+  }
 
   if (
     joinRoomQuery.isError &&

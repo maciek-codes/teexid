@@ -4,6 +4,7 @@ import { getRoomToken, updateRoomToken } from "../hooks/useAuth";
 import Player from "../models/Player";
 import { RoomState, TurnState } from "../types";
 import apiClient from "../utils/apiClient";
+import { usePlayerStore } from "../stores/PlayerStore";
 
 type JoinArgs = {
   roomName: string;
@@ -36,6 +37,8 @@ const joinRoom = async (params: JoinArgs) => {
 
 export const useJoinRoom = () => {
   const { handleRoomCommand } = useRoomStore();
+  const { id: playerId, setIsOwner } = usePlayerStore();
+
   const key = ["join_room"] as MutationKey;
   return useMutation(key, joinRoom, {
     onSuccess: (response) => {
@@ -47,6 +50,7 @@ export const useJoinRoom = () => {
           ...response.data,
         },
       });
+      setIsOwner(response.data.ownerId === playerId);
     },
   });
 };

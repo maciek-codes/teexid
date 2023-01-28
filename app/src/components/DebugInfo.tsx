@@ -2,10 +2,13 @@ import React from "react";
 
 import { Stack, Text } from "@chakra-ui/react";
 
-import { useSocket } from "../contexts/WebsocketContext";
+interface DebugInfoProps {
+  connecting: boolean;
+  connected: boolean;
+}
 
-const DebugInfo: React.FC = () => {
-  const { connecting, connected } = useSocket();
+export const DebugInfo: React.FC<DebugInfoProps> = (props) => {
+  const { connecting, connected } = props;
   return (
     <Stack
       fontSize="3xs"
@@ -25,5 +28,3 @@ const DebugInfo: React.FC = () => {
     </Stack>
   );
 };
-
-export default DebugInfo;

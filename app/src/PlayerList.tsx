@@ -9,7 +9,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 
-import { usePlayer } from "./contexts/PlayerContext";
+import { usePlayerStore } from "./stores/PlayerStore";
 import Player from "./models/Player";
 import { useRoomStore } from "./stores/RoomStore";
 import { useReady } from "./queries/useReady";
@@ -88,7 +88,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
   );
 };
 export const PlayerList: React.FC = () => {
-  const { id, isOwner } = usePlayer();
+  const { id, isOwner } = usePlayerStore();
   const players = useRoomStore((state) => state.players);
   const roomState = useRoomStore((state) => state.roomState);
   const storyPlayerId = useRoomStore((state) => state.storyPlayerId);

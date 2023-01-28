@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 import { Box, Progress, Stack, Text } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
-import { usePlayer } from "./contexts/PlayerContext";
+import { usePlayerStore } from "./stores/PlayerStore";
 import { useRoomStore } from "./stores/RoomStore";
 import Card from "./models/Card";
 import { CardPicker } from "./components/CardPicker";
@@ -10,12 +10,11 @@ import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
 import GameLog from "./components/GameLog";
 import CardView from "./components/CardView";
-import DebugInfo from "./components/DebugInfo";
 import { useSubmitCard } from "./queries/useSubmitCard";
 import { StoryInput } from "./components/StoryInput";
 
 export const GameFeed: React.FC = () => {
-  const player = usePlayer();
+  const { id: playerId } = usePlayerStore();
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const story = useRoomStore((state) => state.story);
   const players = useRoomStore((state) => state.players);
@@ -28,7 +27,7 @@ export const GameFeed: React.FC = () => {
 
   const submitQuery = useSubmitCard(turnNumber);
 
-  const isTellingStory = storyPlayerId === player.id;
+  const isTellingStory = storyPlayerId === playerId;
   const storyPlayerName = players.find((p) => p.id === storyPlayerId)?.name;
   const isPlaying = roomState === "playing";
   const isVoting = turnState === "voting";
@@ -134,7 +133,6 @@ export const GameFeed: React.FC = () => {
       )}
       <PlayerList />
       <GameLog />
-      <DebugInfo />
     </Stack>
   );
 };

@@ -2,9 +2,10 @@ import React, { useState } from "react";
 
 import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 
-import { usePlayer } from "./contexts/PlayerContext";
+import { usePlayerStore } from "./stores/PlayerStore";
 import { PlayerEdit } from "./PlayerName";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useJoinRoom } from "./queries/useJoinRoom";
 
 interface LobbyProps {}
 
@@ -12,11 +13,23 @@ export const Lobby: React.FC<LobbyProps> = () => {
   const location = useLocation();
   const [roomIdText, setRoomIdText] = useState("");
 
-  const player = usePlayer();
+  const player = usePlayerStore();
   const navigate = useNavigate();
+  const { mutate: joinRoom, isIdle: joinRoomIdle, isLoading } = useJoinRoom();
 
   const joinRoomClick = () => {
-    navigate("/rooms/" + roomIdText.toLowerCase());
+    if (joinRoomIdle) {
+      joinRoom(
+        {
+          playerName: player.name,
+          playerId: player.id,
+          roomName: roomIdText.toLowerCase(),
+        },
+        {
+          onSuccess: () => navigate("/rooms/" + roomIdText.toLowerCase()),
+        }
+      );
+    }
   };
 
   if (location.pathname.indexOf("/rooms/") === 0) {
@@ -56,6 +69,7 @@ export const Lobby: React.FC<LobbyProps> = () => {
               className="rounded-full bg-purple-700 text-white"
               isDisabled={roomIdText.trim() === ""}
               onClick={joinRoomClick}
+              isLoading={isLoading}
               backgroundColor="#B0CC69"
             >
               Join or start a room

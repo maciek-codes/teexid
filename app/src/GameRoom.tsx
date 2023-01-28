@@ -4,16 +4,17 @@ import { AxiosError } from "axios";
 import { Text, Progress, Stack } from "@chakra-ui/react";
 
 import { PlayerEdit } from "./PlayerName";
-import { usePlayer } from "./contexts/PlayerContext";
+import { usePlayerStore } from "./stores/PlayerStore";
 import { useRoomStore } from "./stores/RoomStore";
 import { useJoinRoom } from "./queries/useJoinRoom";
 import { GameFeed } from "./GameFeed";
-import { WebSocketContextProvider } from "./contexts/WebsocketContext";
+import { useWebsocket } from "./hooks/useWebsocket";
 import { useGameCommand } from "./queries/useGameCommand";
 import { useParams } from "react-router-dom";
+import { DebugInfo } from "./components/DebugInfo";
 
 const GameRoom: React.FC = () => {
-  const player = usePlayer();
+  const { name: playerName, id: playerId } = usePlayerStore();
 
   const roomId = useRoomStore((state) => state.roomId);
   const params = useParams();
@@ -21,20 +22,21 @@ const GameRoom: React.FC = () => {
 
   const joinRoomQuery = useJoinRoom();
   const fetchHistoryQuery = useGameCommand("fetch_history");
-  const hasPlayerName = player.name !== "";
+  const hasPlayerName = playerName !== "";
+  const { connState } = useWebsocket();
 
   useEffect(() => {
     // Join the room
-    if (player.name !== null && player.name !== "") {
+    if (playerName !== null && playerName !== "") {
       if (joinRoomQuery.isIdle && !joinRoomQuery.isSuccess) {
         joinRoomQuery.mutate({
-          playerName: player.name,
-          playerId: player.id,
+          playerName,
+          playerId,
           roomName: params.roomId?.toLowerCase().trim() ?? "",
         });
       }
     }
-  }, [player, roomId, joinRoomQuery]);
+  }, [playerName, playerId, roomId, joinRoomQuery]);
 
   if (joinRoomQuery.isSuccess && fetchHistoryQuery.isIdle) {
     fetchHistoryQuery.mutate({});
@@ -91,9 +93,13 @@ const GameRoom: React.FC = () => {
   }
 
   return (
-    <WebSocketContextProvider>
+    <Stack>
       <GameFeed />
-    </WebSocketContextProvider>
+      <DebugInfo
+        connecting={connState === "connecting"}
+        connected={connState === "connected"}
+      />
+    </Stack>
   );
 };
 

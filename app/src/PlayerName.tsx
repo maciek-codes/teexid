@@ -14,14 +14,14 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 
-import { usePlayer } from "./contexts/PlayerContext";
+import { usePlayerStore } from "./stores/PlayerStore";
 
 interface PlayerEditProps {
   onClose?: () => void;
 }
 
 export const PlayerEdit: React.FC<PlayerEditProps> = ({ onClose }) => {
-  const { name, setName } = usePlayer();
+  const { name, setName } = usePlayerStore();
   const [value, setValue] = useState<string>(name ?? "");
 
   const updateName = () => {
@@ -48,7 +48,7 @@ export const PlayerEdit: React.FC<PlayerEditProps> = ({ onClose }) => {
 };
 
 export const PlayerName: React.FC = () => {
-  const { name } = usePlayer();
+  const { name } = usePlayerStore();
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
 

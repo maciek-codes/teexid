@@ -23,5 +23,7 @@ const postCommand = async (cmd: string, payload: unknown) => {
 export const useGameCommand = (cmd: string) => {
   const key = [cmd] as MutationKey;
   const self = this;
-  return useMutation(key, postCommand.bind(self, cmd));
+  return useMutation(key, postCommand.bind(self, cmd), {
+    cacheTime: Infinity,
+  });
 };

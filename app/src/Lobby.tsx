@@ -44,10 +44,10 @@ export const Lobby: React.FC<LobbyProps> = () => {
     >
       <Stack
         flexDir="column"
-        width={["sm", "md"]}
         backgroundColor="#537CB9"
         color="#F2F3ED"
         padding={2}
+        paddingTop={1}
         borderRadius={10}
       >
         {player.name === "" && <PlayerEdit />}

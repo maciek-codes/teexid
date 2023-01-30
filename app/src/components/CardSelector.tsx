@@ -37,8 +37,10 @@ const CardSelector = ({ cards, onSelected }: CardSelectorProps) => {
     <Flex
       flexDirection="row"
       gap="10px"
+      py={5}
       justifyItems="center"
       alignItems="stretch"
+      overflowX="auto"
     >
       {cardViews}
     </Flex>

@@ -16,7 +16,6 @@ import { DebugInfo } from "./components/DebugInfo";
 const GameRoom: React.FC = () => {
   const { name: playerName, id: playerId } = usePlayerStore();
 
-  const roomId = useRoomStore((state) => state.roomId);
   const params = useParams();
   const joinedState = useRoomStore((state) => state.joinedState);
 
@@ -36,9 +35,13 @@ const GameRoom: React.FC = () => {
         });
       }
     }
-  }, [playerName, playerId, roomId, joinRoomQuery]);
+  }, [playerName, playerId, params.roomId, joinRoomQuery]);
 
-  if (joinRoomQuery.isSuccess && fetchHistoryQuery.isIdle) {
+  if (
+    joinRoomQuery.isSuccess &&
+    !fetchHistoryQuery.isSuccess &&
+    !fetchHistoryQuery.isLoading
+  ) {
     fetchHistoryQuery.mutate({});
   }
 

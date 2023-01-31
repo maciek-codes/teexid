@@ -15,7 +15,7 @@ export const DebugInfo: React.FC<DebugInfoProps> = (props) => {
       backgroundColor="#f5f5f5"
       px={5}
       py={2}
-      borderRadius={2}
+      rounded="lg"
       opacity={0.4}
     >
       <Text>

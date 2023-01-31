@@ -124,7 +124,7 @@ export const PlayerList: React.FC = () => {
   // Create a list of players
   return (
     <Box
-      rounded="3xl"
+      rounded="lg"
       backgroundColor="#537CB9"
       color="F2F3ED"
       m="5"

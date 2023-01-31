@@ -34,15 +34,22 @@ export const PlayerEdit: React.FC<PlayerEditProps> = ({ onClose }) => {
   };
 
   return (
-    <Stack>
-      <Text>What is your player's name?</Text>
+    <Stack backgroundColor="#537CB9" color="white" py={7} px={8} rounded="lg">
+      <Text>Choose your nickname:</Text>
       <Input
         value={value}
         onChange={(e) => setValue(e.currentTarget.value)}
         placeholder="Enter your name"
+        color="black"
         background="white"
       />
-      <Button onClick={updateName}>Done</Button>
+      <Button
+        onClick={updateName}
+        backgroundColor="#ac4fc2"
+        _hover={{ bg: "#B47FC1" }}
+      >
+        Done
+      </Button>
     </Stack>
   );
 };

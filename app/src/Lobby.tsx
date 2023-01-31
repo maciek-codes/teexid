@@ -48,7 +48,7 @@ export const Lobby: React.FC<LobbyProps> = () => {
         color="#F2F3ED"
         padding={2}
         paddingTop={1}
-        borderRadius={10}
+        rounded="lg"
       >
         {player.name === "" && <PlayerEdit />}
         {player.name !== "" && (

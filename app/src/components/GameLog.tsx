@@ -130,7 +130,7 @@ const GameLog: React.FC = () => {
       px={5}
       py={3}
       mt={10}
-      borderRadius={10}
+      rounded="lg"
     >
       <Text>History: </Text>
       {logItems}

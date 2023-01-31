@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-import { Box, Progress, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
 import { usePlayerStore } from "./stores/PlayerStore";
 import { useRoomStore } from "./stores/RoomStore";
@@ -47,7 +47,7 @@ export const GameFeed: React.FC = () => {
         color="#F2F3ED"
         px="5"
         py="3"
-        borderRadius={10}
+        rounded="lg"
         dropShadow="10px"
       >
         {roomState === "waiting" && (
@@ -80,52 +80,56 @@ export const GameFeed: React.FC = () => {
         )}
         {roomState === "ended" && <Text fontSize="xl">Game ended!</Text>}
       </Box>
-      <Box backgroundColor="#ebd9ff" p={2} borderRadius={10}>
-        {isPlaying &&
-          turnState === "selecting_cards" &&
-          !isTellingStory &&
-          submitQuery.isIdle && (
-            <CardPicker
-              cards={cards}
-              story={story}
-              selectedCard={selectedCard}
-              setSelectedCard={setSelectedCard}
-              promptText="Pick a card"
-              buttonText="Submit a card"
-              onSelectedCard={() => submitCardForStory()}
-            />
-          )}
-        {isPlaying && !isTellingStory && turnState === "waiting_for_story" && (
-          <Progress isAnimated={true} isIndeterminate={true} />
-        )}
-        {isPlaying &&
-          turnState === "selecting_cards" &&
-          !isTellingStory &&
-          submitQuery.isSuccess && (
-            <>
-              <Text fontSize="lg" mb={5}>
-                You submitted this card for the "<Text as="em">{story}</Text>"
-                story
-              </Text>
-              <CardView
-                card={{ cardId: submitQuery.data.submittedCard } as Card}
+      {isPlaying && (
+        <Box backgroundColor="#ebd9ff" p={2} rounded="lg">
+          {isPlaying &&
+            turnState === "selecting_cards" &&
+            !isTellingStory &&
+            submitQuery.isIdle && (
+              <CardPicker
+                cards={cards}
+                story={story}
+                selectedCard={selectedCard}
+                setSelectedCard={setSelectedCard}
+                promptText="Pick a card"
+                buttonText="Submit a card"
+                onSelectedCard={() => submitCardForStory()}
               />
-            </>
-          )}
-        {isPlaying && isTellingStory && <StoryInput />}
-        {isPlaying &&
-          isVoting &&
-          !isTellingStory &&
-          storyCards &&
-          storyCards?.length !== null && (
-            <Voting
-              story={story}
-              playerCards={cards}
-              storyCards={storyCards}
-              turnNumber={turnNumber}
-            />
-          )}
-      </Box>
+            )}
+          {isPlaying &&
+            !isTellingStory &&
+            turnState === "waiting_for_story" && (
+              <Text>Waiting for the story teller...</Text>
+            )}
+          {isPlaying &&
+            turnState === "selecting_cards" &&
+            !isTellingStory &&
+            submitQuery.isSuccess && (
+              <>
+                <Text fontSize="lg" mb={5}>
+                  You submitted this card for the "<Text as="em">{story}</Text>"
+                  story
+                </Text>
+                <CardView
+                  card={{ cardId: submitQuery.data.submittedCard } as Card}
+                />
+              </>
+            )}
+          {isPlaying && isTellingStory && <StoryInput />}
+          {isPlaying &&
+            isVoting &&
+            !isTellingStory &&
+            storyCards &&
+            storyCards?.length !== null && (
+              <Voting
+                story={story}
+                playerCards={cards}
+                storyCards={storyCards}
+                turnNumber={turnNumber}
+              />
+            )}
+        </Box>
+      )}
       {roomState === "ended" && (
         <Box>
           <PlayerScores playersList={players} />

@@ -1,4 +1,4 @@
-import { Flex, Heading, Link, Text } from "@chakra-ui/react";
+import { Flex, Heading, Link, Stack, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 import React from "react";
 import { useRoomStore } from "../stores/RoomStore";
@@ -16,9 +16,15 @@ const Header: React.FC = () => {
         justifyItems="center"
         justifyContent="space-between"
       >
-        <Link as={RouterLink} to="/" color="#F2F3ED" mt="2">
-          TeeXid
-        </Link>
+        <Stack direction="row" alignContent="center" justifyContent="center">
+          <Link as={RouterLink} to="/" color="#F2F3ED" mt="2">
+            TeeXid
+          </Link>
+
+          <Link as={RouterLink} to="/about" color="#F2F3ED" fontSize="sm">
+            About
+          </Link>
+        </Stack>
 
         <Flex
           alignSelf="flex-end"

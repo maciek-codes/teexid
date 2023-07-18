@@ -70,7 +70,7 @@ export const PlayerName: React.FC = () => {
       </Button>
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent backgroundColor="#537CB9" color="#FFF">
           <ModalHeader>Update name</ModalHeader>
           <ModalCloseButton />
           <ModalBody>

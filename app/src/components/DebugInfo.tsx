@@ -11,7 +11,7 @@ export const DebugInfo: React.FC<DebugInfoProps> = (props) => {
   const { connecting, connected } = props;
   return (
     <Stack
-      fontSize="3xs"
+      fontSize="xs"
       backgroundColor="#f5f5f5"
       px={5}
       py={2}

@@ -28,7 +28,6 @@ const Root: React.FC = () => {
             px={[10, 5, 10]}
             direction={{ base: "column", md: "row" }}
           >
-            <Lobby />
             <Outlet />
           </Stack>
         </Container>

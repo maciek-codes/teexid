@@ -125,11 +125,12 @@ export const PlayerList: React.FC = () => {
   return (
     <Box
       rounded="lg"
+      maxW="lg"
       backgroundColor="#537CB9"
       color="F2F3ED"
       m="5"
       p="5"
-      minWidth={["sm", "780px"]}
+      minWidth={["sm"]}
     >
       <List>
         {players.map((player: Player, idx: number) => {

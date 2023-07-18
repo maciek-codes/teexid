@@ -6,6 +6,7 @@ import GameRoom from "./GameRoom";
 import { ErrorPage } from "./ErrorPage";
 import { Lobby } from "./Lobby";
 import Root from "./Root";
+import AboutPage from "./AboutPage";
 
 // Font awesome icons
 library.add(far);
@@ -13,17 +14,20 @@ library.add(far);
 const App = () => {
   const browserRouter = createBrowserRouter([
     {
-      path: "/",
       element: <Root />,
       errorElement: <ErrorPage />,
       children: [
         {
-          path: "/join",
+          path: "/",
           element: <Lobby />,
         },
         {
           path: "/rooms/:roomId",
           element: <GameRoom />,
+        },
+        {
+          path: "/about",
+          element: <AboutPage />,
         },
       ],
     },

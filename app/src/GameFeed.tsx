@@ -40,7 +40,7 @@ export const GameFeed: React.FC = () => {
   };
 
   return (
-    <Stack pt={0}>
+    <Stack pt={0} w="md">
       {/* What's happening in the room*/}
       <Box
         backgroundColor="#ac4fc2"

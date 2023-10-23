@@ -1,14 +1,13 @@
 import React from "react";
 
 import { Stack, Text } from "@chakra-ui/react";
+import { useGameStore } from "../stores/GameStore";
 
-interface DebugInfoProps {
-  connecting: boolean;
-  connected: boolean;
-}
-
-export const DebugInfo: React.FC<DebugInfoProps> = (props) => {
-  const { connecting, connected } = props;
+export const DebugInfo = (): JSX.Element => {
+  const [playerId, isConnected] = useGameStore((state) => [
+    state.playerId,
+    state.isConnected,
+  ]);
   return (
     <Stack
       fontSize="xs"
@@ -18,13 +17,9 @@ export const DebugInfo: React.FC<DebugInfoProps> = (props) => {
       rounded="lg"
       opacity={0.4}
     >
-      <Text>
-        Connection Status:
-        <Text as="b">
-          {connecting ? <> Re-connecting</> : null}
-          {connected ? <> Connected</> : null}
-        </Text>
-      </Text>
+      <Text>Connection Status:</Text>
+      <Text as="b">{isConnected ? "Connected" : "Not Connected"}</Text>
+      <Text>{"Client ID: " + playerId}</Text>
     </Stack>
   );
 };

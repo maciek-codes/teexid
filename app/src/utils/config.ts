@@ -1,6 +1,6 @@
 export const getWsHost = (): string => {
   if (process.env.NODE_ENV !== "production") {
-    return "ws://localhost:8080/ws";
+    return "ws://localhost:4000/ws";
   }
   return "wss://game.teexit.maciek.codes/ws";
 };

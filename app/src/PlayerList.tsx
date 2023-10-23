@@ -8,33 +8,24 @@ import {
   ListItem,
   Text,
 } from "@chakra-ui/react";
-
-import { usePlayerStore } from "./stores/PlayerStore";
-import Player from "./models/Player";
+import { PlayerState } from "@teexid/shared";
 import { useRoomStore } from "./stores/RoomStore";
-import { useReady } from "./queries/useReady";
-import { useStart } from "./queries/useStart";
+import { useGameStore } from "./stores/GameStore";
+import { useWebsocketContext } from "./context/WebsocketContextProvider";
 
 const MIN_PLAYERS = 2;
 
 type PlayerItemProps = {
-  player: Player;
-  currentPlayerId: string;
+  player: PlayerState;
   onReadyClick: () => void;
-  isTellingStory: boolean;
-  hasSubmittedCard: boolean;
-  hasVoted: boolean;
 };
 
 const PlayerItem: React.FC<PlayerItemProps> = ({
   player,
-  currentPlayerId,
   onReadyClick,
-  isTellingStory,
-  hasSubmittedCard,
-  hasVoted,
 }: PlayerItemProps) => {
-  const isSelf = player.id === currentPlayerId;
+  const playerName = useGameStore((s) => s.playerName);
+  const isSelf = player.name === playerName;
   return (
     <ListItem mt="1">
       <Box
@@ -63,14 +54,14 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
             >
               {player.name}
             </Text>
-            {isTellingStory ? (
+            {player.status === "story_telling" ? (
               <Box display="inline" ml="2px">
                 {" "}
                 ✍
               </Box>
             ) : null}
-            {hasSubmittedCard ? <i> &#127183;</i> : null}
-            {hasVoted ? <i> &#128499;</i> : null}
+            {player.status === "submitted_card" ? <i> &#127183;</i> : null}
+            {player.status === "finished" ? <i> &#128499;</i> : null}
           </HStack>
           {!player.ready && (
             <Text ml={2} color={"#F2F3ED"}>
@@ -79,7 +70,11 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
             </Text>
           )}
         </Box>
-        <Text color={isSelf ? "green.100" : "#F2F3ED"}>{player.points} pt</Text>
+        {player.points && player.points > 0 && (
+          <Text color={isSelf ? "green.100" : "#F2F3ED"}>
+            {player.points} pt
+          </Text>
+        )}
         {isSelf && !player.ready ? (
           <Button onClick={onReadyClick}>I'm ready</Button>
         ) : null}
@@ -88,38 +83,34 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
   );
 };
 export const PlayerList: React.FC = () => {
-  const { id, isOwner } = usePlayerStore();
-  const players = useRoomStore((state) => state.players);
-  const roomState = useRoomStore((state) => state.roomState);
-  const storyPlayerId = useRoomStore((state) => state.storyPlayerId);
-  const turnState = useRoomStore((state) => state.turnState);
-  const submittedBy = useRoomStore((state) => state.submittedBy);
-  const gameStarted = roomState !== "waiting";
-  const sendReadyQuery = useReady();
-  const startQuery = useStart();
+  const [playerId, players, gameState, roomState, roomName] = useGameStore(
+    (s) => [
+      s.playerId,
+      s.room.players,
+      s.room.gameState,
+      s.roomState,
+      s.roomName,
+    ]
+  );
+  const gameStarted = gameState !== "waiting";
+  const { send } = useWebsocketContext();
 
   const onReadyClick = () => {
-    sendReadyQuery.mutate();
+    send({ type: "mark_ready" });
+  };
+
+  const startGame = () => {
+    send({ type: "start_game" });
   };
 
   const canStart = useMemo(() => {
     return (
       !gameStarted &&
-      isOwner &&
-      players.reduce((acc: number, curr: Player) => {
+      players.reduce((acc: number, curr: PlayerState) => {
         return acc + (curr.ready ? 1 : 0);
       }, 0) >= MIN_PLAYERS
     );
-  }, [gameStarted, isOwner, players]);
-
-  const startGame = () => {
-    if (isOwner) {
-      startQuery.mutate();
-    }
-  };
-
-  const isVoting = turnState === "voting";
-  const isSelectingCards = turnState === "selecting_cards";
+  }, [gameStarted, players]);
 
   // Create a list of players
   return (
@@ -130,22 +121,12 @@ export const PlayerList: React.FC = () => {
       color="F2F3ED"
       m="5"
       p="5"
-      minWidth={["sm"]}
     >
       <List>
-        {players.map((player: Player, idx: number) => {
-          const hasSubmitted =
-            submittedBy.filter((sb) => sb === player.id).length === 1;
+        {players.map((player: PlayerState, idx: number) => {
           return (
             <Box mt="10px" key={idx}>
-              <PlayerItem
-                player={player}
-                currentPlayerId={id ?? ""}
-                onReadyClick={onReadyClick}
-                isTellingStory={player.id === storyPlayerId}
-                hasSubmittedCard={hasSubmitted && isSelectingCards}
-                hasVoted={hasSubmitted && isVoting}
-              />
+              <PlayerItem player={player} onReadyClick={onReadyClick} />
             </Box>
           );
         })}

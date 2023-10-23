@@ -2,7 +2,6 @@ import React, { useState } from "react";
 
 import { Box, Stack, Text } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
-import { usePlayerStore } from "./stores/PlayerStore";
 import { useRoomStore } from "./stores/RoomStore";
 import Card from "./models/Card";
 import { CardPicker } from "./components/CardPicker";
@@ -12,25 +11,31 @@ import GameLog from "./components/GameLog";
 import CardView from "./components/CardView";
 import { useSubmitCard } from "./queries/useSubmitCard";
 import { StoryInput } from "./components/StoryInput";
+import { useGameStore } from "./stores/GameStore";
 
 export const GameFeed: React.FC = () => {
-  const { id: playerId } = usePlayerStore();
+  const [playerId, playerName] = useGameStore((s) => [
+    s.playerId,
+    s.playerName,
+  ]);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const players = useGameStore((state) => state.room.players);
+  const gameState = useGameStore((state) => state.room.gameState);
+
   const story = useRoomStore((state) => state.story);
-  const players = useRoomStore((state) => state.players);
   const cards = useRoomStore((state) => state.cards);
   const storyCards = useRoomStore((state) => state.storyCards);
-  const storyPlayerId = useRoomStore((state) => state.storyPlayerId);
-  const roomState = useRoomStore((state) => state.roomState);
-  const turnState = useRoomStore((state) => state.turnState);
   const turnNumber = useRoomStore((state) => state.turnNumber);
 
   const submitQuery = useSubmitCard(turnNumber);
 
-  const isTellingStory = storyPlayerId === playerId;
-  const storyPlayerName = players.find((p) => p.id === storyPlayerId)?.name;
-  const isPlaying = roomState === "playing";
-  const isVoting = turnState === "voting";
+  const isTellingStory =
+    players.find((p) => p.name === playerName)?.status === "story_telling";
+
+  const storyPlayerName =
+    players.find((p) => p.status === "story_telling")?.name ?? "";
+  const isPlaying = gameState !== "waiting";
+  const isVoting = gameState === "voting";
 
   const submitCardForStory = () => {
     if (selectedCard !== null) {
@@ -40,7 +45,7 @@ export const GameFeed: React.FC = () => {
   };
 
   return (
-    <Stack pt={0} w="md">
+    <Stack pt={0}>
       {/* What's happening in the room*/}
       <Box
         backgroundColor="#ac4fc2"
@@ -50,40 +55,40 @@ export const GameFeed: React.FC = () => {
         rounded="lg"
         dropShadow="10px"
       >
-        {roomState === "waiting" && (
+        {gameState === "waiting" && (
           <Text flexGrow={2} align="center" fontSize="xl">
             Wait for players to join...
           </Text>
         )}
-        {isPlaying && turnState !== "not_started" && (
+        {isPlaying && gameState !== "waiting" && (
           <Text fontSize="x-large" align="center">
             Turn {turnNumber}:
           </Text>
         )}
-        {isPlaying && isTellingStory && turnState === "waiting_for_story" && (
+        {isPlaying && isTellingStory && gameState !== "waiting" && (
           <Text fontSize="lg">Pick a card and type your story:</Text>
         )}
-        {isPlaying && isTellingStory && turnState !== "waiting_for_story" && (
+        {isPlaying && isTellingStory && gameState !== "waiting" && (
           <Text fontSize="lg">You are the story teller.</Text>
         )}
-        {isPlaying && !isTellingStory && turnState === "waiting_for_story" && (
+        {isPlaying && !isTellingStory && gameState === "waiting" && (
           <Text textAlign="center">
             Waiting for <Text as="b">{storyPlayerName}</Text> to write a story
             and pick a card.
           </Text>
         )}
-        {isPlaying && !isTellingStory && turnState === "selecting_cards" && (
+        {isPlaying && !isTellingStory && gameState === "selecting_cards" && (
           <Text textAlign="center">Now you select a card for the story.</Text>
         )}
-        {isPlaying && turnState === "voting" && (
+        {isPlaying && gameState === "voting" && (
           <Text fontSize="xl">Voting!</Text>
         )}
-        {roomState === "ended" && <Text fontSize="xl">Game ended!</Text>}
+        {gameState === "finished" && <Text fontSize="xl">Game ended!</Text>}
       </Box>
       {isPlaying && (
         <Box backgroundColor="#ebd9ff" p={2} rounded="lg">
           {isPlaying &&
-            turnState === "selecting_cards" &&
+            gameState === "selecting_cards" &&
             !isTellingStory &&
             submitQuery.isIdle && (
               <CardPicker
@@ -98,11 +103,11 @@ export const GameFeed: React.FC = () => {
             )}
           {isPlaying &&
             !isTellingStory &&
-            turnState === "waiting_for_story" && (
+            players.some((p) => p.status === "story_telling") && (
               <Text>Waiting for the story teller...</Text>
             )}
           {isPlaying &&
-            turnState === "selecting_cards" &&
+            gameState === "selecting_cards" &&
             !isTellingStory &&
             submitQuery.isSuccess && (
               <>
@@ -130,7 +135,7 @@ export const GameFeed: React.FC = () => {
             )}
         </Box>
       )}
-      {roomState === "ended" && (
+      {gameState === "ended" && (
         <Box>
           <PlayerScores playersList={players} />
         </Box>

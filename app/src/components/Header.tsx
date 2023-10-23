@@ -1,13 +1,14 @@
 import { Flex, Heading, Link, Stack, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 import React from "react";
-import { useRoomStore } from "../stores/RoomStore";
+import { useGameStore } from "../stores/GameStore";
 import PlayerName from "../PlayerName";
-import { usePlayerStore } from "../stores/PlayerStore";
 
 const Header: React.FC = () => {
-  const roomId = useRoomStore((state) => state.roomId);
-  const { name: playerName } = usePlayerStore();
+  const [playerName, roomName] = useGameStore((s) => [
+    s.playerName,
+    s.roomName,
+  ]);
   return (
     <Heading size="xl" pt="10px" background="#ac4fc2" px="0.5em" py="0.25em">
       <Flex
@@ -35,9 +36,9 @@ const Header: React.FC = () => {
           flexDirection="row"
         >
           {playerName !== "" && <PlayerName />}
-          {roomId !== "" && (
+          {roomName !== "" && (
             <Text fontSize="md" color="white" ml="20px">
-              Room: {roomId}
+              Room: {roomName}
             </Text>
           )}
         </Flex>

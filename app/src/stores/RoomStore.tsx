@@ -1,7 +1,7 @@
 import { create } from "zustand";
 
 import Card from "../models/Card";
-import Player from "../models/Player";
+import PlayerState from "../models/Player";
 import {
   GameLogEntry,
   GameLogEntryCard,
@@ -11,8 +11,6 @@ import {
   TurnState,
 } from "../types";
 
-type JoinedState = "not_joined" | "joining" | "joined";
-
 type CurrentRoomState = {
   roomId: string;
   ownerId: string;
@@ -21,10 +19,9 @@ type CurrentRoomState = {
   turnNumber: number;
   roomState: RoomState;
   storyCard: number;
-  storyPlayerId: string;
   cards: Card[];
   storyCards: Card[];
-  players: Player[];
+  players: PlayerState[];
   story: string;
   gameLog: GameLogEntry[];
   submittedBy: string[];
@@ -93,16 +90,7 @@ export const useRoomStore = create<CurrentRoomState>((set) => ({
         });
         break;
       }
-      case "on_room_state_updated": {
-        set({
-          ...payload,
-          cards: payload.cards.map((cardId) => ({ cardId } as Card)),
-          storyCards: payload.cardsSubmitted.map((cardId) => {
-            return { cardId } as Card;
-          }),
-        });
-        break;
-      }
+
       default:
         break;
     }

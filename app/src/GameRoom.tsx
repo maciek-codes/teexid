@@ -1,90 +1,28 @@
 import React, { useEffect } from "react";
 
-import { AxiosError } from "axios";
 import { Text, Progress, Stack } from "@chakra-ui/react";
 
-import { PlayerEdit } from "./PlayerName";
-import { usePlayerStore } from "./stores/PlayerStore";
-import { useRoomStore } from "./stores/RoomStore";
 import { useJoinRoom } from "./queries/useJoinRoom";
 import { GameFeed } from "./GameFeed";
-import { useWebsocket } from "./hooks/useWebsocket";
-import { useGameCommand } from "./queries/useGameCommand";
-import { useParams } from "react-router-dom";
 import { DebugInfo } from "./components/DebugInfo";
+import { useGameStore } from "./stores/GameStore";
+import { useNavigate } from "react-router-dom";
 
 const GameRoom: React.FC = () => {
-  const { name: playerName, id: playerId } = usePlayerStore();
-
-  const params = useParams();
-  const joinedState = useRoomStore((state) => state.joinedState);
-
-  const joinRoomQuery = useJoinRoom();
-  const fetchHistoryQuery = useGameCommand("fetch_history");
-  const hasPlayerName = playerName !== "";
-  const { connState } = useWebsocket();
+  useJoinRoom();
+  const [isConnected, roomState] = useGameStore((state) => [
+    state.isConnected,
+    state.roomState,
+  ]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    // Join the room
-    if (playerName !== null && playerName !== "") {
-      if (joinRoomQuery.isIdle && !joinRoomQuery.isSuccess) {
-        joinRoomQuery.mutate({
-          playerName,
-          playerId,
-          roomName: params.roomId?.toLowerCase().trim() ?? "",
-        });
-      }
+    if (!isConnected) {
+      navigate("/");
     }
-  }, [playerName, playerId, params.roomId, joinRoomQuery]);
+  }, [isConnected]);
 
-  if (
-    joinRoomQuery.isSuccess &&
-    !fetchHistoryQuery.isSuccess &&
-    !fetchHistoryQuery.isLoading
-  ) {
-    fetchHistoryQuery.mutate({});
-  }
-
-  if (fetchHistoryQuery.isSuccess) {
-    console.log("History", fetchHistoryQuery.data);
-  }
-
-  if (
-    joinRoomQuery.isError &&
-    (joinRoomQuery.error as AxiosError).code === AxiosError.ERR_NETWORK
-  ) {
-    return (
-      <Stack>
-        <Text size="lg">Ooops! The server seems to be down.</Text>
-      </Stack>
-    );
-  }
-
-  if (joinRoomQuery.isError) {
-    return (
-      <Stack>
-        <Text size="lg">Error connecting!</Text>
-        <Text>
-          {((joinRoomQuery.error as AxiosError).code as string) ?? ""}
-        </Text>
-      </Stack>
-    );
-  }
-
-  if (joinRoomQuery.isLoading) {
-    return (
-      <>
-        <Text>Loading ...</Text>
-        <Progress size="xs" isIndeterminate />
-      </>
-    );
-  }
-
-  if (!hasPlayerName) {
-    return <PlayerEdit />;
-  }
-
-  if (joinedState !== "joined") {
+  if (roomState === "joining") {
     return (
       <>
         <Text>Loading ...</Text>
@@ -95,13 +33,19 @@ const GameRoom: React.FC = () => {
     );
   }
 
+  // TODO: ALLOW TO JOIN AS SPECTATOR
+  if (roomState === "failed_to_join") {
+    return (
+      <>
+        <Text>Failed to join - game in progress</Text>
+      </>
+    );
+  }
+
   return (
     <Stack>
       <GameFeed />
-      <DebugInfo
-        connecting={connState === "connecting"}
-        connected={connState === "connected"}
-      />
+      <DebugInfo />
     </Stack>
   );
 };

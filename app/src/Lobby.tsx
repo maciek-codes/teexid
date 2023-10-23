@@ -1,40 +1,33 @@
-import React, { useState } from "react";
+import React from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 
-import { usePlayerStore } from "./stores/PlayerStore";
-import { PlayerEdit } from "./PlayerName";
-import { useLocation, useNavigate } from "react-router-dom";
 import { useJoinRoom } from "./queries/useJoinRoom";
+import { DebugInfo } from "./components/DebugInfo";
+import { useGameStore } from "./stores/GameStore";
 
-interface LobbyProps {}
-
-export const Lobby: React.FC<LobbyProps> = () => {
-  const location = useLocation();
-  const [roomIdText, setRoomIdText] = useState("");
-
-  const player = usePlayerStore();
+export const Lobby = (): JSX.Element => {
+  const joinRoom = useJoinRoom();
+  const [roomName, setRoomName, playerName, setPlayerName] = useGameStore(
+    (state) => [
+      state.roomName,
+      state.setRoomName,
+      state.playerName,
+      state.setPlayerName,
+    ]
+  );
   const navigate = useNavigate();
-  const { mutate: joinRoom, isIdle: joinRoomIdle, isLoading } = useJoinRoom();
 
   const joinRoomClick = () => {
-    if (joinRoomIdle) {
-      joinRoom(
-        {
-          playerName: player.name,
-          playerId: player.id,
-          roomName: roomIdText.toLowerCase(),
-        },
-        {
-          onSuccess: () => navigate("/rooms/" + roomIdText.toLowerCase()),
-        }
-      );
-    }
+    joinRoom();
+    navigate(`/rooms/${roomName}`);
   };
 
   if (location.pathname.indexOf("/rooms/") === 0) {
-    return null;
+    return <></>;
   }
+
   return (
     <Flex
       flexDirection="column"
@@ -50,33 +43,40 @@ export const Lobby: React.FC<LobbyProps> = () => {
         paddingTop={1}
         rounded="lg"
       >
-        {player.name === "" && <PlayerEdit />}
-        {player.name !== "" && (
-          <Stack pt="5px">
-            <Text fontSize="md">
-              Enter the room name to start a new room or type in the room name
-              that someone shared with you
-            </Text>
-            <Input
-              type="text"
-              placeholder="Room name"
-              background="white"
-              color="black"
-              onChange={(e) => setRoomIdText(e.target.value)}
-            />
+        <Stack pt="5px">
+          <Text fontSize="md">
+            Enter the room name to start a new room or type in the room name
+            that someone shared with you
+          </Text>
+          <Input
+            type="text"
+            placeholder="Room name"
+            background="white"
+            color="black"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value.trim())}
+          />
 
-            <Button
-              className="rounded-full bg-purple-700 text-white"
-              isDisabled={roomIdText.trim() === ""}
-              onClick={joinRoomClick}
-              isLoading={isLoading}
-              backgroundColor="#B0CC69"
-            >
-              Join or start a room
-            </Button>
-          </Stack>
-        )}
+          <Input
+            type="text"
+            placeholder="Player name"
+            background="white"
+            color="black"
+            value={playerName}
+            onChange={(e) => setPlayerName(e.target.value.trim())}
+          />
+
+          <Button
+            className="rounded-full bg-purple-700 text-white"
+            isDisabled={roomName === "" || playerName === ""}
+            onClick={joinRoomClick}
+            backgroundColor="#B0CC69"
+          >
+            Join or start a room
+          </Button>
+        </Stack>
       </Stack>
+      <DebugInfo />
     </Flex>
   );
 };

@@ -1,13 +1,5 @@
-import Card from "./models/Card";
 import Player from "./models/Player";
-
-export type RoomState = "waiting" | "playing" | "ended";
-export type TurnState =
-  | "not_started"
-  | "waiting_for_story"
-  | "selecting_cards"
-  | "voting"
-  | "scoring";
+import { RoomState, TurnState, Card } from "@teexid/shared";
 
 // Web socket response
 export type ResponseMsg =

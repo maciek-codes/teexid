@@ -14,19 +14,25 @@ import {
   useDisclosure,
 } from "@chakra-ui/react";
 
-import { usePlayerStore } from "./stores/PlayerStore";
+import { useGameStore } from "./stores/GameStore";
+import { useWebsocketContext } from "./context/WebsocketContextProvider";
 
 interface PlayerEditProps {
   onClose?: () => void;
 }
 
-export const PlayerEdit: React.FC<PlayerEditProps> = ({ onClose }) => {
-  const { name, setName } = usePlayerStore();
+export const PlayerEdit = ({ onClose }: PlayerEditProps): JSX.Element => {
+  const [name, setName] = useGameStore((state) => [
+    state.playerName,
+    state.setPlayerName,
+  ]);
+  const { send } = useWebsocketContext();
   const [value, setValue] = useState<string>(name ?? "");
 
   const updateName = () => {
     if (value?.trim() !== "") {
       setName(value);
+      send({ type: "update_name", payload: { newName: value } });
     }
     if (onClose) {
       onClose();
@@ -55,7 +61,7 @@ export const PlayerEdit: React.FC<PlayerEditProps> = ({ onClose }) => {
 };
 
 export const PlayerName: React.FC = () => {
-  const { name } = usePlayerStore();
+  const { playerName } = useGameStore();
   const [isEditingName, setIsEditingName] = useState<boolean>(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -66,7 +72,7 @@ export const PlayerName: React.FC = () => {
   return (
     <Box>
       <Button onClick={() => onOpen()}>
-        {name} <Box ml={2}>&#128100;</Box>
+        {playerName} <Box ml={2}>&#128100;</Box>
       </Button>
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />

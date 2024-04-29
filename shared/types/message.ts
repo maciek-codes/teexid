@@ -1,4 +1,4 @@
-import { PlayerState } from "./models";
+import { PlayerState, Card, GameState, Scores } from "./models";
 
 export type JoinRoom = {
   type: "join_room";
@@ -13,8 +13,27 @@ export type OnJoinRoom = {
   payload: { roomName: string; playerName: string; success: boolean };
 };
 
+export type OnRejoinRoom = {
+  type: "on_rejoin_room";
+  payload: {
+    roomName: string;
+    playerName: string;
+    success: boolean;
+    state: {
+      gameState: GameState;
+      turnState: TurnState;
+      turnNumber: number;
+      players: PlayerState[];
+      story: string;
+      cardsSubmitted: Card[];
+      scores: Scores[];
+    };
+  };
+};
+
 export type MarkReady = {
   type: "mark_ready";
+  payload?: {};
 };
 
 export type OnRoomStateUpdated = {
@@ -23,7 +42,12 @@ export type OnRoomStateUpdated = {
     roomName: string;
     state: {
       gameState: GameState;
+      turnState: TurnState;
+      turnNumber: number;
       players: PlayerState[];
+      story: string;
+      cardsSubmitted: Card[];
+      scores: Scores[];
     };
   };
 };
@@ -32,6 +56,13 @@ export type OnPlayersListUpdated = {
   type: "on_players_list_updated";
   payload: {
     players: PlayerState[];
+  };
+};
+
+export type OnCardsDealt = {
+  type: "on_cards_dealt";
+  payload: {
+    cards: Card[];
   };
 };
 
@@ -61,22 +92,56 @@ type OnNameUpdated = {
   };
 };
 
+type SubmitStory = {
+  type: "submit_story";
+  payload: {
+    story: string;
+    cardId: number;
+  };
+};
+
+type SubmitStoryCard = {
+  type: "submit_story_card";
+  payload: {
+    cardId: number;
+  };
+};
+
+type VoteForStoryCard = {
+  type: "vote";
+  payload: {
+    cardId: number;
+  };
+};
+
+type OnRoundEnded = {
+  type: "on_round_ended";
+  payload: {
+    storyCard: Card;
+    storyPlayerId: string;
+    scores: Scores;
+  };
+};
+
 export type MessageType =
   | { type: "ping" }
   | { type: "pong" }
   | Identify
   | JoinRoom
   | OnJoinRoom
+  | OnRejoinRoom
   | MarkReady
   | UpdateName
   | OnNameUpdated
   | StartGame
   | OnPlayersListUpdated
-  | { type: "on_joined"; payload: { roomName: string; playerName: string } }
-  | { type: "on_room_created"; payload: any }
+  | OnCardsDealt
+  | SubmitStory
+  | SubmitStoryCard
+  | VoteForStoryCard
+  | OnRoundEnded
   | OnRoomStateUpdated
-  | { type: "error"; payload: any }
-  | { type: "on_turn_result"; payload: any };
+  | { type: "error"; payload: any };
 
 export type GameMessage = Exclude<
   MessageType,
@@ -84,10 +149,3 @@ export type GameMessage = Exclude<
 >;
 
 export type RoomState = "waiting" | "playing" | "ended";
-
-export type TurnState =
-  | "not_started"
-  | "waiting_for_story"
-  | "selecting_cards"
-  | "voting"
-  | "scoring";

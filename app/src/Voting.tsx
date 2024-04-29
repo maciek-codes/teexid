@@ -1,52 +1,50 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 
 import { Progress, Stack, Text } from "@chakra-ui/react";
+import { Card } from "@teexid/shared";
 
 import { CardPicker } from "./components/CardPicker";
-import Card from "./models/Card";
 import CardView from "./components/CardView";
-import { useVote } from "./queries/useVote";
+import { useWebsocketContext } from "./context/WebsocketContextProvider";
 
 type VotingProps = {
   story: string;
   playerCards: Card[];
   storyCards: Card[];
-  turnNumber: number;
 };
 
-export const Voting: React.FC<VotingProps> = ({
+export const Voting = ({
   story,
   playerCards,
   storyCards,
-  turnNumber,
-}: VotingProps) => {
+}: VotingProps): JSX.Element => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const useVoteQuery = useVote(turnNumber);
+  const [votedCard, setVotedCard] = useState<Card | null>(null);
+  const [voted, setVoted] = useState<boolean>(false);
+  const { send } = useWebsocketContext();
 
-  const voteForCard = () => {
+  const voteForCard = useCallback(() => {
     if (selectedCard !== null) {
-      useVoteQuery.mutate({ cardId: selectedCard.cardId });
+      send({
+        type: "vote",
+        payload: {
+          cardId: selectedCard.cardId,
+        },
+      });
       setSelectedCard(null);
+      setVotedCard({
+        cardId: selectedCard.cardId,
+      });
+      setVoted(true);
     }
-  };
+  }, [setVoted, selectedCard, send]);
 
-  if (useVoteQuery.isSuccess) {
+  if (voted && votedCard) {
     return (
       <>
         <Text>You voted for:</Text>
-        {useVoteQuery.data.cardId !== -1 && (
-          <CardView card={{ cardId: useVoteQuery.data.cardId }} />
-        )}
+        <CardView card={{ cardId: votedCard.cardId }} />
       </>
-    );
-  }
-
-  if (useVoteQuery.isLoading) {
-    return (
-      <Stack>
-        <Text>Voting...</Text>
-        <Progress isIndeterminate={true} />
-      </Stack>
     );
   }
 

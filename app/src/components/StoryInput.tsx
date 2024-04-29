@@ -1,43 +1,46 @@
 import { Button, Flex, FormLabel, Input, Stack, Text } from "@chakra-ui/react";
+import { Card } from "@teexid/shared";
 import React, { useState } from "react";
+
 import CardSelector from "./CardSelector";
-import { useRoomStore } from "../stores/RoomStore";
-import Card from "../models/Card";
-import { useSubmitStory } from "../queries/useSubmitStory";
 import CardView from "./CardView";
+import { useGameStore } from "../stores/GameStore";
+import { useWebsocketContext } from "../context/WebsocketContextProvider";
 
 export const StoryInput: React.FC = () => {
-  const turnState = useRoomStore((state) => state.turnState);
-  const turnNumber = useRoomStore((state) => state.turnNumber);
-  const cards = useRoomStore((state) => state.cards);
-  const storyCards = useRoomStore((state) => state.storyCards);
-  const storyCard = useRoomStore((state) => state.storyCard);
-  const story = useRoomStore((state) => state.story);
+  const turnState = useGameStore((state) => state.room.turnState);
+  const cards = useGameStore((state) => state.room.cards);
+  const storyCards = useGameStore((state) => state.room.storyCards);
   const [storyText, setStoryText] = useState<string>("");
-  const submitStoryQuery = useSubmitStory(turnNumber);
+  const [submitted, setSubmitted] = useState<boolean>(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const { send } = useWebsocketContext();
 
   const submitStory = () => {
     if (storyText !== "" && selectedCard !== null) {
-      submitStoryQuery.mutate({
-        story: storyText,
-        cardId: selectedCard.cardId,
+      send({
+        type: "submit_story",
+        payload: {
+          story: storyText,
+          cardId: selectedCard.cardId,
+        },
       });
+      setSubmitted(true);
     }
   };
 
-  if (submitStoryQuery.isSuccess || story) {
-    const storySubmitted = submitStoryQuery.data?.story || story;
-    const storyCardSubmitted = submitStoryQuery.data?.cardId || storyCard;
+  if (submitted) {
     return (
       <Stack>
         <Text fontSize="lg" mb={5}>
-          You submitted the story: <Text as="em">{storySubmitted}</Text>
+          You submitted the story: <Text as="em">{storyText}</Text>
         </Text>
         <Text fontSize="lg" mb={5}>
           Your story card:
         </Text>
-        <CardView card={{ cardId: storyCardSubmitted } as Card} />
+        {selectedCard && (
+          <CardView card={{ cardId: selectedCard.cardId } as Card} />
+        )}
         {turnState === "selecting_cards" && (
           <Text fontSize="lg" mb={5}>
             Waiting for others to submit the cards
@@ -80,18 +83,12 @@ export const StoryInput: React.FC = () => {
         alignSelf="center"
         background="gray.200"
         isActive={storyText.trim() !== "" && selectedCard !== null}
-        isLoading={submitStoryQuery.isLoading}
         isDisabled={storyText.trim() === "" || selectedCard === null}
         onClick={() => submitStory()}
         my={5}
       >
         Submit story
       </Button>
-      {submitStoryQuery.isError && (
-        <Text>
-          Something went wrong: {(submitStoryQuery.error as Error).toString()}
-        </Text>
-      )}
     </Flex>
   );
 };

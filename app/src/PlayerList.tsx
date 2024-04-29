@@ -9,7 +9,6 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { PlayerState } from "@teexid/shared";
-import { useRoomStore } from "./stores/RoomStore";
 import { useGameStore } from "./stores/GameStore";
 import { useWebsocketContext } from "./context/WebsocketContextProvider";
 
@@ -83,15 +82,10 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
   );
 };
 export const PlayerList: React.FC = () => {
-  const [playerId, players, gameState, roomState, roomName] = useGameStore(
-    (s) => [
-      s.playerId,
-      s.room.players,
-      s.room.gameState,
-      s.roomState,
-      s.roomName,
-    ]
-  );
+  const [players, gameState] = useGameStore((s) => [
+    s.room.players,
+    s.room.gameState,
+  ]);
   const gameStarted = gameState !== "waiting";
   const { send } = useWebsocketContext();
 

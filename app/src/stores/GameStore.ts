@@ -1,31 +1,14 @@
 import {
   Card,
-  Player,
+  PlayerState,
   MessageType,
-  ConnectionState,
   GameState,
+  TurnState,
 } from "@teexid/shared";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 type JoinedState = "not_joined" | "joining" | "joined" | "failed_to_join";
-
-export type TurnStatus =
-  | "writingStory"
-  | "waitingForStory"
-  | "submittingCard"
-  | "waitingForOthers"
-  | "voting"
-  | "voted";
-
-export interface TurnState {
-  storyPlayerId: string;
-  turnStatus: TurnStatus;
-  storyPrompt: string;
-  storyCard: Card;
-  pickedCardId: string;
-  cardsToVote: string;
-}
 
 const NAME_KEY = "55d78e7c-9f3e-49e4-9385-0ee53138972f";
 const ID_KEY = "474170b0-affe-4d8e-a7ea-795e416697e6";
@@ -61,14 +44,15 @@ type RoomState = {
   roomId: string;
   ownerId: string;
   gameState: GameState;
-  //turnState: TurnState;
-  // turnNumber: number;
+  turnNumber: number;
+  turnState: TurnState;
   // storyCard: number;
   // storyPlayerId: string;
-  //cards: Card[];
-  //storyCards: Card[];
-  players: Player[];
-  //story: string;
+  cards: Card[];
+  storyCards: Card[];
+  cardsSubmitted: Card[];
+  players: PlayerState[];
+  story: string;
   //gameLog: GameLogEntry[];
   //submittedBy: string[];
 };
@@ -111,7 +95,13 @@ export const useGameStore = create<GameStore>()(
       roomId: "",
       ownerId: "",
       players: [],
+      turnNumber: 0,
+      storyCards: [],
+      cardsSubmitted: [],
+      turnState: "waiting",
       gameState: "waiting",
+      story: "",
+      cards: [],
     },
 
     setRoomName: (newName) => set({ roomName: newName.toLocaleLowerCase() }),
@@ -139,6 +129,15 @@ export const useGameStore = create<GameStore>()(
             room: {
               ...state.room,
               ...message.payload.state,
+            },
+          }));
+          break;
+        }
+        case "on_cards_dealt": {
+          set((state) => ({
+            room: {
+              ...state.room,
+              cards: message.payload.cards,
             },
           }));
           break;

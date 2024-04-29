@@ -1,4 +1,4 @@
-import { Flex, Heading, Link, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Heading, Link, Text } from "@chakra-ui/react";
 import { Link as RouterLink } from "react-router-dom";
 import React from "react";
 import { useGameStore } from "../stores/GameStore";
@@ -13,20 +13,19 @@ const Header: React.FC = () => {
     <Heading size="xl" pt="10px" background="#ac4fc2" px="0.5em" py="0.25em">
       <Flex
         flexDirection="row"
-        alignItems="start"
+        alignItems="center"
         justifyItems="center"
         justifyContent="space-between"
       >
-        <Stack direction="row" alignContent="center" justifyContent="center">
-          <Link as={RouterLink} to="/" color="#F2F3ED" mt="2">
+        <Box gap="20px" display="flex">
+          <Link as={RouterLink} to="/" color="#F2F3ED" fontSize="lg">
             TeeXid
           </Link>
 
-          <Link as={RouterLink} to="/about" color="#F2F3ED" fontSize="sm">
+          <Link as={RouterLink} to="/about" color="#F2F3ED" fontSize="lg">
             About
           </Link>
-        </Stack>
-
+        </Box>
         <Flex
           alignSelf="flex-end"
           alignContent="end"

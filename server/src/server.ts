@@ -9,6 +9,7 @@ import { logger } from "./logger";
 
 logger.info("Server starting");
 const host = process.env.HOST || "localhost";
+const serverPort = process.env.PORT ?? 8080;
 
 const app = express();
 
@@ -46,8 +47,7 @@ export const runServer = () => {
     });
   });
 
-  const port = process.env.PORT ?? 8080;
-  server.listen(port, () => {
-    logger.info(`Server started on port ${host}:${port}`);
+  server.listen(serverPort, () => {
+    logger.info(`Server started on port ${host}:${serverPort}`);
   });
 };

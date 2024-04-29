@@ -5,9 +5,9 @@ import { GameMessage, JoinRoom } from "../../shared/types/message";
 import { logger } from "./logger";
 
 export class Game {
-  private readonly rooms: Map<string, Room> = new Map<string, Room>();
-  private readonly clients: Map<string, Client[]> = new Map<string, Client[]>();
-  private readonly players: Map<string, Player> = new Map<string, Player>();
+  readonly rooms: Map<string, Room> = new Map<string, Room>();
+  readonly clients: Map<string, Client[]> = new Map<string, Client[]>();
+  readonly players: Map<string, Player> = new Map<string, Player>();
   constructor() {}
 
   public createRoom(name: string) {
@@ -16,13 +16,18 @@ export class Game {
   }
 
   public addPlayerClient(client: Client) {
+    if (client.getPlayerId() === "") {
+      logger.error("Player id is empty", client);
+      return;
+    }
+
     if (this.clients.has(client.getPlayerId())) {
       this.clients.get(client.getPlayerId()).push(client);
     } else {
       this.clients.set(client.getPlayerId(), [client]);
     }
     if (!this.players.has(client.getPlayerId())) {
-      logger.info("Adding new player ", client.getPlayerId());
+      logger.info("Adding new player ", { playerId: client.getPlayerId() });
       this.players.set(client.getPlayerId(), new Player(client.getPlayerId()));
     }
   }
@@ -52,15 +57,30 @@ export class Game {
         player.ready = true;
         this.updatePlayersList(player.roomId);
         return;
-      case "start_game":
+      case "start_game": {
         logger.info("Starting game", player);
-
-        // TODO: how do we handle this?
-        const room = Array.from(this.rooms.values()).find(
-          (r) => r.id === player.roomId
-        );
+        const room = this.findRoom(playerId);
         room.startGame();
         return;
+      }
+      case "submit_story": {
+        logger.info("Got story game", player, msg.payload);
+        const room = this.findRoom(playerId);
+        room.submitStory(playerId, msg.payload.story, msg.payload.cardId);
+        return;
+      }
+      case "submit_story_card": {
+        logger.info("Got story card", player, msg.payload);
+        const room = this.findRoom(playerId);
+        room.submitStoryCard(playerId, msg.payload.cardId);
+        return;
+      }
+      case "vote": {
+        logger.info("Got vote", player, msg.payload);
+        const room = this.findRoom(playerId);
+        room.vote(playerId, msg.payload.cardId);
+        return;
+      }
       default:
         break;
     }
@@ -75,25 +95,31 @@ export class Game {
       this.rooms.set(payload.roomName, room);
     }
 
+    // Find the player
     const player = this.players.get(client.getPlayerId());
-
     if (room.gameState !== "waiting" && !room.players.has(player.id)) {
       client.send({
         type: "on_join_room",
         payload: { ...payload, success: false },
       });
       return;
+    } else if (room.gameState !== "waiting" && room.players.has(player.id)) {
+      // Player re-joining the room, send the current state
+      client.send({
+        type: "on_join_room",
+        payload: { ...payload, success: true },
+      });
     } else {
+      // Add player to room, wait for others
       player.roomId = room.id;
       if (!room.players.has(player.id)) {
         room.addPlayer(player);
       }
+      client.send({
+        type: "on_join_room",
+        payload: { ...payload, success: true },
+      });
     }
-
-    client.send({
-      type: "on_join_room",
-      payload: { ...payload, success: true },
-    });
 
     this.updatePlayersList(room.id);
   }
@@ -101,7 +127,7 @@ export class Game {
   public send(playerId: string, msg: GameMessage) {
     if (this.clients.has(playerId)) {
       this.clients.get(playerId).forEach((client) => {
-        logger.info("Sending message to client", playerId, msg);
+        logger.info("Sending message to client", { playerId: playerId }, msg);
         client.send(msg);
       });
     }
@@ -114,6 +140,15 @@ export class Game {
         this.send(playerId, msg);
       }
     }
+  }
+
+  private findRoom(playerId: string): Room {
+    for (const room of this.rooms.values()) {
+      if (room.players.has(playerId)) {
+        return room;
+      }
+    }
+    throw new Error("Player not in any room");
   }
 
   private updatePlayerName(playerId: string, newName: string) {

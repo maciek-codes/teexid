@@ -1,9 +1,10 @@
-import { PlayerStatus } from "@teexid/shared";
+import { PlayerStatus, Card } from "@teexid/shared";
 
 export class Player {
   constructor(public readonly id: string) {}
 
   private _name: string;
+  private _cards: Card[] = [];
   get name() {
     return this._name;
   }
@@ -42,5 +43,9 @@ export class Player {
   }
   public set status(v: PlayerStatus) {
     this._status = v;
+  }
+
+  public dealCards(cards: Card[]) {
+    this._cards.push(...cards);
   }
 }

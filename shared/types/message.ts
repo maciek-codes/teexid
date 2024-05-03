@@ -1,4 +1,4 @@
-import { PlayerState, Card, GameState, Scores } from "./models";
+import { PlayerState, Card, GameState, Scores, TurnState } from "./models";
 
 export type JoinRoom = {
   type: "join_room";
@@ -43,26 +43,13 @@ export type OnRoomStateUpdated = {
     state: {
       gameState: GameState;
       turnState: TurnState;
+      cardsDealt: Card[];
       turnNumber: number;
       players: PlayerState[];
       story: string;
       cardsSubmitted: Card[];
       scores: Scores[];
     };
-  };
-};
-
-export type OnPlayersListUpdated = {
-  type: "on_players_list_updated";
-  payload: {
-    players: PlayerState[];
-  };
-};
-
-export type OnCardsDealt = {
-  type: "on_cards_dealt";
-  payload: {
-    cards: Card[];
   };
 };
 
@@ -118,7 +105,7 @@ type OnRoundEnded = {
   type: "on_round_ended";
   payload: {
     storyCard: Card;
-    storyPlayerId: string;
+    storyPlayerName: string;
     scores: Scores;
   };
 };
@@ -135,7 +122,6 @@ export type MessageType =
   | OnNameUpdated
   | StartGame
   | OnPlayersListUpdated
-  | OnCardsDealt
   | SubmitStory
   | SubmitStoryCard
   | VoteForStoryCard

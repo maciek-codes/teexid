@@ -1,8 +1,9 @@
 import {
   Card,
-  PlayerState,
-  MessageType,
   GameState,
+  MessageType,
+  PlayerState,
+  Scores,
   TurnState,
 } from "@teexid/shared";
 import { create } from "zustand";
@@ -46,15 +47,16 @@ type RoomState = {
   gameState: GameState;
   turnNumber: number;
   turnState: TurnState;
-  // storyCard: number;
-  // storyPlayerId: string;
+
   cards: Card[];
   storyCards: Card[];
   cardsSubmitted: Card[];
   players: PlayerState[];
   story: string;
-  //gameLog: GameLogEntry[];
-  //submittedBy: string[];
+  // Set after the round has ended
+  storyCard: Card | null;
+  storyPlayerName: string | null;
+  scores: Scores[] | null;
 };
 
 interface GameStore {
@@ -102,6 +104,9 @@ export const useGameStore = create<GameStore>()(
       gameState: "waiting",
       story: "",
       cards: [],
+      storyCard: null,
+      storyPlayerName: "",
+      scores: null,
     },
 
     setRoomName: (newName) => set({ roomName: newName.toLocaleLowerCase() }),
@@ -129,24 +134,16 @@ export const useGameStore = create<GameStore>()(
             room: {
               ...state.room,
               ...message.payload.state,
+              cards: message.payload.state.cardsDealt,
             },
           }));
           break;
         }
-        case "on_cards_dealt": {
+        case "on_round_ended": {
           set((state) => ({
             room: {
               ...state.room,
-              cards: message.payload.cards,
-            },
-          }));
-          break;
-        }
-        case "on_players_list_updated": {
-          set((state) => ({
-            room: {
-              ...state.room,
-              players: message.payload.players,
+              ...message.payload,
             },
           }));
           break;

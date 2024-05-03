@@ -19,6 +19,7 @@ export type PlayerStatus =
 
 export type PlayerState = {
   name: string;
+  id: string;
   ready: boolean;
   points: number;
   status: PlayerStatus;

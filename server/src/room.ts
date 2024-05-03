@@ -88,12 +88,6 @@ export class Room {
     for (const player of this.players.values()) {
       const newCards = this._deck.splice(0, 5);
       player.dealCards(newCards);
-      this.game.send(player.id, {
-        type: "on_cards_dealt",
-        payload: {
-          cards: newCards,
-        },
-      });
     }
 
     this.updateRoomState();
@@ -195,10 +189,6 @@ export class Room {
   }
 
   private scoreRound() {
-    if (this.scores.length !== this.currentTurn + 1) {
-      this.scores.push({});
-    }
-
     let roundScore: Scores = {} as Scores;
 
     const allRight = Array.from(this.votes.entries()).every(([_, votedFor]) => {
@@ -263,7 +253,7 @@ export class Room {
 
   updateRoomState() {
     const players = Array.from(this.players.values());
-    this.game.sendAll(this.id, {
+    this.game.sendAll(this.id, (p) => ({
       type: "on_room_state_updated",
       payload: {
         roomName: this.name,
@@ -272,8 +262,10 @@ export class Room {
           turnState: this.turnState,
           turnNumber: this.currentTurn,
           story: this.story,
+          cardsDealt: p.cardsDealt,
           players: players.map((p) => ({
             name: p.name,
+            id: p.id,
             ready: p.ready,
             points: p.points,
             status: p.status,
@@ -287,18 +279,18 @@ export class Room {
               : ([] as Card[]),
         },
       },
-    });
+    }));
   }
 
   private sendRoundResults() {
-    this.game.sendAll(this.id, {
+    this.game.sendAll(this.id, () => ({
       type: "on_round_ended",
       payload: {
         storyCard: { cardId: this.storyCard },
-        storyPlayerId: this.storyPlayerId,
+        storyPlayerName: this.players.get(this.storyPlayerId)?.name,
         scores: this.scores[this.scores.length - 1],
       },
-    });
+    }));
   }
 }
 

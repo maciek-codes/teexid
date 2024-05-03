@@ -1,14 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 
-import { useJoinRoom } from "./queries/useJoinRoom";
+import { useWebsocketContext } from "./context/WebsocketContextProvider";
 import { DebugInfo } from "./components/DebugInfo";
 import { useGameStore } from "./stores/GameStore";
 
 export const Lobby = (): JSX.Element => {
-  const joinRoom = useJoinRoom();
+  const { send } = useWebsocketContext();
   const [roomName, setRoomName, playerName, setPlayerName] = useGameStore(
     (state) => [
       state.roomName,
@@ -17,11 +17,22 @@ export const Lobby = (): JSX.Element => {
       state.setPlayerName,
     ]
   );
+
+  const [roomNameLocal, setRoomNameLocal] = useState(roomName);
+  const [playerNameLocal, setPlayerNameLocal] = useState(playerName);
   const navigate = useNavigate();
 
   const joinRoomClick = () => {
-    joinRoom();
-    navigate(`/rooms/${roomName}`);
+    setRoomName(roomNameLocal);
+    setPlayerName(playerNameLocal);
+    send({
+      type: "join_room",
+      payload: {
+        roomName: roomNameLocal,
+        playerName: playerNameLocal,
+      },
+    });
+    navigate(`/rooms/${roomNameLocal}`);
   };
 
   if (location.pathname.indexOf("/rooms/") === 0) {
@@ -53,8 +64,8 @@ export const Lobby = (): JSX.Element => {
             placeholder="Room name"
             background="white"
             color="black"
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value.trim())}
+            value={roomNameLocal}
+            onChange={(e) => setRoomNameLocal(e.target.value.trim())}
           />
 
           <Input
@@ -62,13 +73,13 @@ export const Lobby = (): JSX.Element => {
             placeholder="Player name"
             background="white"
             color="black"
-            value={playerName}
-            onChange={(e) => setPlayerName(e.target.value.trim())}
+            value={playerNameLocal}
+            onChange={(e) => setPlayerNameLocal(e.target.value.trim())}
           />
 
           <Button
             className="rounded-full bg-purple-700 text-white"
-            isDisabled={roomName === "" || playerName === ""}
+            isDisabled={roomNameLocal === "" || playerNameLocal === ""}
             onClick={joinRoomClick}
             backgroundColor="#B0CC69"
           >

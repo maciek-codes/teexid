@@ -41,7 +41,7 @@ export const StoryInput: React.FC = () => {
         {selectedCard && (
           <CardView card={{ cardId: selectedCard.cardId } as Card} />
         )}
-        {turnState === "selecting_cards" && (
+        {turnState === "guessing" && (
           <Text fontSize="lg" mb={5}>
             Waiting for others to submit the cards
           </Text>
@@ -51,10 +51,10 @@ export const StoryInput: React.FC = () => {
             <Text fontSize="lg" mb={5}>
               Waiting for others to vote...
             </Text>
-            <Text>Others submitted:</Text>
+            {/*<Text>Others submitted:</Text>
             <CardSelector
               cards={storyCards.filter((c) => c.cardId !== storyCardSubmitted)}
-            />
+        />*/}
           </>
         )}
       </Stack>

@@ -7,7 +7,7 @@ describe("Game", () => {
     it("should create a room", () => {
       const game = new Game();
       game.createRoom("test");
-      expect(game.rooms.size).toBe(1);
+      expect(game.roomsByRoomId.size).toBe(1);
     });
   });
 

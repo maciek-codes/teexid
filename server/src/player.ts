@@ -13,6 +13,11 @@ export class Player {
     this._name = v;
   }
 
+  /** Cards that were dealt to that player */
+  public get cardsDealt(): Card[] {
+    return this._cards;
+  }
+
   private _roomId: string;
   get roomId(): string {
     return this._roomId;

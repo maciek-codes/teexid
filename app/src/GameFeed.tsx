@@ -11,6 +11,7 @@ import CardView from "./components/CardView";
 import { StoryInput } from "./components/StoryInput";
 import { useGameStore } from "./stores/GameStore";
 import { useWebsocketContext } from "./context/WebsocketContextProvider";
+import { TurnResults } from "./TurnResults";
 
 export const GameFeed: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -35,7 +36,8 @@ export const GameFeed: React.FC = () => {
   const isPickingCard =
     players.find((p) => p.name === playerName)?.status === "picking_card";
 
-  const isVoting = players.some((p) => p.status === "voting");
+  // Are we all voting
+  const isVoting = turnState === "voting";
 
   // Send a card for the given story
   const submitCardForStory = () => {
@@ -86,9 +88,15 @@ export const GameFeed: React.FC = () => {
         {isPlaying && !isTellingStory && isPickingCard && (
           <Text textAlign="center">Now you select a card for the story.</Text>
         )}
+        {isPlaying && isTellingStory && isPickingCard && (
+          <Text textAlign="center">
+            Waiting for other to pick cards for your story.
+          </Text>
+        )}
         {isPlaying && turnState === "voting" && (
           <Text fontSize="xl">Voting!</Text>
         )}
+        {isPlaying && turnState === "finished" && <TurnResults />}
         {gameState === "finished" && <Text fontSize="xl">Game ended!</Text>}
       </Box>
       {isPlaying && (
@@ -109,7 +117,10 @@ export const GameFeed: React.FC = () => {
             players.some((p) => p.status === "story_telling") && (
               <Text>Waiting for the story teller...</Text>
             )}
-          {isPlaying && turnState === "selecting_cards" && !isTellingStory && (
+          {/*
+          {isPlaying &&
+            turnState === "selecting_cards" &&
+            !isTellingStory &&
             <>
               <Text fontSize="lg" mb={5}>
                 You submitted this card for the "<Text as="em">{story}</Text>"
@@ -118,12 +129,11 @@ export const GameFeed: React.FC = () => {
               <CardView
                 card={{ cardId: submitQuery.data.submittedCard } as Card}
               />
-            </>
-          )}
+          </>}
+          */}
           {isPlaying && isTellingStory && <StoryInput />}
           {isPlaying &&
             isVoting &&
-            !isTellingStory &&
             cardsSubmitted &&
             cardsSubmitted?.length !== null && (
               <Voting
@@ -134,7 +144,7 @@ export const GameFeed: React.FC = () => {
             )}
         </Box>
       )}
-      {gameState === "ended" && (
+      {gameState === "finished" && (
         <Box>
           <PlayerScores playersList={players} />
         </Box>

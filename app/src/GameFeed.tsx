@@ -9,7 +9,6 @@ import PlayerScores from "./PlayerScoreList";
 import CardView from "./components/CardView";
 import { StoryInput } from "./components/StoryInput";
 import { useGameStore } from "./stores/GameStore";
-import { useWebsocketContext } from "./context/WebsocketContextProvider";
 import { TurnResults } from "./TurnResults";
 
 export const GameFeed: React.FC = () => {
@@ -23,7 +22,7 @@ export const GameFeed: React.FC = () => {
   const turnNumber = useGameStore((s) => s.room.turnNumber);
   const gameState = useGameStore((s) => s.room.gameState);
 
-  const { send } = useWebsocketContext();
+  const send = useGameStore((s) => s.send);
 
   const player = players.find((p) => p.name === playerName);
   const isTellingStory =

@@ -1,16 +1,7 @@
 import React, { useMemo } from "react";
-import {
-  Avatar,
-  Box,
-  Button,
-  HStack,
-  List,
-  ListItem,
-  Text,
-} from "@chakra-ui/react";
+import { Box, Button, HStack, List, ListItem, Text } from "@chakra-ui/react";
 import { PlayerState } from "@teexid/shared";
 import { useGameStore } from "./stores/GameStore";
-import { useWebsocketContext } from "./context/WebsocketContextProvider";
 import { PlayerAvatar } from "./components/PlayerAvatar";
 
 const MIN_PLAYERS = 2;
@@ -57,7 +48,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
               </Box>
             ) : null}
             {player.status === "submitted_card" ? <i> &#127183;</i> : null}
-            {player.status === "finished" ? <i> &#128499;</i> : null}
+            {player.status === "vote_submitted" ? <i> &#128499;</i> : null}
           </HStack>
           {!player.ready && (
             <Text ml={2} color={"#F2F3ED"}>
@@ -83,7 +74,7 @@ export const PlayerList: React.FC = () => {
   const gameState = useGameStore((s) => s.room.gameState);
   const gameStarted = gameState !== "waiting";
   const turnState = useGameStore((s) => s.room.turnState);
-  const { send } = useWebsocketContext();
+  const send = useGameStore((s) => s.send);
 
   const onReadyClick = () => {
     send({ type: "mark_ready" });

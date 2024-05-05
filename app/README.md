@@ -1,11 +1,15 @@
 # TODO
 
 - [x] - TS
-- [ ] - Send cards
-- [ ] - Send room state on re-join
-- [ ] - Card submission
-- [ ] - Voting
+- [x] - Send cards
+- [x] - Send room state on re-join
+- [x] - Card submission
+- [x] - Voting
     - Submit votes
+- [] - Game end
+
+- [] - UI
+
 -
 - Need to keep history of votes at the end of voting
 - Sync server state to supabase

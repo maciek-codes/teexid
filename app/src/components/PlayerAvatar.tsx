@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Avatar, AvatarProps } from "@chakra-ui/react";
+import { Avatar, AvatarBadge, AvatarProps } from "@chakra-ui/react";
 
 import { PlayerState } from "@teexid/shared";
 
@@ -26,6 +26,9 @@ export const PlayerAvatar = ({
       backgroundColor={toColor(player.name)}
       color="#F2F3ED"
       size={size}
-    />
+    >
+      {player.inactive && <AvatarBadge boxSize="1em" bg="yellow.300" />}
+      {!player.inactive && <AvatarBadge boxSize="1em" bg="green.300" />}
+    </Avatar>
   );
 };

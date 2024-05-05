@@ -1,21 +1,22 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { shallow } from "zustand/shallow";
 
 import { Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 
-import { useWebsocketContext } from "./context/WebsocketContextProvider";
 import { DebugInfo } from "./components/DebugInfo";
 import { useGameStore } from "./stores/GameStore";
 
 export const Lobby = (): JSX.Element => {
-  const { send } = useWebsocketContext();
+  const send = useGameStore((s) => s.send);
   const [roomName, setRoomName, playerName, setPlayerName] = useGameStore(
     (state) => [
       state.roomName,
       state.setRoomName,
       state.playerName,
       state.setPlayerName,
-    ]
+    ],
+    shallow
   );
 
   const [roomNameLocal, setRoomNameLocal] = useState(roomName);
@@ -25,13 +26,6 @@ export const Lobby = (): JSX.Element => {
   const joinRoomClick = () => {
     setRoomName(roomNameLocal);
     setPlayerName(playerNameLocal);
-    send({
-      type: "join_room",
-      payload: {
-        roomName: roomNameLocal,
-        playerName: playerNameLocal,
-      },
-    });
     navigate(`/rooms/${roomNameLocal}`);
   };
 

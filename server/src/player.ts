@@ -1,9 +1,12 @@
 import { PlayerStatus, Card } from "@teexid/shared";
 
+const SECONDS_INACTIVE = 30;
+
 export class Player {
   constructor(public readonly id: string) {}
 
   private _name: string;
+  private _lastSeen: number = Date.now();
   private _cards: Card[] = [];
   get name() {
     return this._name;
@@ -11,6 +14,13 @@ export class Player {
 
   set name(v: string) {
     this._name = v;
+  }
+
+  get lastSeen() {
+    return this._lastSeen;
+  }
+  set lastSeen(date) {
+    this._lastSeen = date;
   }
 
   /** Cards that were dealt to that player */
@@ -40,6 +50,10 @@ export class Player {
   }
   public set ready(v: boolean) {
     this._ready = v;
+  }
+
+  public get inactive() {
+    return Date.now() - this._lastSeen > SECONDS_INACTIVE * 1000;
   }
 
   private _status: PlayerStatus = "unknown";

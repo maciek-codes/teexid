@@ -31,7 +31,6 @@ export class Room {
   players: Map<string, Player> = new Map();
   points: Map<string, number> = new Map();
   votes: Map<string, string> = new Map();
-  history: Move[] = [];
   currentTurn: number = 0;
 
   private storyCard: number;
@@ -61,13 +60,6 @@ export class Room {
       throw new Error("Game already started");
     }
 
-    this.history.push({
-      timestamp: new Date(),
-      playerId: player.id,
-      action: "join_room",
-      payload: { playerName: player.name },
-    });
-
     this.players.set(player.id, player);
     this.updateRoomState();
     return player;
@@ -84,12 +76,6 @@ export class Room {
       this.currentTurn % this.players.size
     ];
     this.players.get(this.storyPlayerId).status = "story_telling";
-
-    this.history.push({
-      timestamp: new Date(),
-      action: "start_turn",
-      payload: {},
-    });
 
     for (const player of this.players.values()) {
       const newCards = this._deck.splice(0, 5 - player.cardsDealt.length);
@@ -126,14 +112,6 @@ export class Room {
 
     // Add story card to the deck
     this._cardsOnTable.push({ cardId: actualStoryCard, from: playerId });
-
-    this.history.push({
-      timestamp: new Date(),
-      playerId: playerId,
-      action: "submit_story",
-      payload: { story },
-    });
-
     this.updateRoomState();
   }
 
@@ -328,6 +306,7 @@ export class Room {
               ready: p.ready,
               points: p.points,
               status: p.status,
+              inactive: p.inactive,
             })),
             scores: this.scores,
             cardsSubmitted: cardsToShow,
@@ -341,6 +320,7 @@ export class Room {
     this.game.sendAll(this.id, () => ({
       type: "on_round_ended",
       payload: {
+        storyCard: { cardId: this.storyCard },
         storyPlayerName: this.players.get(this.storyPlayerId)?.name,
         scores: this.scores[this.scores.length - 1],
       },

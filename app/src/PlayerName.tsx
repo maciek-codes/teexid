@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { shallow } from "zustand/shallow";
 import {
   Box,
   Button,
@@ -15,18 +16,17 @@ import {
 } from "@chakra-ui/react";
 
 import { useGameStore } from "./stores/GameStore";
-import { useWebsocketContext } from "./context/WebsocketContextProvider";
 
 interface PlayerEditProps {
   onClose?: () => void;
 }
 
 export const PlayerEdit = ({ onClose }: PlayerEditProps): JSX.Element => {
-  const [name, setName] = useGameStore((state) => [
-    state.playerName,
-    state.setPlayerName,
-  ]);
-  const { send } = useWebsocketContext();
+  const [name, setName] = useGameStore(
+    (state) => [state.playerName, state.setPlayerName],
+    shallow
+  );
+  const send = useGameStore((s) => s.send);
   const [value, setValue] = useState<string>(name ?? "");
 
   const updateName = () => {

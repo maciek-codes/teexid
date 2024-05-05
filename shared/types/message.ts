@@ -121,7 +121,6 @@ export type MessageType =
   | UpdateName
   | OnNameUpdated
   | StartGame
-  | OnPlayersListUpdated
   | SubmitStory
   | SubmitStoryCard
   | VoteForStoryCard

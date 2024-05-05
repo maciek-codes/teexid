@@ -5,7 +5,6 @@ import React, { useState } from "react";
 import CardSelector from "./CardSelector";
 import CardView from "./CardView";
 import { useGameStore } from "../stores/GameStore";
-import { useWebsocketContext } from "../context/WebsocketContextProvider";
 
 export const StoryInput: React.FC = () => {
   const turnState = useGameStore((state) => state.room.turnState);
@@ -14,7 +13,7 @@ export const StoryInput: React.FC = () => {
   const [storyText, setStoryText] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
-  const { send } = useWebsocketContext();
+  const send = useGameStore((s) => s.send);
 
   const submitStory = () => {
     if (storyText !== "" && selectedCard !== null) {

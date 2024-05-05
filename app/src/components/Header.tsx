@@ -1,14 +1,16 @@
 import { Box, Flex, Heading, Link, Text } from "@chakra-ui/react";
-import { Link as RouterLink } from "react-router-dom";
 import React from "react";
+import { Link as RouterLink } from "react-router-dom";
+import { shallow } from "zustand/shallow";
+
 import { useGameStore } from "../stores/GameStore";
 import PlayerName from "../PlayerName";
 
 const Header: React.FC = () => {
-  const [playerName, roomName] = useGameStore((s) => [
-    s.playerName,
-    s.roomName,
-  ]);
+  const [playerName, roomName] = useGameStore(
+    (s) => [s.playerName, s.roomName],
+    shallow
+  );
   return (
     <Heading size="xl" pt="10px" background="#ac4fc2" px="0.5em" py="0.25em">
       <Flex

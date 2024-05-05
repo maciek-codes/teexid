@@ -1,35 +1,44 @@
 import React, { useEffect } from "react";
+import { shallow } from "zustand/shallow";
 
-import { Text, Progress, Stack } from "@chakra-ui/react";
+import { Box, CircularProgress, Stack, Text } from "@chakra-ui/react";
 
-import { useJoinRoom } from "./queries/useJoinRoom";
 import { GameFeed } from "./GameFeed";
 import { DebugInfo } from "./components/DebugInfo";
 import { useGameStore } from "./stores/GameStore";
 import { useNavigate } from "react-router-dom";
 
 const GameRoom: React.FC = () => {
-  useJoinRoom();
-  const [isConnected, roomState] = useGameStore((state) => [
-    state.isConnected,
-    state.roomState,
-  ]);
+  const [connectionState, roomState, joinRoom] = useGameStore(
+    (s) => [s.connectionState, s.roomState, s.joinRoom],
+    shallow
+  );
   const navigate = useNavigate();
+  const isConnected = connectionState === "connected";
 
   useEffect(() => {
-    if (!isConnected) {
+    if (connectionState !== "connected" && roomState === "not_joined") {
+      joinRoom();
+    } else if (isConnected && roomState === "failed_to_join") {
       navigate("/");
     }
-  }, [isConnected]);
+  }, [isConnected, roomState]);
+
+  if (!isConnected) {
+    return (
+      <Box backgroundColor="#ac4fc2" color="#F2F3ED">
+        <CircularProgress isIndeterminate={true} />
+        <Text> Connecting...</Text>
+      </Box>
+    );
+  }
 
   if (roomState === "joining") {
     return (
-      <>
-        <Text>Loading ...</Text>
-        <Progress isIndeterminate={true} isAnimated={true}>
-          Joining the room
-        </Progress>
-      </>
+      <Box backgroundColor="#ac4fc2" color="#F2F3ED">
+        <CircularProgress isIndeterminate={true} />
+        <Text> Joining the room {roomState}</Text>
+      </Box>
     );
   }
 

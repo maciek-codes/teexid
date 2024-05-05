@@ -185,6 +185,13 @@ export class Game {
     });
   }
 
+  public updatePlayerLastSeen(playerId: string) {
+    const player = this.players.get(playerId);
+    if (player) {
+      player.lastSeen = Date.now();
+    }
+  }
+
   private updatePlayerRoomState(player: Player) {
     const room = this.roomsByRoomId.get(player.roomId);
     if (!room) {

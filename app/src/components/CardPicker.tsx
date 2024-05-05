@@ -43,16 +43,18 @@ export const CardPicker: React.FC<CardPickerProps> = ({
           }}
         />
       </Box>
-      <Button
-        mt="10px"
-        alignSelf={"center"}
-        width="200px"
-        isActive={selectedCard !== null}
-        isDisabled={selectedCard === null}
-        onClick={() => onSelectedCard()}
-      >
-        {buttonText}
-      </Button>
+      {buttonText !== "" && (
+        <Button
+          mt="10px"
+          alignSelf={"center"}
+          width="200px"
+          isActive={selectedCard !== null}
+          isDisabled={selectedCard === null}
+          onClick={() => onSelectedCard()}
+        >
+          {buttonText}
+        </Button>
+      )}
     </Stack>
   );
 };

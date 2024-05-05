@@ -1,13 +1,14 @@
-import React from "react";
-
 import { Stack, Text } from "@chakra-ui/react";
+import React from "react";
+import { shallow } from "zustand/shallow";
+
 import { useGameStore } from "../stores/GameStore";
 
 export const DebugInfo = (): JSX.Element => {
-  const [playerId, isConnected] = useGameStore((state) => [
-    state.playerId,
-    state.isConnected,
-  ]);
+  const [playerId, isConnected] = useGameStore(
+    (state) => [state.playerId, state.isConnected],
+    shallow
+  );
   return (
     <Stack
       fontSize="xs"

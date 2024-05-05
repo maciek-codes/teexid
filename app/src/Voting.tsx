@@ -5,7 +5,6 @@ import { Card } from "@teexid/shared";
 
 import { CardPicker } from "./components/CardPicker";
 import CardView from "./components/CardView";
-import { useWebsocketContext } from "./context/WebsocketContextProvider";
 import { useGameStore } from "./stores/GameStore";
 
 type VotingProps = {
@@ -27,7 +26,7 @@ export const Voting = ({
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
   const [votedCard, setVotedCard] = useState<Card | null>(null);
   const [voted, setVoted] = useState<boolean>(false);
-  const { send } = useWebsocketContext();
+  const send = useGameStore((s) => s.send);
 
   const voteForCard = useCallback(() => {
     if (selectedCard !== null) {

@@ -14,12 +14,9 @@ export class Client {
   // Represents the unique identifier for the player
   // Player can have multiple connections
   private playerId: string;
-  private lastSeen: Date;
-
   constructor(ws: WebSocket, game: Game) {
     this.uuid = uuidv4();
     this.ws = ws;
-    this.lastSeen = new Date();
     this.game = game;
   }
 
@@ -28,9 +25,15 @@ export class Client {
   }
 
   public handleMessage(msg: MessageType) {
-    logger.info("handling message", msg);
+    logger.info("handling message", {
+      type: msg.type,
+      payload: ("payload" in msg && msg?.payload) ?? {},
+    });
+
     if (msg.type === "ping") {
-      this.lastSeen = new Date();
+      if (this.playerId !== "") {
+        this.game.updatePlayerLastSeen(this.playerId);
+      }
       this.send({ type: "pong" });
     } else if (msg.type === "identify") {
       this.playerId = msg.payload.playerId;

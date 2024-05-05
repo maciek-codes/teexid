@@ -23,6 +23,7 @@ export type PlayerState = {
   ready: boolean;
   points: number;
   status: PlayerStatus;
+  inactive: boolean;
 };
 
 export type Card = {

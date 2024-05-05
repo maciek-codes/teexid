@@ -22,7 +22,7 @@ const App = () => {
           element: <Lobby />,
         },
         {
-          path: "/rooms/:roomId",
+          path: "/room/:roomId",
           element: <GameRoom />,
         },
         {

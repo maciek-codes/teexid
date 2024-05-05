@@ -61,6 +61,10 @@ interface RoomState {
   storyCard: Card | null;
   storyPlayerName: string | null;
   scores: Scores[] | null;
+  // What story card the player submitted
+  submittedCard: Card | null;
+  // What story card the player voted for
+  votedForCard: Card | null;
 }
 
 interface GameStoreState {
@@ -70,24 +74,21 @@ interface GameStoreState {
   roomState: JoinedState;
   room: RoomState;
   playerName: string;
-  isConnected: boolean;
   connectionState: "not_connected" | "connecting" | "connected";
 }
 
 interface GameStoreActions {
-  setRoomName: (name: string) => void;
   setRoomState: (state: JoinedState) => void;
   setPlayerName: (playerName: string) => void;
   setConnected: (isConnected: boolean) => void;
   onAction: (message: MessageType) => void;
-  joinRoom: () => void;
+  joinRoom: (roomName) => void;
   send: (message: MessageType) => void;
 }
 
 type GameStore = GameStoreState & GameStoreActions;
 
 const INITIAL_STATE: GameStoreState = {
-  isConnected: false,
   ws: null,
   roomState: "not_joined",
   playerName: getPlayerNameFromLocalStorage(),
@@ -107,6 +108,8 @@ const INITIAL_STATE: GameStoreState = {
     storyCard: null,
     storyPlayerName: "",
     scores: null,
+    submittedCard: null,
+    votedForCard: null,
   },
   connectionState: "not_connected",
 };
@@ -114,7 +117,7 @@ const INITIAL_STATE: GameStoreState = {
 export const useGameStore = create<GameStore & GameStoreActions>()(
   devtools((set, get) => {
     const onConnect = () => {
-      set({ isConnected: true });
+      set({ connectionState: "connected" });
       get().send({
         type: "identify",
         payload: { playerId: get().playerId },
@@ -129,7 +132,7 @@ export const useGameStore = create<GameStore & GameStoreActions>()(
 
     const onClose = (msg: CloseEvent) => {
       console.log("onClose", msg);
-      set({ isConnected: false });
+      set({ connectionState: "not_connected" });
     };
 
     // Log errors
@@ -138,15 +141,17 @@ export const useGameStore = create<GameStore & GameStoreActions>()(
     };
 
     const connect = () => {
+      set({ connectionState: "connecting" });
       const ws = new WebSocket(getWsHost());
+      set({ ws: ws });
       ws.addEventListener("open", onConnect);
       ws.addEventListener("message", onMsg);
       ws.addEventListener("close", onClose);
       ws.addEventListener("error", onError);
-      set({ ws: ws });
     };
 
     const disconnect = () => {
+      set({ connectionState: "not_connected" });
       const ws = get().ws;
       ws?.removeEventListener("open", onConnect);
       ws?.removeEventListener("message", onMsg);
@@ -174,15 +179,15 @@ export const useGameStore = create<GameStore & GameStoreActions>()(
         set({ playerName: newName });
         setPlayerNameInLocalStorage(newName);
       },
-      setRoomName: (newName) => set({ roomName: newName.toLocaleLowerCase() }),
       setConnected: (isConnected) => set({ isConnected }),
       setRoomState: (roomState: JoinedState) => set({ roomState }),
-      joinRoom: async () => {
-        set({ roomState: "joining" });
+      joinRoom: async (roomName: string) => {
+        const roomNameNormalized = roomName.toLowerCase();
+        set({ roomName: roomNameNormalized, roomState: "joining" });
         get().send({
           type: "join_room",
           payload: {
-            roomName: get().roomName,
+            roomName: roomNameNormalized,
             playerName: get().playerName,
           },
         });

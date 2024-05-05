@@ -43,6 +43,7 @@ export const runServer = () => {
     ws.on("message", (data: Buffer) => {
       const message = data.toString();
       const parsed = JSON.parse(message) as MessageType;
+      console.log("message", { data: message });
       clients.get(ws)?.handleMessage(parsed);
     });
   });

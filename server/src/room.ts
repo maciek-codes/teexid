@@ -15,13 +15,6 @@ import { logger } from "./logger";
 
 const cardsTotal = 55;
 
-type Move = {
-  timestamp: Date;
-  playerId?: string;
-  action: MessageType["type"];
-  payload: unknown;
-};
-
 export class Room {
   private readonly game: Game;
   private readonly _id: string;
@@ -68,21 +61,34 @@ export class Room {
   startTurn() {
     this._gameState = "playing";
     this.turnState = "waiting_for_story";
-
     //Discard the deck
     this._cardsOnTable = [];
-    this.currentTurn += 1;
-    this.storyPlayerId = Array.from(this.players.keys())[
-      this.currentTurn % this.players.size
-    ];
-    this.players.get(this.storyPlayerId).status = "story_telling";
 
+    // Move to the next round
+    this.currentTurn += 1;
+
+    // Empty the votes
+    this.votes.clear();
+
+    // Set the story player
+    this.pickNextStoryTeller();
+
+    // Deal new cards
     for (const player of this.players.values()) {
       const newCards = this._deck.splice(0, 5 - player.cardsDealt.length);
       player.dealCards(newCards);
     }
 
     this.updateRoomState();
+  }
+
+  pickNextStoryTeller() {
+    this.storyPlayerId = Array.from(this.players.keys())[
+      this.currentTurn % this.players.size
+    ];
+
+    // Set the story teller
+    this.players.get(this.storyPlayerId).status = "story_telling";
   }
 
   public submitStory(playerId: string, story: string, actualStoryCard: number) {
@@ -261,9 +267,17 @@ export class Room {
     this.game.sendAll(this.id, (p) => {
       const isStoryTeller = this.storyPlayerId === p.id;
       const cardsToShow = [];
-      const cardFromPlayer = this._cardsOnTable.find(
-        (c) => c.from === p.id
-      )?.cardId;
+      const cardFromPlayer =
+        this._cardsOnTable.find((c) => c.from === p.id)?.cardId ?? null;
+
+      const playersVote = this.votes.has(p.id) ? this.votes.get(p.id) : null;
+      const cardPlayerVotedFor = playersVote
+        ? this._cardsOnTable.find((c) => c.from === playersVote)
+        : null;
+
+      const votesForStoryCard = Array.from(this.votes.values()).filter(
+        (voteFor) => voteFor === this.storyPlayerId
+      );
 
       // Story player gets to see what other submitted
       if (isStoryTeller && ["guessing", "voting"].includes(this.turnState)) {
@@ -298,6 +312,14 @@ export class Room {
             gameState: this.gameState,
             turnState: this.turnState,
             turnNumber: this.currentTurn,
+            turnResult:
+              this.turnState === "finished"
+                ? votesForStoryCard.length == players.values.length - 1
+                  ? "everyone_guessed"
+                  : votesForStoryCard.length === 0
+                  ? "nobody_guessed"
+                  : "story_guessed"
+                : null,
             story: this.story,
             cardsDealt: p.cardsDealt,
             players: players.map((p) => ({
@@ -310,6 +332,10 @@ export class Room {
             })),
             scores: this.scores,
             cardsSubmitted: cardsToShow,
+            submittedCard: cardFromPlayer ? { cardId: cardFromPlayer } : null,
+            votedForCard: cardPlayerVotedFor
+              ? { cardId: cardPlayerVotedFor.cardId }
+              : null,
           },
         },
       };

@@ -8,14 +8,8 @@ import { DebugInfo } from "./components/DebugInfo";
 import { useGameStore } from "./stores/GameStore";
 
 export const Lobby = (): JSX.Element => {
-  const send = useGameStore((s) => s.send);
-  const [roomName, setRoomName, playerName, setPlayerName] = useGameStore(
-    (state) => [
-      state.roomName,
-      state.setRoomName,
-      state.playerName,
-      state.setPlayerName,
-    ],
+  const [roomName, playerName, setPlayerName] = useGameStore(
+    (state) => [state.roomName, state.playerName, state.setPlayerName],
     shallow
   );
 
@@ -24,12 +18,11 @@ export const Lobby = (): JSX.Element => {
   const navigate = useNavigate();
 
   const joinRoomClick = () => {
-    setRoomName(roomNameLocal);
     setPlayerName(playerNameLocal);
-    navigate(`/rooms/${roomNameLocal}`);
+    navigate(`/room/${roomNameLocal}`);
   };
 
-  if (location.pathname.indexOf("/rooms/") === 0) {
+  if (location.pathname.indexOf("/room/") === 0) {
     return <></>;
   }
 

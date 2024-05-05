@@ -5,10 +5,12 @@ import { shallow } from "zustand/shallow";
 import { useGameStore } from "../stores/GameStore";
 
 export const DebugInfo = (): JSX.Element => {
-  const [playerId, isConnected] = useGameStore(
-    (state) => [state.playerId, state.isConnected],
+  const [playerId, connectionState] = useGameStore(
+    (state) => [state.playerId, state.connectionState],
     shallow
   );
+  const isConnected = connectionState === "connected";
+  const isConnecting = connectionState === "connecting";
   return (
     <Stack
       fontSize="xs"
@@ -19,7 +21,13 @@ export const DebugInfo = (): JSX.Element => {
       opacity={0.4}
     >
       <Text>Connection Status:</Text>
-      <Text as="b">{isConnected ? "Connected" : "Not Connected"}</Text>
+      <Text as="b">
+        {isConnected
+          ? "Connected"
+          : isConnecting
+          ? "Connecting..."
+          : "Not connected"}
+      </Text>
       <Text>{"Client ID: " + playerId}</Text>
     </Stack>
   );

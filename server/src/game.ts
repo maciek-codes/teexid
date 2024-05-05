@@ -144,6 +144,7 @@ export class Game {
         type: "on_join_room",
         payload: { ...payload, success: true },
       });
+      room.updateRoomState();
     }
   }
 

@@ -9,16 +9,17 @@ import { useGameStore } from "./stores/GameStore";
 import { useNavigate } from "react-router-dom";
 
 const GameRoom: React.FC = () => {
-  const [connectionState, roomState, joinRoom] = useGameStore(
-    (s) => [s.connectionState, s.roomState, s.joinRoom],
+  const [connectionState, roomState, joinRoom, roomName] = useGameStore(
+    (s) => [s.connectionState, s.roomState, s.joinRoom, s.roomName],
     shallow
   );
   const navigate = useNavigate();
   const isConnected = connectionState === "connected";
 
   useEffect(() => {
-    if (connectionState !== "connected" && roomState === "not_joined") {
-      joinRoom();
+    if (isConnected && roomState === "not_joined") {
+      const roomName = location.pathname.split("/").pop();
+      joinRoom(roomName);
     } else if (isConnected && roomState === "failed_to_join") {
       navigate("/");
     }
@@ -37,7 +38,7 @@ const GameRoom: React.FC = () => {
     return (
       <Box backgroundColor="#ac4fc2" color="#F2F3ED">
         <CircularProgress isIndeterminate={true} />
-        <Text> Joining the room {roomState}</Text>
+        <Text> Joining the room {roomName}</Text>
       </Box>
     );
   }

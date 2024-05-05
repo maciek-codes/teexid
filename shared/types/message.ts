@@ -41,14 +41,32 @@ export type OnRoomStateUpdated = {
   payload: {
     roomName: string;
     state: {
+      // What state are we in the game
       gameState: GameState;
+      // What state are we in the turn
       turnState: TurnState;
+      // Cards on hand
       cardsDealt: Card[];
+      // What turn are we on
       turnNumber: number;
+      // How this turn ended
+      turnResult:
+        | null
+        | "story_guessed"
+        | "nobody_guessed"
+        | "everyone_guessed";
+      // List of players and their states
       players: PlayerState[];
+      // Story
       story: string;
+      // What story cards were submitted by all players
       cardsSubmitted: Card[];
+      // List of scores for each round
       scores: Scores[];
+      // What story card the player submitted
+      submittedCard: Card | null;
+      // What story card the player voted for
+      votedForCard: Card | null;
     };
   };
 };

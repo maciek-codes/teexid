@@ -3,11 +3,12 @@ import Card from "../models/Card";
 
 interface CardViewProps {
   card: Card;
+  size?: "sm" | "lg";
   selected?: boolean;
   onClick?: (card: Card) => void;
 }
 
-const CardView = ({ card, selected, onClick }: CardViewProps) => {
+const CardView = ({ card, size = "lg", selected, onClick }: CardViewProps) => {
   const imageUrl = "/cards/" + (card?.cardId ?? "") + ".jpg";
 
   const handleClick = () => {
@@ -29,9 +30,9 @@ const CardView = ({ card, selected, onClick }: CardViewProps) => {
       filter={selected ?? false ? "brightness(110%)" : "brightness(90%)"}
       _hover={{ opacity: selected ?? false ? 1 : 0.5 }}
       transform={selected ?? false ? "scale(1.1)" : "auto"}
-      width={[150, 150, 180]}
-      height="240px"
-      minHeight={240}
+      width={size === "lg" ? [150, 150, 180] : [75, 75, 90]}
+      height={size === "lg" ? "240px" : "120px"}
+      minHeight={size === "lg" ? 240 : 120}
       margin="0"
     />
   );

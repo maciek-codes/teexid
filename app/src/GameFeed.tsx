@@ -6,7 +6,6 @@ import { PlayerList } from "./PlayerList";
 import { CardPicker } from "./components/CardPicker";
 import { Voting } from "./Voting";
 import PlayerScores from "./PlayerScoreList";
-import GameLog from "./components/GameLog";
 import CardView from "./components/CardView";
 import { StoryInput } from "./components/StoryInput";
 import { useGameStore } from "./stores/GameStore";
@@ -26,8 +25,9 @@ export const GameFeed: React.FC = () => {
 
   const { send } = useWebsocketContext();
 
+  const player = players.find((p) => p.name === playerName);
   const isTellingStory =
-    players.find((p) => p.name === playerName)?.status === "story_telling";
+    player?.status === "story_telling" || player?.status === "story_submitted";
 
   const storyPlayerName =
     players.find((p) => p.status === "story_telling")?.name ?? "";
@@ -54,7 +54,6 @@ export const GameFeed: React.FC = () => {
 
   return (
     <Stack pt={0}>
-      {/* What's happening in the room*/}
       <Box
         backgroundColor="#ac4fc2"
         color="#F2F3ED"
@@ -73,13 +72,25 @@ export const GameFeed: React.FC = () => {
             Turn {turnNumber}:
           </Text>
         )}
-        {isPlaying && isTellingStory && turnState !== "finished" && (
-          <Text fontSize="lg">Pick a card and type your story:</Text>
+        {isPlaying && isTellingStory && turnState === "guessing" && (
+          <>
+            <Text fontSize="lg">Others are guessing. Cards submitted:</Text>
+            <>
+              {cardsSubmitted.map((card, idx) => (
+                <CardView card={card} key={idx} />
+              ))}
+            </>
+          </>
         )}
+        {isPlaying &&
+          player?.status === "story_telling" &&
+          turnState !== "finished" && (
+            <Text fontSize="lg">Pick a card and type your story.</Text>
+          )}
         {isPlaying && isTellingStory && turnState !== "finished" && (
           <Text fontSize="lg">You are the story teller.</Text>
         )}
-        {isPlaying && !isTellingStory && turnState === "finished" && (
+        {isPlaying && !isTellingStory && turnState === "waiting_for_story" && (
           <Text textAlign="center">
             Waiting for <Text as="b">{storyPlayerName}</Text> to write a story
             and pick a card.
@@ -88,15 +99,17 @@ export const GameFeed: React.FC = () => {
         {isPlaying && !isTellingStory && isPickingCard && (
           <Text textAlign="center">Now you select a card for the story.</Text>
         )}
-        {isPlaying && isTellingStory && isPickingCard && (
+        {isPlaying && player?.status === "story_submitted" && isPickingCard && (
           <Text textAlign="center">
             Waiting for other to pick cards for your story.
           </Text>
         )}
         {isPlaying && turnState === "voting" && (
-          <Text fontSize="xl">Voting!</Text>
+          <Text fontSize="xl">Voting...</Text>
         )}
-        {isPlaying && turnState === "finished" && <TurnResults />}
+        {isPlaying && turnState === "finished" && (
+          <Text fontSize="xl">Round {turnNumber} ended!</Text>
+        )}
         {gameState === "finished" && <Text fontSize="xl">Game ended!</Text>}
       </Box>
       {isPlaying && (
@@ -107,7 +120,7 @@ export const GameFeed: React.FC = () => {
               story={story}
               selectedCard={selectedCard}
               setSelectedCard={setSelectedCard}
-              promptText="Pick a card"
+              promptText="Pick the best card that matches the story."
               buttonText="Submit a card"
               onSelectedCard={() => submitCardForStory()}
             />
@@ -115,7 +128,18 @@ export const GameFeed: React.FC = () => {
           {isPlaying &&
             !isTellingStory &&
             players.some((p) => p.status === "story_telling") && (
-              <Text>Waiting for the story teller...</Text>
+              <>
+                <Text>Cards in hand:</Text>
+                <CardPicker
+                  cards={cards}
+                  story={""}
+                  promptText=""
+                  buttonText=""
+                  selectedCard={null}
+                  setSelectedCard={() => {}}
+                  onSelectedCard={() => {}}
+                />
+              </>
             )}
           {/*
           {isPlaying &&
@@ -131,7 +155,7 @@ export const GameFeed: React.FC = () => {
               />
           </>}
           */}
-          {isPlaying && isTellingStory && <StoryInput />}
+          {isPlaying && player?.status === "story_telling" && <StoryInput />}
           {isPlaying &&
             isVoting &&
             cardsSubmitted &&
@@ -142,6 +166,15 @@ export const GameFeed: React.FC = () => {
                 storyCards={cardsSubmitted}
               />
             )}
+          {isPlaying &&
+            isVoting &&
+            (player?.status === "vote_submitted" ||
+              player?.status === "story_submitted") && (
+              <>
+                <Text>Waiting for other players to vote...</Text>
+              </>
+            )}
+          {isPlaying && turnState === "finished" && <TurnResults />}
         </Box>
       )}
       {gameState === "finished" && (
@@ -150,7 +183,6 @@ export const GameFeed: React.FC = () => {
         </Box>
       )}
       <PlayerList />
-      <GameLog />
     </Stack>
   );
 };

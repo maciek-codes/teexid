@@ -11,6 +11,9 @@ import {
 import { Player } from "./player";
 import { Game } from "./game";
 import { MessageType } from "../../shared/types/message";
+import { logger } from "./logger";
+
+const cardsTotal = 55;
 
 type Move = {
   timestamp: Date;
@@ -70,10 +73,13 @@ export class Room {
     return player;
   }
 
-  startGame() {
+  startTurn() {
     this._gameState = "playing";
     this.turnState = "waiting_for_story";
-    this.currentTurn = 0;
+
+    //Discard the deck
+    this._cardsOnTable = [];
+    this.currentTurn += 1;
     this.storyPlayerId = Array.from(this.players.keys())[
       this.currentTurn % this.players.size
     ];
@@ -81,12 +87,12 @@ export class Room {
 
     this.history.push({
       timestamp: new Date(),
-      action: "start_game",
+      action: "start_turn",
       payload: {},
     });
 
     for (const player of this.players.values()) {
-      const newCards = this._deck.splice(0, 5);
+      const newCards = this._deck.splice(0, 5 - player.cardsDealt.length);
       player.dealCards(newCards);
     }
 
@@ -112,8 +118,14 @@ export class Room {
     });
     this.story = story;
     this.storyPlayerId = playerId;
+
+    // remember the story card
     this.storyCard = actualStoryCard;
     this.turnState = "guessing";
+    this.removeCardFromPlayer(actualStoryCard, playerId);
+
+    // Add story card to the deck
+    this._cardsOnTable.push({ cardId: actualStoryCard, from: playerId });
 
     this.history.push({
       timestamp: new Date(),
@@ -128,6 +140,7 @@ export class Room {
   public submitStoryCard(playerId: string, cardId: number) {
     this._cardsOnTable.push({ cardId: cardId, from: playerId });
     this.players.get(playerId).status = "submitted_card";
+    this.removeCardFromPlayer(cardId, playerId);
 
     const players = Array.from(this.players.values()).filter(
       (p) => p.id !== this.storyPlayerId
@@ -191,60 +204,74 @@ export class Room {
   private scoreRound() {
     let roundScore: Scores = {} as Scores;
 
+    logger.info("Scoring round", {
+      votes: this.votes,
+    });
+
+    // Each player voted for the story teller
     const allRight = Array.from(this.votes.entries()).every(([_, votedFor]) => {
       return votedFor === this.storyPlayerId;
     });
 
+    // No one voted for the story teller
     const allWrong = Array.from(this.votes.entries()).every(([_, votedFor]) => {
       return votedFor !== this.storyPlayerId;
     });
 
     for (const playerId of this.players.keys()) {
+      const player = this.players.get(playerId);
       const isStoryTeller = this.storyPlayerId === playerId;
       const guessedStoryteller =
         !isStoryTeller && this.votes.get(playerId) === this.storyPlayerId;
 
-      let addPoints = 0;
+      const submittedCard = this._cardsOnTable.find((c) => c.from === playerId);
 
-      const voteCount = Array.from(this.votes.values()).reduce((acc, curr) => {
-        return curr === playerId ? acc + 1 : acc;
-      }, 0);
+      let pointsToAdd = 0;
 
-      const votedForThis = Array.from(this.votes.entries()).reduce(
+      const votedForThisPlayer = Array.from(this.votes.entries()).reduce(
         (acc, curr) => {
           return curr[1] === playerId ? [curr[0], ...acc] : acc;
         },
         []
       );
 
+      const votesByThisPlayer = this.votes.has(playerId)
+        ? this.votes.get(playerId) ?? []
+        : [];
+
       if (allRight || allWrong) {
         if (isStoryTeller) {
-          addPoints = 0;
+          pointsToAdd = 0;
         } else {
-          addPoints = 2;
+          pointsToAdd = 2;
         }
       } else if (!isStoryTeller && guessedStoryteller) {
-        addPoints = 3;
+        pointsToAdd = 3;
       } else if (isStoryTeller) {
-        addPoints = 3;
+        pointsToAdd = 3;
       }
 
-      addPoints += voteCount;
+      logger.info("Scoring round", {
+        player: player.name,
+        pointsToAdd: pointsToAdd,
+        isAllRight: allRight,
+        isAllWrong: allWrong,
+      });
+
+      if (!allRight && !allWrong) {
+        pointsToAdd += votedForThisPlayer.length;
+      }
+
+      player.points += pointsToAdd;
 
       roundScore[playerId] = {
         turn: this.currentTurn,
-        scoreBefore: -1,
-        score: addPoints,
-        reason: allRight
-          ? "all_right"
-          : allRight
-          ? "all_wrong"
-          : guessedStoryteller
-          ? "story_guessed"
-          : "missed",
-        votesFrom: votedForThis,
-        voteFor: isStoryTeller ? undefined : this.votes.get(playerId),
+        scoreBefore: 0,
+        score: pointsToAdd,
+        votesFrom: votedForThisPlayer,
+        votedFor: isStoryTeller ? [] : votesByThisPlayer,
         wasStoryTelling: isStoryTeller,
+        submittedCard: submittedCard?.cardId ?? null,
       } as ScoreLogEntry;
     }
 
@@ -253,50 +280,83 @@ export class Room {
 
   updateRoomState() {
     const players = Array.from(this.players.values());
-    this.game.sendAll(this.id, (p) => ({
-      type: "on_room_state_updated",
-      payload: {
-        roomName: this.name,
-        state: {
-          gameState: this.gameState,
-          turnState: this.turnState,
-          turnNumber: this.currentTurn,
-          story: this.story,
-          cardsDealt: p.cardsDealt,
-          players: players.map((p) => ({
-            name: p.name,
-            id: p.id,
-            ready: p.ready,
-            points: p.points,
-            status: p.status,
-          })),
-          scores: this.scores,
-          cardsSubmitted:
-            this.turnState === "voting"
-              ? this._cardsOnTable.map((c) => ({
-                  cardId: c.cardId,
-                }))
-              : ([] as Card[]),
+    this.game.sendAll(this.id, (p) => {
+      const isStoryTeller = this.storyPlayerId === p.id;
+      const cardsToShow = [];
+      const cardFromPlayer = this._cardsOnTable.find(
+        (c) => c.from === p.id
+      )?.cardId;
+
+      // Story player gets to see what other submitted
+      if (isStoryTeller && ["guessing", "voting"].includes(this.turnState)) {
+        cardsToShow.push(
+          ...this._cardsOnTable
+            .filter((card) => card.cardId !== this.storyCard)
+            .map((c) => ({
+              cardId: c.cardId,
+            }))
+        );
+      } else if (this.turnState === "voting") {
+        cardsToShow.push(
+          ...this._cardsOnTable
+            // Don't let a player vote for themselves
+            .filter((card) => card.cardId !== cardFromPlayer)
+            .map((c) => ({
+              cardId: c.cardId,
+            }))
+        );
+      }
+
+      return {
+        type: "on_room_state_updated",
+        payload: {
+          roomName: this.name,
+          state: {
+            // Show the card if the round is finished
+            storyCard:
+              this.turnState === "finished"
+                ? { cardId: this.storyCard }
+                : { cardId: -1 },
+            gameState: this.gameState,
+            turnState: this.turnState,
+            turnNumber: this.currentTurn,
+            story: this.story,
+            cardsDealt: p.cardsDealt,
+            players: players.map((p) => ({
+              name: p.name,
+              id: p.id,
+              ready: p.ready,
+              points: p.points,
+              status: p.status,
+            })),
+            scores: this.scores,
+            cardsSubmitted: cardsToShow,
+          },
         },
-      },
-    }));
+      };
+    });
   }
 
   private sendRoundResults() {
     this.game.sendAll(this.id, () => ({
       type: "on_round_ended",
       payload: {
-        storyCard: { cardId: this.storyCard },
         storyPlayerName: this.players.get(this.storyPlayerId)?.name,
         scores: this.scores[this.scores.length - 1],
       },
     }));
   }
+
+  // Remove card from players hand
+  private removeCardFromPlayer(cardId: number, playerId: string) {
+    const player = this.players.get(playerId);
+    player.removeCard(cardId);
+  }
 }
 
 function shuffleNewDeck(): Card[] {
   const cards: number[] = [];
-  for (let i = 0; i < 55; i++) {
+  for (let i = 0; i < cardsTotal; i++) {
     cards[i] = i;
   }
 
@@ -306,8 +366,8 @@ function shuffleNewDeck(): Card[] {
     arr[j] = tmp;
   };
 
-  for (let i = 0; i < 55; i++) {
-    const j = Math.floor(Math.random() * 55);
+  for (let i = 0; i < cardsTotal; i++) {
+    const j = Math.floor(Math.random() * cardsTotal);
     swap(cards, i, j);
   }
   return cards.map((id) => ({ cardId: id }));

@@ -37,7 +37,7 @@ const CardSelector = ({ cards, onSelected }: CardSelectorProps) => {
   return (
     <Flex
       flexDirection="row"
-      gap="10px"
+      gap="5px"
       py={5}
       justifyItems="center"
       alignItems="stretch"

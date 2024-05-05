@@ -60,7 +60,7 @@ export class Game {
       case "start_game": {
         logger.info("Starting game", player);
         const room = this.findRoom(playerId);
-        room.startGame();
+        room.startTurn();
         return;
       }
       case "submit_story": {

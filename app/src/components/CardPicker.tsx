@@ -26,11 +26,16 @@ export const CardPicker: React.FC<CardPickerProps> = ({
 }: CardPickerProps) => {
   return (
     <Stack>
-      <Text fontSize="xl" fontWeight={400}>
-        Story: {story}
+      {story && (
+        <Text fontSize="lg" fontWeight={400} textAlign="center">
+          Story:
+        </Text>
+      )}
+      <Text fontSize="xl" fontWeight={600} textAlign="center">
+        {story}
       </Text>
       <Text>{promptText}</Text>
-      <Box my="100px">
+      <Box my="10px">
         <CardSelector
           cards={cards}
           onSelected={(card) => {
@@ -39,7 +44,9 @@ export const CardPicker: React.FC<CardPickerProps> = ({
         />
       </Box>
       <Button
-        mt={150}
+        mt="10px"
+        alignSelf={"center"}
+        width="200px"
         isActive={selectedCard !== null}
         isDisabled={selectedCard === null}
         onClick={() => onSelectedCard()}

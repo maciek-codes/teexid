@@ -53,4 +53,11 @@ export class Player {
   public dealCards(cards: Card[]) {
     this._cards.push(...cards);
   }
+
+  public removeCard(cardId: number) {
+    const index = this._cards.findIndex((c) => c.cardId === cardId);
+    if (index !== -1) {
+      this._cards.splice(index, 1);
+    }
+  }
 }

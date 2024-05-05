@@ -39,17 +39,14 @@ export type ScoreLogEntry = {
   // Score for this round
   score: number;
 
-  // Reason for score
-  reason: "guessed" | "all_same" | "missed" | "story_guessed";
-
   // Was the player telling the story
   wasStoryTelling: boolean;
 
   // Who the player got the votes from
   votesFrom: string[];
 
-  // Who teh player voted for
-  voteFor?: string;
+  // Who the player voted for
+  votedFor: string[];
 };
 
 export type Scores = {

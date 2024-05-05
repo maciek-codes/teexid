@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from "react";
 
-import { Progress, Stack, Text } from "@chakra-ui/react";
+import { Text } from "@chakra-ui/react";
 import { Card } from "@teexid/shared";
 
 import { CardPicker } from "./components/CardPicker";

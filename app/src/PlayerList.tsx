@@ -11,6 +11,7 @@ import {
 import { PlayerState } from "@teexid/shared";
 import { useGameStore } from "./stores/GameStore";
 import { useWebsocketContext } from "./context/WebsocketContextProvider";
+import { PlayerAvatar } from "./components/PlayerAvatar";
 
 const MIN_PLAYERS = 2;
 
@@ -40,11 +41,7 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
           alignItems="center"
           justifyItems="center"
         >
-          <Avatar
-            name={player.name}
-            backgroundColor="#B0CC69"
-            color="#F2F3ED"
-          />
+          <PlayerAvatar player={player} size={"md"} />
           <HStack>
             <Text
               ml={4}
@@ -82,11 +79,10 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
   );
 };
 export const PlayerList: React.FC = () => {
-  const [players, gameState] = useGameStore((s) => [
-    s.room.players,
-    s.room.gameState,
-  ]);
+  const players = useGameStore((s) => s.room.players);
+  const gameState = useGameStore((s) => s.room.gameState);
   const gameStarted = gameState !== "waiting";
+  const turnState = useGameStore((s) => s.room.turnState);
   const { send } = useWebsocketContext();
 
   const onReadyClick = () => {
@@ -99,7 +95,7 @@ export const PlayerList: React.FC = () => {
 
   const canStart = useMemo(() => {
     return (
-      !gameStarted &&
+      (!gameStarted || turnState === "finished") &&
       players.reduce((acc: number, curr: PlayerState) => {
         return acc + (curr.ready ? 1 : 0);
       }, 0) >= MIN_PLAYERS
@@ -127,7 +123,7 @@ export const PlayerList: React.FC = () => {
       </List>
       {canStart ? (
         <Button mt={5} onClick={() => startGame()}>
-          Start
+          {turnState === "finished" ? "Next turn" : "Start"}
         </Button>
       ) : null}
     </Box>

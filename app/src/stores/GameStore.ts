@@ -11,7 +11,6 @@ import { getWsHost } from "../utils/config";
 
 import { devtools } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
-import { send } from "process";
 
 type JoinedState = "not_joined" | "joining" | "joined" | "failed_to_join";
 

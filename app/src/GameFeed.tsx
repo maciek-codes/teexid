@@ -10,7 +10,8 @@ import { StoryInput } from "./components/StoryInput";
 import { useGameStore } from "./stores/GameStore";
 import { TurnResults } from "./TurnResults";
 import { TurnStateDescription } from "./TurnStateDescription";
-import CardView from "./components/CardView";
+import { CardView } from "./components/CardView";
+import { ScoresHistory } from "./components/ScoresHistory";
 
 export const GameFeed: React.FC = () => {
   const [selectedCard, setSelectedCard] = useState<Card | null>(null);
@@ -166,6 +167,7 @@ export const GameFeed: React.FC = () => {
         </Box>
       )}
       <PlayerList />
+      <ScoresHistory />
     </Stack>
   );
 };

@@ -4,7 +4,7 @@ import { Text } from "@chakra-ui/react";
 import { Card } from "@teexid/shared";
 
 import { CardPicker } from "./components/CardPicker";
-import CardView from "./components/CardView";
+import { CardView } from "./components/CardView";
 import { useGameStore } from "./stores/GameStore";
 
 type VotingProps = {

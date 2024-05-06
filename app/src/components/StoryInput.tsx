@@ -3,7 +3,7 @@ import { Card } from "@teexid/shared";
 import React, { useState } from "react";
 
 import CardSelector from "./CardSelector";
-import CardView from "./CardView";
+import { CardView } from "./CardView";
 import { useGameStore } from "../stores/GameStore";
 
 export const StoryInput: React.FC = () => {

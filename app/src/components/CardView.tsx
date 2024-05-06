@@ -9,7 +9,12 @@ interface CardViewProps {
   onClick?: (card: Card) => void;
 }
 
-const CardView = ({ card, size = "lg", selected, onClick }: CardViewProps) => {
+export const CardView = ({
+  card,
+  size = "lg",
+  selected,
+  onClick,
+}: CardViewProps) => {
   const imageUrl = "/cards/" + (card?.cardId ?? "") + ".jpg";
 
   const handleClick = () => {
@@ -38,5 +43,3 @@ const CardView = ({ card, size = "lg", selected, onClick }: CardViewProps) => {
     />
   );
 };
-
-export default CardView;

@@ -3,7 +3,7 @@ import React from "react";
 import { Text } from "@chakra-ui/react";
 
 import { useGameStore } from "./stores/GameStore";
-import CardView from "./components/CardView";
+import { CardView } from "./components/CardView";
 
 export const TurnStateDescription = (): JSX.Element => {
   const turnState = useGameStore((s) => s.room.turnState);

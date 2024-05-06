@@ -2,7 +2,7 @@ import { Flex } from "@chakra-ui/react";
 import { Card } from "@teexid/shared";
 import { useState } from "react";
 
-import CardView from "./CardView";
+import { CardView } from "./CardView";
 
 interface CardSelectorProps {
   cards: Array<Card>;

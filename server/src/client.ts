@@ -1,9 +1,9 @@
-import { logger } from "./logger";
-import { GameMessage, MessageType } from "../../shared/types/message";
-import { Game } from "./game";
+import { GameMessage, MessageType } from "@teexid/shared";
 import { v4 as uuidv4 } from "uuid";
-
 import { WebSocket } from "ws";
+
+import { logger } from "./logger";
+import { Game } from "./game";
 
 export class Client {
   private ws: WebSocket | null;

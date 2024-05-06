@@ -1,8 +1,9 @@
-import { Room } from "./room";
+import { GameMessage, JoinRoom } from "@teexid/shared";
+
 import { Client } from "./client";
-import { Player } from "./player";
-import { GameMessage, JoinRoom } from "../../shared/types/message";
 import { logger } from "./logger";
+import { Player } from "./player";
+import { Room } from "./room";
 
 export class Game {
   readonly roomsByRoomId: Map<string, Room> = new Map<string, Room>();
@@ -89,7 +90,7 @@ export class Game {
   public joinRoom(payload: JoinRoom["payload"], client: Client) {
     // TODO: O(n) -> O(1)
     let room: Room = Array.from(this.roomsByRoomId.values()).find(
-      (r) => r.name === payload.roomName,
+      (r) => r.name === payload.roomName
     );
 
     if (room) {

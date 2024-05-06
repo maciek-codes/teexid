@@ -26,6 +26,7 @@
     "@types/react-dom": "^18.0.6",
     "@types/react-fontawesome": "^1.6.5",
     "@types/uuid": "^9.0.8",
+    "@vitejs/plugin-react": "^4.1.0",
     "axios": "^1.2.2",
     "framer-motion": "^6.5.1",
     "react": "^18.2.0",
@@ -33,6 +34,8 @@
     "react-dom": "^18.2.0",
     "typescript": "^5.2.2",
     "uuid": "^9.0.1",
+    "vite": "^4.4.9",
+    "vite-tsconfig-paths": "^4.2.1",
     "web-vitals": "^1.1.2",
     "zustand": "^4.3.2"
   },
@@ -64,10 +67,7 @@
   "devDependencies": {
     "@babel/core": "^7.16.0",
     "@types/testing-library__jest-dom": "^6.0.0",
-    "@vitejs/plugin-react": "^4.1.0",
     "prettier": "^2.7.1",
-    "update-browserslist-db": "^1.0.14",
-    "vite": "^4.4.9",
-    "vite-tsconfig-paths": "^4.2.1"
+    "update-browserslist-db": "^1.0.14"
   }
 }

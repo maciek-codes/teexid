@@ -15,6 +15,7 @@
     "@fortawesome/free-regular-svg-icons": "^5.15.4",
     "@fortawesome/free-solid-svg-icons": "^5.15.4",
     "@fortawesome/react-fontawesome": "^0.1.16",
+    "@tanstack/react-query": "^4.0.10",
     "@teexid/shared": "file:../shared",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^15.0.5",
@@ -60,7 +61,6 @@
   },
   "devDependencies": {
     "@babel/core": "^7.16.0",
-    "@tanstack/react-query": "^4.0.10",
     "@types/testing-library__jest-dom": "^6.0.0",
     "@types/uuid": "^9.0.6",
     "@vitejs/plugin-react": "^4.1.0",

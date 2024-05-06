@@ -53,7 +53,7 @@ export class Player {
   }
 
   public get inactive() {
-    return Date.now() - this._lastSeen > SECONDS_INACTIVE * 1000;
+    return Date.now() - this.lastSeen > SECONDS_INACTIVE * 1000;
   }
 
   private _status: PlayerStatus = "unknown";

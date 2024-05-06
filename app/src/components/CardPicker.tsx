@@ -3,7 +3,7 @@ import React from "react";
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 
 import CardSelector from "./CardSelector";
-import Card from "../models/Card";
+import { Card } from "@teexid/shared";
 
 type CardPickerProps = {
   story: string;
@@ -31,7 +31,12 @@ export const CardPicker: React.FC<CardPickerProps> = ({
           Story:
         </Text>
       )}
-      <Text fontSize="xl" fontWeight={600} textAlign="center">
+      <Text
+        fontSize="xl"
+        fontWeight={600}
+        textAlign="center"
+        fontStyle="cursive"
+      >
         {story}
       </Text>
       <Text>{promptText}</Text>

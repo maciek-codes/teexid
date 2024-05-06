@@ -1,7 +1,7 @@
 import { Card } from "@teexid/shared";
 import React, { useState } from "react";
 
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
 import { CardPicker } from "./components/CardPicker";
 import { Voting } from "./Voting";
@@ -90,6 +90,12 @@ export const GameFeed: React.FC = () => {
                       You submitted this card for the story '{story}':
                     </Text>
                     <CardView card={submittedCard} />
+                    <Text fontSize="lg">Others submitted:</Text>
+                    <>
+                      {cardsSubmitted.map((card, idx) => (
+                        <CardView card={card} key={idx} />
+                      ))}
+                    </>
                   </>
                 )}
               </>
@@ -127,6 +133,20 @@ export const GameFeed: React.FC = () => {
               player?.status === "story_submitted") && (
               <>
                 <Text>Waiting for other players to vote...</Text>
+                {isTellingStory && submittedCard && (
+                  <>
+                    <Text>
+                      You submitted this card for the story '{story}':
+                    </Text>
+                    <CardView card={submittedCard} />
+                    <Text fontSize="lg">Others submitted:</Text>
+                    <Flex flexDir="row" gap="10px">
+                      {cardsSubmitted.map((card, idx) => (
+                        <CardView card={card} key={idx} />
+                      ))}
+                    </Flex>
+                  </>
+                )}
                 {votedForCard && (
                   <>
                     <Text>

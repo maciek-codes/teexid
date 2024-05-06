@@ -82,10 +82,14 @@ const ScoresList = ({
   const players = useGameStore((s) => s.room.players);
 
   const individualScores = Object.keys(scores).map((playerId, idx) => {
-    if (playerId === "") return null;
+    if (playerId === "") {
+      return null;
+    }
     const player = players.find((p) => p.id === playerId);
+    if (player === undefined) {
+      return null;
+    }
     const roundScores = scores[playerId];
-    const name = players.find((p) => p.id === playerId)?.name;
     return (
       <ScoreListItem
         key={idx}
@@ -101,7 +105,7 @@ const ScoresList = ({
 
   return (
     <Box>
-      <Text textAlign="center" fontSize="larger">
+      <Text textAlign="center" fontSize="larger" fontFamily="cursive">
         Round #{round} scores:
       </Text>
       {individualScores}
@@ -111,8 +115,8 @@ const ScoresList = ({
 
 export const TurnResults = (): JSX.Element => {
   const story = useGameStore((s) => s.room.story);
-  const storyPlayerName = useGameStore((s) => s.room.storyPlayerName);
   const storyCard = useGameStore((s) => s.room.storyCard);
+  const turnResult = useGameStore((s) => s.room.turnResult);
   const scores = Array.from(useGameStore((s) => s.room.scores) ?? []);
   return (
     <Stack>
@@ -120,12 +124,55 @@ export const TurnResults = (): JSX.Element => {
         <Text fontSize="lg" fontWeight={400} textAlign="center">
           Story:
         </Text>
-        <Text fontSize="xl" fontWeight={600} textAlign="center">
+        <Text
+          fontSize="xl"
+          fontWeight={600}
+          textAlign="center"
+          fontStyle="cursive"
+        >
           {story}
         </Text>
+        {turnResult === "nobody_guessed" && (
+          <>
+            <Text fontSize="md" fontWeight={600}>
+              Nobody guessed the story!
+            </Text>
+            <Text>
+              Every player gets 2 points. Story teller gets 0. Each player who
+              got votes gets 1 point per vote.
+            </Text>
+          </>
+        )}
+        {turnResult === "everyone_guessed" && (
+          <>
+            <Text fontSize="md" fontWeight={600} textAlign="center">
+              Nobody guessed the story!
+            </Text>
+            <Text>Every player gets 2 points. Story teller gets 0.</Text>
+            <Text> Each player who got votes gets 1 point per vote.</Text>
+          </>
+        )}
+        {turnResult === "story_guessed" && (
+          <>
+            <Text fontSize="md" fontWeight={600}>
+              The correct story card guessed.
+            </Text>
+            <Text fontSize="md" fontWeight={400}>
+              The players who guessed and the story teller get +3 points.
+            </Text>
+            <Text fontSize="md" fontWeight={400}>
+              Each player who got votes (except story teller) gets 1 point per
+              vote.
+            </Text>
+          </>
+        )}
       </Box>
-      <Text variant="">The story card:</Text>
-      <CardView size="sm" card={storyCard} />
+      {storyCard && (
+        <>
+          <Text variant="">The story card for "{story}":</Text>
+          <CardView size="sm" card={storyCard} />
+        </>
+      )}
       <>
         {scores !== null &&
           scores

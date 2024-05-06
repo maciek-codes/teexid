@@ -19,7 +19,11 @@ const GameRoom: React.FC = () => {
   useEffect(() => {
     if (isConnected && roomState === "not_joined") {
       const roomName = location.pathname.split("/").pop();
-      joinRoom(roomName);
+      if (roomName) {
+        joinRoom(roomName);
+      } else {
+        navigate("/");
+      }
     } else if (isConnected && roomState === "failed_to_join") {
       navigate("/");
     }

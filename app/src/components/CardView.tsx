@@ -1,5 +1,6 @@
 import { Image } from "@chakra-ui/react";
-import Card from "../models/Card";
+
+import { Card } from "@teexid/shared";
 
 interface CardViewProps {
   card: Card;

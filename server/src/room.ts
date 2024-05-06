@@ -180,7 +180,6 @@ export class Room {
       this.turnState = "finished";
       this.players.forEach((p) => (p.status = "finished"));
       this.scoreRound();
-      this.sendRoundResults();
     }
     this.updateRoomState();
   }
@@ -235,16 +234,17 @@ export class Room {
         pointsToAdd = 3;
       }
 
+      // Add +1 point for each extra guess
+      if (!isStoryTeller) {
+        pointsToAdd += votedForThisPlayer.length;
+      }
+
       logger.info("Scoring round", {
         player: player.name,
         pointsToAdd: pointsToAdd,
         isAllRight: allRight,
         isAllWrong: allWrong,
       });
-
-      if (!allRight && !allWrong) {
-        pointsToAdd += votedForThisPlayer.length;
-      }
 
       player.points += pointsToAdd;
 
@@ -317,8 +317,8 @@ export class Room {
                 ? votesForStoryCard.length == players.values.length - 1
                   ? "everyone_guessed"
                   : votesForStoryCard.length === 0
-                  ? "nobody_guessed"
-                  : "story_guessed"
+                    ? "nobody_guessed"
+                    : "story_guessed"
                 : null,
             story: this.story,
             cardsDealt: p.cardsDealt,
@@ -340,17 +340,6 @@ export class Room {
         },
       };
     });
-  }
-
-  private sendRoundResults() {
-    this.game.sendAll(this.id, () => ({
-      type: "on_round_ended",
-      payload: {
-        storyCard: { cardId: this.storyCard },
-        storyPlayerName: this.players.get(this.storyPlayerId)?.name,
-        scores: this.scores[this.scores.length - 1],
-      },
-    }));
   }
 
   // Remove card from players hand

@@ -16,32 +16,32 @@ export class Game {
   }
 
   public addPlayerClient(client: Client) {
-    if (client.getPlayerId() === "") {
+    if (client.playerId === "") {
       logger.error("Player id is empty", client);
       return;
     }
 
-    if (this.clients.has(client.getPlayerId())) {
-      this.clients.get(client.getPlayerId()).push(client);
+    if (this.clients.has(client.playerId)) {
+      this.clients.get(client.playerId).push(client);
     } else {
-      this.clients.set(client.getPlayerId(), [client]);
+      this.clients.set(client.playerId, [client]);
     }
-    if (!this.players.has(client.getPlayerId())) {
-      logger.info("Adding new player ", { playerId: client.getPlayerId() });
-      this.players.set(client.getPlayerId(), new Player(client.getPlayerId()));
+    if (!this.players.has(client.playerId)) {
+      logger.info("Adding new player ", { playerId: client.playerId });
+      this.players.set(client.playerId, new Player(client.playerId));
     }
   }
 
   public removePlayerClient(client: Client) {
-    if (this.clients.has(client.getPlayerId())) {
-      const clients = this.clients.get(client.getPlayerId());
+    if (this.clients.has(client.playerId)) {
+      const clients = this.clients.get(client.playerId);
       const index = clients.indexOf(client);
       clients.splice(index, 1);
     }
   }
 
   public handleMessage(msg: GameMessage, client: Client) {
-    const playerId = client.getPlayerId();
+    const playerId = client.playerId;
     const player = this.players.get(playerId);
     switch (msg.type) {
       case "update_name": {
@@ -107,7 +107,7 @@ export class Game {
     }
 
     // Find the player
-    const player = this.players.get(client.getPlayerId());
+    const player = this.players.get(client.playerId);
     if (room.gameState !== "waiting" && !room.players.has(player.id)) {
       logger.info("New player can't join the room - game started", {
         playerId: player.id,
@@ -190,6 +190,10 @@ export class Game {
     const player = this.players.get(playerId);
     if (player) {
       player.lastSeen = Date.now();
+      logger.verbose("Player seen", {
+        playerId: playerId,
+        lastSeen: player.lastSeen,
+      });
     }
   }
 

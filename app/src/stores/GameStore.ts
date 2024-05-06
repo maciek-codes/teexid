@@ -11,12 +11,14 @@ import { getWsHost } from "../utils/config";
 
 import { devtools } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
+import { send } from "process";
 
 type JoinedState = "not_joined" | "joining" | "joined" | "failed_to_join";
 
 const NAME_KEY = "55d78e7c-9f3e-49e4-9385-0ee53138972f";
 const ID_KEY = "474170b0-affe-4d8e-a7ea-795e416697e6";
 const RECONNECT_INTERVAL_MS = 2_000;
+const PING_INTERVAL_MS = 19_000;
 
 const getPlayerNameFromLocalStorage = (): string => {
   const existingName = window.localStorage.getItem(NAME_KEY);
@@ -51,7 +53,7 @@ interface RoomState {
   gameState: GameState;
   turnNumber: number;
   turnState: TurnState;
-
+  turnResult: null | "story_guessed" | "nobody_guessed" | "everyone_guessed";
   cards: Card[];
   storyCards: Card[];
   cardsSubmitted: Card[];
@@ -80,9 +82,8 @@ interface GameStoreState {
 interface GameStoreActions {
   setRoomState: (state: JoinedState) => void;
   setPlayerName: (playerName: string) => void;
-  setConnected: (isConnected: boolean) => void;
   onAction: (message: MessageType) => void;
-  joinRoom: (roomName) => void;
+  joinRoom: (roomName: string) => void;
   send: (message: MessageType) => void;
 }
 
@@ -103,6 +104,7 @@ const INITIAL_STATE: GameStoreState = {
     cardsSubmitted: [],
     turnState: "waiting",
     gameState: "waiting",
+    turnResult: null,
     story: "",
     cards: [],
     storyCard: null,
@@ -127,6 +129,9 @@ export const useGameStore = create<GameStore & GameStoreActions>()(
     const onMsg = (msg: MessageEvent<string>) => {
       const payload = JSON.parse(msg.data);
       console.log("onMsg", payload);
+      if (payload.type === "pong") {
+        return;
+      }
       get().onAction(payload as MessageType);
     };
 
@@ -173,13 +178,19 @@ export const useGameStore = create<GameStore & GameStoreActions>()(
       }
     }, RECONNECT_INTERVAL_MS);
 
+    // Monitor the connection, reconnect if necessary
+    setInterval(() => {
+      if (get().ws?.readyState === WebSocket.OPEN) {
+        get().send({ type: "ping" });
+      }
+    }, PING_INTERVAL_MS);
+
     return {
       ...INITIAL_STATE,
       setPlayerName: (newName) => {
         set({ playerName: newName });
         setPlayerNameInLocalStorage(newName);
       },
-      setConnected: (isConnected) => set({ isConnected }),
       setRoomState: (roomState: JoinedState) => set({ roomState }),
       joinRoom: async (roomName: string) => {
         const roomNameNormalized = roomName.toLowerCase();
@@ -223,15 +234,6 @@ export const useGameStore = create<GameStore & GameStoreActions>()(
                 ...state.room,
                 ...message.payload.state,
                 cards: message.payload.state.cardsDealt,
-              },
-            }));
-            break;
-          }
-          case "on_round_ended": {
-            set((state) => ({
-              room: {
-                ...state.room,
-                ...message.payload,
               },
             }));
             break;

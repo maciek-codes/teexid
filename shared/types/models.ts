@@ -48,6 +48,9 @@ export type ScoreLogEntry = {
 
   // Who the player voted for
   votedFor: string[];
+
+  // What card the player submitted
+  submittedCard: number;
 };
 
 export type Scores = {

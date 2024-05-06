@@ -1,14 +1,14 @@
 import React from "react";
 import { Box, List, Text } from "@chakra-ui/react";
-import Player from "./models/Player";
+import { PlayerState } from "@teexid/shared";
 
 interface PlayerScoresProps {
-  playersList: Array<Player>;
+  playersList: Array<PlayerState>;
 }
 
 const PlayerScores = ({ playersList }: PlayerScoresProps) => {
   const scoreItems = playersList
-    .filter((p: Player) => p.points > 0)
+    .filter((p: PlayerState) => p.points > 0)
     .sort((a, b) => {
       return a.points === b.points ? 0 : a.points > b.points ? 1 : -1;
     })

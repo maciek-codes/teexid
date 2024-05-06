@@ -13,24 +13,6 @@ export type OnJoinRoom = {
   payload: { roomName: string; playerName: string; success: boolean };
 };
 
-export type OnRejoinRoom = {
-  type: "on_rejoin_room";
-  payload: {
-    roomName: string;
-    playerName: string;
-    success: boolean;
-    state: {
-      gameState: GameState;
-      turnState: TurnState;
-      turnNumber: number;
-      players: PlayerState[];
-      story: string;
-      cardsSubmitted: Card[];
-      scores: Scores[];
-    };
-  };
-};
-
 export type MarkReady = {
   type: "mark_ready";
   payload?: {};
@@ -119,22 +101,12 @@ type VoteForStoryCard = {
   };
 };
 
-type OnRoundEnded = {
-  type: "on_round_ended";
-  payload: {
-    storyCard: Card;
-    storyPlayerName: string;
-    scores: Scores;
-  };
-};
-
 export type MessageType =
   | { type: "ping" }
   | { type: "pong" }
   | Identify
   | JoinRoom
   | OnJoinRoom
-  | OnRejoinRoom
   | MarkReady
   | UpdateName
   | OnNameUpdated
@@ -142,7 +114,6 @@ export type MessageType =
   | SubmitStory
   | SubmitStoryCard
   | VoteForStoryCard
-  | OnRoundEnded
   | OnRoomStateUpdated
   | { type: "error"; payload: any };
 

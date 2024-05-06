@@ -38,12 +38,7 @@ export const TurnStateDescription = (): JSX.Element => {
       )}
       {isPlaying && isTellingStory && turnState === "guessing" && (
         <>
-          <Text fontSize="lg">Others are guessing. Cards submitted:</Text>
-          <>
-            {cardsSubmitted.map((card, idx) => (
-              <CardView card={card} key={idx} />
-            ))}
-          </>
+          <Text fontSize="lg">Others are submitting cards for the story.</Text>
         </>
       )}
       {isPlaying &&

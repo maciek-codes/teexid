@@ -37,13 +37,14 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
             <Text
               ml={4}
               color={isSelf ? "green.100 " : "#F2F3ED"}
+              fontWeight={isSelf ? 800 : 400}
               justifySelf="left"
             >
               {player.name}
             </Text>
-            {player.status === "story_telling" ? (
-              <Box display="inline" ml="2px">
-                {" "}
+            {player.status === "story_telling" ||
+            player.status === "story_submitted" ? (
+              <Box display="inline" ml="2px" inset="10px">
                 ✍
               </Box>
             ) : null}
@@ -57,11 +58,16 @@ const PlayerItem: React.FC<PlayerItemProps> = ({
             </Text>
           )}
         </Box>
-        {player.points && player.points > 0 && (
-          <Text color={isSelf ? "green.100" : "#F2F3ED"}>
-            {player.points} pt
-          </Text>
-        )}
+        <>
+          {player.points > 0 && (
+            <Text
+              color={isSelf ? "green.100" : "#F2F3ED"}
+              fontWeight={isSelf ? 800 : 400}
+            >
+              {player.points} pt
+            </Text>
+          )}
+        </>
         {isSelf && !player.ready ? (
           <Button onClick={onReadyClick}>I'm ready</Button>
         ) : null}

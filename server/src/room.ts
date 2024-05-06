@@ -10,10 +10,9 @@ import {
 
 import { Player } from "./player";
 import { Game } from "./game";
-import { MessageType } from "../../shared/types/message";
 import { logger } from "./logger";
 
-const cardsTotal = 55;
+const cardsTotal = 59;
 
 export class Room {
   private readonly game: Game;
@@ -297,6 +296,8 @@ export class Room {
               cardId: c.cardId,
             }))
         );
+        // shuffle the cards
+        cardsToShow.sort(() => Math.random() - 0.5);
       }
 
       return {

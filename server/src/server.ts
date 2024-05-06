@@ -4,7 +4,7 @@ import { WebSocket, WebSocketServer } from "ws";
 
 import { Client } from "./client";
 import { Game } from "./game";
-import { MessageType } from "../../shared/types/message";
+import { MessageType } from "@teexid/shared";
 import { logger } from "./logger";
 
 logger.info("Server starting");
@@ -13,8 +13,12 @@ const serverPort = process.env.PORT ?? 8080;
 
 const app = express();
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
+app.get("/", (_, res) => {
+  res.status(200).send("Teexit");
+});
+
+app.get("/health", (_, res) => {
+  res.status(200).send("healthy");
 });
 
 const server = new Server(app);

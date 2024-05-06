@@ -89,7 +89,7 @@ export class Game {
   public joinRoom(payload: JoinRoom["payload"], client: Client) {
     // TODO: O(n) -> O(1)
     let room: Room = Array.from(this.roomsByRoomId.values()).find(
-      (r) => r.name === payload.roomName
+      (r) => r.name === payload.roomName,
     );
 
     if (room) {

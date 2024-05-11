@@ -12,7 +12,7 @@ import { Player } from "./player";
 import { Game } from "./game";
 import { logger } from "./logger";
 
-const cardsTotal = 59;
+const cardsTotal = 60;
 
 export class Room {
   private readonly game: Game;
@@ -126,7 +126,7 @@ export class Room {
     this.removeCardFromPlayer(cardId, playerId);
 
     const players = Array.from(this.players.values()).filter(
-      (p) => p.id !== this.storyPlayerId,
+      (p) => p.id !== this.storyPlayerId
     );
 
     const allSubmitedCard = players.every((p) => p.status === "submitted_card");
@@ -172,7 +172,7 @@ export class Room {
     this.votes.set(playerId, votedFor);
 
     const players = Array.from(this.players.values()).filter(
-      (p) => p.id !== this.storyPlayerId,
+      (p) => p.id !== this.storyPlayerId
     );
     const allVoted = players.every((p) => p.status === "vote_submitted");
     if (allVoted) {
@@ -214,7 +214,7 @@ export class Room {
         (acc, curr) => {
           return curr[1] === playerId ? [curr[0], ...acc] : acc;
         },
-        [],
+        []
       );
 
       const votesByThisPlayer = this.votes.has(playerId)
@@ -275,7 +275,7 @@ export class Room {
         : null;
 
       const votesForStoryCard = Array.from(this.votes.values()).filter(
-        (voteFor) => voteFor === this.storyPlayerId,
+        (voteFor) => voteFor === this.storyPlayerId
       );
 
       // Story player gets to see what other submitted
@@ -285,7 +285,7 @@ export class Room {
             .filter((card) => card.cardId !== this.storyCard)
             .map((c) => ({
               cardId: c.cardId,
-            })),
+            }))
         );
       } else if (this.turnState === "voting") {
         cardsToShow.push(
@@ -294,7 +294,7 @@ export class Room {
             .filter((card) => card.cardId !== cardFromPlayer)
             .map((c) => ({
               cardId: c.cardId,
-            })),
+            }))
         );
         // shuffle the cards
         cardsToShow.sort(() => Math.random() - 0.5);

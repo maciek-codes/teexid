@@ -38,21 +38,21 @@ export const TurnResults = (): JSX.Element => {
             <Text fontSize="md" fontWeight={600} textAlign="center">
               Nobody guessed the story!
             </Text>
-            <Text>Every player gets 2 points. Story teller gets 0.</Text>
-            <Text> Each player who got votes gets 1 point per vote.</Text>
+            <Text>Every player gets 2 points. Story teller gets 0 points.</Text>
           </>
         )}
         {turnResult === "story_guessed" && (
           <>
             <Text fontSize="md" fontWeight={600}>
-              The correct story card guessed.
+              Someone guessed the story!
             </Text>
             <Text fontSize="md" fontWeight={400}>
-              The players who guessed and the story teller get +3 points.
+              Each player who guessed correctly and the story teller get +3
+              points.
             </Text>
             <Text fontSize="md" fontWeight={400}>
-              Each player who got votes (except story teller) gets 1 point per
-              vote.
+              Each player who got votes for their card (except story teller)
+              gets +1 point per vote.
             </Text>
           </>
         )}

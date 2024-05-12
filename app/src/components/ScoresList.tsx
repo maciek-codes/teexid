@@ -5,6 +5,7 @@ import { Scores } from "@teexid/shared";
 
 import { useGameStore } from "../stores/GameStore";
 import { ScoreListItem } from "./ScoreListItem";
+import { CardView } from "./CardView";
 
 export const ScoresList = ({
   scores,
@@ -14,6 +15,14 @@ export const ScoresList = ({
   round: number;
 }): JSX.Element => {
   const players = useGameStore((s) => s.room.players);
+
+  const scoreValues = Object.values(scores);
+  const story = scoreValues.length > 0 ? scoreValues[0].story : "";
+  const storyPlayerId =
+    scoreValues.length > 0 ? scoreValues[0].storyPlayerId : "";
+  const storyCardId =
+    scoreValues.find((s) => s.wasStoryTelling && s.submittedCard)
+      ?.submittedCard ?? -1;
 
   const individualScores = Object.keys(scores).map((playerId, idx) => {
     if (playerId === "") {
@@ -33,6 +42,7 @@ export const ScoresList = ({
         votesFrom={roundScores.votesFrom}
         wasStoryTeller={roundScores.wasStoryTelling}
         submittedCardId={roundScores.submittedCard}
+        turnResult={roundScores.turnResult}
       />
     );
   });
@@ -42,6 +52,14 @@ export const ScoresList = ({
       <Text textAlign="center" fontSize="larger" fontFamily="cursive">
         Round #{round} scores:
       </Text>
+      <Text>
+        The story "{story}" was submitted by{" "}
+        {players.find((p) => p.id === storyPlayerId)?.name ?? ""} with the
+        following card:
+      </Text>
+      {storyCardId >= 0 && (
+        <CardView card={{ cardId: storyCardId }} size="sm" />
+      )}
       {individualScores}
     </Box>
   );

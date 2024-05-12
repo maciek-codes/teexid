@@ -7,6 +7,11 @@ export type TurnState =
   | "voting"
   | "finished";
 
+export type TurnResult =
+  | "story_guessed"
+  | "nobody_guessed"
+  | "everyone_guessed";
+
 export type PlayerStatus =
   | "unknown"
   | "story_telling"
@@ -33,6 +38,12 @@ export type Card = {
 export type ScoreLogEntry = {
   // Turn number
   turn: number;
+
+  turnResult: TurnResult;
+
+  story: string;
+
+  storyPlayerId: string;
 
   // Previous score
   scoreBefore: number;

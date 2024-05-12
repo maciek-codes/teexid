@@ -72,6 +72,10 @@ type StartGame = {
   type: "start_game";
 };
 
+type RestartGame = {
+  type: "restart_game";
+};
+
 type OnNameUpdated = {
   type: "on_name_updated";
   payload: {
@@ -123,6 +127,7 @@ export type MessageType =
   | UpdateName
   | OnNameUpdated
   | StartGame
+  | RestartGame
   | SubmitStory
   | SubmitStoryCard
   | VoteForStoryCard

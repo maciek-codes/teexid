@@ -1,7 +1,7 @@
 import { Card } from "@teexid/shared";
 import React, { useState } from "react";
 
-import { Box, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { PlayerList } from "./PlayerList";
 import { CardPicker } from "./components/CardPicker";
 import { Voting } from "./Voting";
@@ -168,6 +168,9 @@ export const GameFeed: React.FC = () => {
       )}
       <PlayerList />
       <ScoresHistory />
+      <Button onClick={() => send({ type: "restart_game" })}>
+        Restart the Game
+      </Button>
     </Stack>
   );
 };

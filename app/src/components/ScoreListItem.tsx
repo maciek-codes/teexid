@@ -2,7 +2,7 @@ import React from "react";
 
 import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 
-import { PlayerState } from "@teexid/shared";
+import { PlayerState, TurnResult } from "@teexid/shared";
 import { useGameStore } from "../stores/GameStore";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { CardView } from "./CardView";
@@ -14,6 +14,7 @@ export const ScoreListItem = ({
   votesFrom,
   wasStoryTeller,
   submittedCardId,
+  turnResult,
 }: {
   player: PlayerState;
   score: number;
@@ -21,6 +22,7 @@ export const ScoreListItem = ({
   votesFrom: string[];
   wasStoryTeller: boolean;
   submittedCardId: number | null;
+  turnResult: TurnResult;
 }): JSX.Element => {
   const players = useGameStore((s) => s.room.players);
   const playersVotedFrom = votesFrom
@@ -51,16 +53,18 @@ export const ScoreListItem = ({
           </Flex>
         )}
 
+        {}
+
         {playersVotedFrom.length > 0 && (
           <Flex gap="5px">
             <Text>Voted for this card:</Text>
-            <>
+            <Box overflowWrap="break-word">
               {playersVotedFrom.map((name, idx) => (
-                <Text key={idx} fontWeight={800}>
+                <Text key={idx} fontWeight={800} mx="1px">
                   {name}
                 </Text>
               ))}
-            </>
+            </Box>
           </Flex>
         )}
         <Flex gap="5px">

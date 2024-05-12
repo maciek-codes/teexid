@@ -86,6 +86,22 @@ export class Game {
         }
         return;
       }
+      case "restart_game": {
+        if (room) {
+          logger.info("Restarting game", {
+            playerId: playerId,
+            roomId: room.id,
+          });
+          room.restartTurn();
+        } else {
+          // Send error message
+          client.send({
+            type: "error",
+            payload: { code: "room_not_found", message: "No room found" },
+          });
+        }
+        return;
+      }
       case "submit_story": {
         logger.info("Got story", {
           playerId: player.id,

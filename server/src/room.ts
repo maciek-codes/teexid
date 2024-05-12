@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   GameState,
   Card,
+  TurnResult,
   TurnState,
   Scores,
   ScoreLogEntry,
@@ -12,7 +13,6 @@ import {
 import { Player } from "./player";
 import { Game } from "./game";
 import { logger } from "./logger";
-import { error } from "console";
 
 const CARDS_TOTAL = 60;
 const SECONDS_INACTIVE = 10;
@@ -40,7 +40,7 @@ export class Room {
   votes: Map<string, string> = new Map();
   currentTurn: number = 0;
 
-  private storyCard: number;
+  private storyCardId: number;
   private storyPlayerId: string;
   private _gameState: GameState = "waiting";
   private _deck: Card[] = shuffleNewDeck();
@@ -48,11 +48,7 @@ export class Room {
   private turnState: TurnState = "waiting";
   private scores: Scores[] = [];
 
-  private get turnResult():
-    | null
-    | "story_guessed"
-    | "nobody_guessed"
-    | "everyone_guessed" {
+  private get turnResult(): TurnResult | null {
     if (this.turnState !== "finished") {
       return null;
     }
@@ -175,6 +171,27 @@ export class Room {
     this.updateRoomState();
   }
 
+  restartTurn() {
+    this._gameState = "waiting";
+    this.turnState = "waiting";
+
+    //Discard the deck
+    this._cardsOnTable = [];
+    // Move to the next round
+    this.currentTurn += 0;
+    this.storyCardId = -1;
+    this.storyPlayerId = "";
+
+    // Empty the votes
+    this.votes.clear();
+    this.scores = [];
+
+    // Restart the cards
+    this._deck = shuffleNewDeck();
+
+    this.updateRoomState();
+  }
+
   pickNextStoryTeller() {
     this.storyPlayerId =
       this.playerIds[this.currentTurn % this.playerIds.length];
@@ -183,7 +200,11 @@ export class Room {
     this.playerState.get(this.storyPlayerId).status = "story_telling";
   }
 
-  public submitStory(playerId: string, story: string, actualStoryCard: number) {
+  public submitStory(
+    playerId: string,
+    story: string,
+    actualStoryCardId: number
+  ) {
     if (playerId !== this.storyPlayerId) {
       this.game.send(playerId, {
         type: "error",
@@ -205,12 +226,12 @@ export class Room {
     this.storyPlayerId = playerId;
 
     // remember the story card
-    this.storyCard = actualStoryCard;
+    this.storyCardId = actualStoryCardId;
     this.turnState = "guessing";
-    this.removeCardFromPlayer(actualStoryCard, playerId);
+    this.removeCardFromPlayer(actualStoryCardId, playerId);
 
     // Add story card to the deck
-    this._cardsOnTable.push({ cardId: actualStoryCard, from: playerId });
+    this._cardsOnTable.push({ cardId: actualStoryCardId, from: playerId });
     this.updateRoomState();
   }
 
@@ -350,6 +371,9 @@ export class Room {
 
       roundScore[playerId] = {
         turn: this.currentTurn,
+        turnResult: this.turnResult,
+        story: this.story,
+        storyPlayerId: this.storyPlayerId,
         scoreBefore: pointsBefore,
         score: pointsToAdd,
         votesFrom: votedForThisPlayer,
@@ -378,7 +402,7 @@ export class Room {
       if (isStoryTeller && ["guessing", "voting"].includes(this.turnState)) {
         cardsToShow.push(
           ...this._cardsOnTable
-            .filter((card) => card.cardId !== this.storyCard)
+            .filter((card) => card.cardId !== this.storyCardId)
             .map((c) => ({
               cardId: c.cardId,
             }))
@@ -392,9 +416,10 @@ export class Room {
               cardId: c.cardId,
             }))
         );
-        // shuffle the cards
-        cardsToShow.sort(() => Math.random() - 0.5);
       }
+
+      // sort cards by id
+      cardsToShow.sort((card, other) => card.cardId - other.cardId);
 
       return {
         type: "on_room_state_updated",
@@ -404,7 +429,7 @@ export class Room {
             // Show the card if the round is finished
             storyCard:
               this.turnState === "finished"
-                ? { cardId: this.storyCard }
+                ? { cardId: this.storyCardId }
                 : { cardId: -1 },
             gameState: this.gameState,
             turnState: this.turnState,

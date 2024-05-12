@@ -17,7 +17,7 @@ type JoinedState = "not_joined" | "joining" | "joined" | "failed_to_join";
 const NAME_KEY = "55d78e7c-9f3e-49e4-9385-0ee53138972f";
 const ID_KEY = "474170b0-affe-4d8e-a7ea-795e416697e6";
 const RECONNECT_INTERVAL_MS = 2_000;
-const PING_INTERVAL_MS = 19_000;
+const PING_INTERVAL_MS = 5_000;
 
 const getPlayerNameFromLocalStorage = (): string => {
   const existingName = window.localStorage.getItem(NAME_KEY);
@@ -215,6 +215,12 @@ export const useGameStore = create<GameStore & GameStoreActions>()(
 
       onAction: (message) => {
         switch (message.type) {
+          case "error": {
+            if (message.payload.code === "room_not_found") {
+              set({ roomState: "failed_to_join" });
+            }
+            return;
+          }
           case "on_join_room": {
             set({
               roomName: message.payload.roomName,

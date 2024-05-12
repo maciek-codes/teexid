@@ -141,7 +141,7 @@ export const GameFeed: React.FC = () => {
                     </Text>
                     <CardView card={submittedCard} />
                     <Text fontSize="lg">Others submitted:</Text>
-                    <Flex flexDir="row" gap="10px">
+                    <Flex flexDir="row" gap="5px" overflowX="auto">
                       {cardsSubmitted.map((card, idx) => (
                         <CardView card={card} key={idx} />
                       ))}

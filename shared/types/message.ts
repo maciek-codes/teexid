@@ -101,6 +101,18 @@ type VoteForStoryCard = {
   };
 };
 
+type OnError = {
+  type: "error";
+  payload: {
+    code:
+      | "room_not_found"
+      | "identify_required"
+      | "not_your_turn"
+      | "invalid_vote";
+    message?: string;
+  };
+};
+
 export type MessageType =
   | { type: "ping" }
   | { type: "pong" }
@@ -115,7 +127,7 @@ export type MessageType =
   | SubmitStoryCard
   | VoteForStoryCard
   | OnRoomStateUpdated
-  | { type: "error"; payload: any };
+  | OnError;
 
 export type GameMessage = Exclude<
   MessageType,

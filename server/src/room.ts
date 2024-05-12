@@ -12,9 +12,10 @@ import {
 import { Player } from "./player";
 import { Game } from "./game";
 import { logger } from "./logger";
+import { error } from "console";
 
 const CARDS_TOTAL = 60;
-const SECONDS_INACTIVE = 30;
+const SECONDS_INACTIVE = 10;
 
 export class Room {
   private readonly game: Game;
@@ -46,6 +47,41 @@ export class Room {
   private _cardsOnTable: { cardId: number; from: string }[] = [];
   private turnState: TurnState = "waiting";
   private scores: Scores[] = [];
+
+  private get turnResult():
+    | null
+    | "story_guessed"
+    | "nobody_guessed"
+    | "everyone_guessed" {
+    if (this.turnState !== "finished") {
+      return null;
+    }
+
+    const votes = Array.from(this.votes.values());
+    const votesForStoryCard = votes.filter(
+      (voteFor) => voteFor === this.storyPlayerId
+    );
+
+    logger.info("Turn result", {
+      votes: votes,
+      storyPlayerId: this.storyPlayerId,
+      votesForStoryCard: votesForStoryCard,
+      playerCount: Array.from(this.playerIds.values()).length,
+    });
+
+    // All players voted for the story teller
+    if (votesForStoryCard.length === this.playerIds.length - 1) {
+      return "everyone_guessed";
+    }
+
+    // No players voted for the story teller
+    if (votesForStoryCard.length === 0) {
+      return "nobody_guessed";
+    }
+
+    // Otherwise at least one player voted for the story teller
+    return "story_guessed";
+  }
 
   constructor(name: string, game: Game) {
     this._id = uuidv4();
@@ -86,7 +122,25 @@ export class Room {
   }
 
   updateLastSeen(playerId: string) {
+    const inactiveCountPre = Array.from(this.playerState.values()).filter(
+      (state) => state.inactive
+    ).length;
+
     this.playerState.get(playerId).lastSeen = new Date();
+
+    // Update inactive state for all players
+    for (const playerId of this.playerState.keys()) {
+      const p = this.playerState.get(playerId);
+      p.inactive = Date.now() - p.lastSeen.getTime() > SECONDS_INACTIVE * 1000;
+    }
+
+    const inactiveCountAfter = Array.from(this.playerState.values()).filter(
+      (state) => state.inactive
+    ).length;
+
+    if (inactiveCountAfter !== inactiveCountPre) {
+      this.updateRoomState();
+    }
   }
 
   markReady(playerId: string) {
@@ -134,7 +188,8 @@ export class Room {
       this.game.send(playerId, {
         type: "error",
         payload: {
-          msg: "It's not your turn to tell a story",
+          code: "not_your_turn",
+          message: "It's not your turn to submit a story",
         },
       });
       return;
@@ -191,7 +246,8 @@ export class Room {
       this.game.send(playerId, {
         type: "error",
         payload: {
-          msg: "Can't vote for this card",
+          code: "invalid_vote",
+          message: "Can't vote for this card",
         },
       });
       return;
@@ -202,7 +258,8 @@ export class Room {
       this.game.send(playerId, {
         type: "error",
         payload: {
-          msg: "Can't vote for yourself",
+          code: "invalid_vote",
+          message: "Can't vote for yourself",
         },
       });
       return;
@@ -252,6 +309,7 @@ export class Room {
       const submittedCard = this._cardsOnTable.find((c) => c.from === playerId);
 
       let pointsToAdd = 0;
+      const pointsBefore = this.playerState.get(playerId).points;
 
       const votedForThisPlayer = Array.from(this.votes.entries()).reduce(
         (acc, curr) => {
@@ -292,7 +350,7 @@ export class Room {
 
       roundScore[playerId] = {
         turn: this.currentTurn,
-        scoreBefore: 0,
+        scoreBefore: pointsBefore,
         score: pointsToAdd,
         votesFrom: votedForThisPlayer,
         votedFor: isStoryTeller ? [] : votesByThisPlayer,
@@ -315,10 +373,6 @@ export class Room {
       const cardPlayerVotedFor = playersVote
         ? this._cardsOnTable.find((c) => c.from === playersVote)
         : null;
-
-      const votesForStoryCard = Array.from(this.votes.values()).filter(
-        (voteFor) => voteFor === this.storyPlayerId
-      );
 
       // Story player gets to see what other submitted
       if (isStoryTeller && ["guessing", "voting"].includes(this.turnState)) {
@@ -355,14 +409,7 @@ export class Room {
             gameState: this.gameState,
             turnState: this.turnState,
             turnNumber: this.currentTurn,
-            turnResult:
-              this.turnState === "finished"
-                ? votesForStoryCard.length == this.playerIds.values.length - 1
-                  ? "everyone_guessed"
-                  : votesForStoryCard.length === 0
-                    ? "nobody_guessed"
-                    : "story_guessed"
-                : null,
+            turnResult: this.turnResult,
             story: this.story,
             cardsDealt: this.playerState.get(p.id).cardsDealt,
             players: this.playerIds.map((pid) => {
@@ -373,9 +420,7 @@ export class Room {
                 ready: state.ready,
                 points: state.points,
                 status: state.status ?? "unknown",
-                inactive:
-                  Date.now() - state.lastSeen.getDate() >
-                    SECONDS_INACTIVE * 1000 || p.roomId !== this.id,
+                inactive: state.inactive,
               };
             }),
             scores: this.scores,

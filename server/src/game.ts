@@ -50,7 +50,7 @@ export class Game {
     switch (msg.type) {
       case "update_name": {
         this.updatePlayerName(playerId, msg.payload.newName);
-        this.updatePlayerRoomState(player);
+        this.updatePlayerRoomState(playerId);
         return;
       }
       case "join_room":
@@ -62,12 +62,28 @@ export class Game {
         this.joinRoom(msg.payload, client);
         return;
       case "mark_ready":
-        room.markReady(playerId);
-        this.updatePlayerRoomState(player);
+        if (room) {
+          room.markReady(playerId);
+          this.updatePlayerRoomState(playerId);
+        } else {
+          // Send error message
+          client.send({
+            type: "error",
+            payload: { code: "room_not_found", message: "No room found" },
+          });
+        }
         return;
       case "start_game": {
-        logger.info("Starting game", { playerId: playerId, roomId: room.id });
-        room?.startTurn();
+        if (room) {
+          logger.info("Starting game", { playerId: playerId, roomId: room.id });
+          room.startTurn();
+        } else {
+          // Send error message
+          client.send({
+            type: "error",
+            payload: { code: "room_not_found", message: "No room found" },
+          });
+        }
         return;
       }
       case "submit_story": {
@@ -217,7 +233,8 @@ export class Game {
     }
   }
 
-  private updatePlayerRoomState(player: Player) {
+  public updatePlayerRoomState(playerId: string) {
+    const player = this.players.get(playerId);
     const room = this.roomsByRoomId.get(player.roomId);
     if (!room) {
       logger.warn("Player not in any room", {

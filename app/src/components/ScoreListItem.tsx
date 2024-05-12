@@ -22,7 +22,6 @@ export const ScoreListItem = ({
   wasStoryTeller: boolean;
   submittedCardId: number | null;
 }): JSX.Element => {
-  const diff = score - scoreBefore;
   const players = useGameStore((s) => s.room.players);
   const playersVotedFrom = votesFrom
     .map((playerId) => {
@@ -45,10 +44,10 @@ export const ScoreListItem = ({
         <CardView card={{ cardId: submittedCardId }} size="sm" />
       )}
       <Stack>
-        {diff > 0 && (
+        {score > 0 && (
           <Flex gap="5px">
             <Text>Points scored in this round:</Text>
-            <Text fontWeight={800}>{diff}</Text>
+            <Text fontWeight={800}>{score}</Text>
           </Flex>
         )}
 
@@ -66,7 +65,7 @@ export const ScoreListItem = ({
         )}
         <Flex gap="5px">
           <Text>Total score:</Text>
-          <Text fontWeight={800}>{score}</Text>
+          <Text fontWeight={800}>{scoreBefore + score}</Text>
         </Flex>
       </Stack>
     </Box>

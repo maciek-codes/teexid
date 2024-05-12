@@ -34,6 +34,8 @@ export const runServer = () => {
 
     if (!clients.has(ws)) {
       clients.set(ws, new Client(ws, game));
+    } else {
+      game.updatePlayerRoomState(clients.get(ws)?.playerId);
     }
 
     ws.on("error", (err) => logger.error("Socker error", err));

@@ -44,7 +44,10 @@ export class Client {
       if (this.playerId === "") {
         this.send({
           type: "error",
-          payload: "You must identify yourself first",
+          payload: {
+            code: "identify_required",
+            message: "You need to identify first",
+          },
         });
         return;
       }

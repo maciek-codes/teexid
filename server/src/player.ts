@@ -52,26 +52,14 @@ export class Player {
     this._ready = v;
   }
 
-  public get inactive() {
+  public get inactive(): boolean {
     return Date.now() - this.lastSeen > SECONDS_INACTIVE * 1000;
   }
-
   private _status: PlayerStatus = "unknown";
   public get status() {
     return this._status;
   }
   public set status(v: PlayerStatus) {
     this._status = v;
-  }
-
-  public dealCards(cards: Card[]) {
-    this._cards.push(...cards);
-  }
-
-  public removeCard(cardId: number) {
-    const index = this._cards.findIndex((c) => c.cardId === cardId);
-    if (index !== -1) {
-      this._cards.splice(index, 1);
-    }
   }
 }

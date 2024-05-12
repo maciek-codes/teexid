@@ -17,10 +17,13 @@ const GameRoom: React.FC = () => {
   const isConnected = connectionState === "connected";
 
   useEffect(() => {
-    if (isConnected && roomState === "not_joined") {
-      const roomName = location.pathname.split("/").pop();
-      if (roomName) {
-        joinRoom(roomName);
+    const roomNameFromPath = location.pathname.split("/").pop();
+    if (
+      isConnected &&
+      (roomState === "not_joined" || roomName !== roomNameFromPath)
+    ) {
+      if (roomNameFromPath) {
+        joinRoom(roomNameFromPath);
       } else {
         navigate("/");
       }

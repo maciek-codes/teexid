@@ -6,13 +6,15 @@ import {
   TurnState,
   Scores,
   ScoreLogEntry,
+  PlayerStatus,
 } from "@teexid/shared";
 
 import { Player } from "./player";
 import { Game } from "./game";
 import { logger } from "./logger";
 
-const cardsTotal = 60;
+const CARDS_TOTAL = 60;
+const SECONDS_INACTIVE = 30;
 
 export class Room {
   private readonly game: Game;
@@ -20,7 +22,19 @@ export class Room {
   name: string;
   story: string;
 
-  players: Map<string, Player> = new Map();
+  playerIds: Array<string> = new Array();
+  playerState: Map<
+    string,
+    {
+      name: string;
+      ready: boolean;
+      inactive: boolean;
+      status: PlayerStatus;
+      points: number;
+      cardsDealt: Card[];
+      lastSeen: Date;
+    }
+  > = new Map();
   points: Map<string, number> = new Map();
   votes: Map<string, string> = new Map();
   currentTurn: number = 0;
@@ -52,9 +66,34 @@ export class Room {
       throw new Error("Game already started");
     }
 
-    this.players.set(player.id, player);
+    this.playerIds.push(player.id);
+    this.playerState.set(player.id, {
+      name: player.name,
+      status: "unknown",
+      points: 0,
+      ready: false,
+      inactive: false,
+      lastSeen: new Date(),
+      cardsDealt: [],
+    });
+
     this.updateRoomState();
     return player;
+  }
+
+  updatePlayerName(playerId: string, newName: string) {
+    this.playerState.get(playerId).name = newName;
+  }
+
+  updateLastSeen(playerId: string) {
+    this.playerState.get(playerId).lastSeen = new Date();
+  }
+
+  markReady(playerId: string) {
+    const state = this.playerState.get(playerId);
+    if (state) {
+      state.ready = true;
+    }
   }
 
   startTurn() {
@@ -73,21 +112,21 @@ export class Room {
     this.pickNextStoryTeller();
 
     // Deal new cards
-    for (const player of this.players.values()) {
-      const newCards = this._deck.splice(0, 5 - player.cardsDealt.length);
-      player.dealCards(newCards);
+    for (const playerId of this.playerState.keys()) {
+      const cardsDealt = this.playerState.get(playerId).cardsDealt;
+      const newCards = this._deck.splice(0, 5 - cardsDealt.length);
+      cardsDealt.push(...newCards);
     }
 
     this.updateRoomState();
   }
 
   pickNextStoryTeller() {
-    this.storyPlayerId = Array.from(this.players.keys())[
-      this.currentTurn % this.players.size
-    ];
+    this.storyPlayerId =
+      this.playerIds[this.currentTurn % this.playerIds.length];
 
     // Set the story teller
-    this.players.get(this.storyPlayerId).status = "story_telling";
+    this.playerState.get(this.storyPlayerId).status = "story_telling";
   }
 
   public submitStory(playerId: string, story: string, actualStoryCard: number) {
@@ -100,11 +139,11 @@ export class Room {
       });
       return;
     }
-    this.players.get(playerId).status = "story_submitted";
+    this.playerState.get(playerId).status = "story_submitted";
     // Tell other players that they need to pick a card
-    this.players.forEach((p) => {
-      if (p.id !== playerId) {
-        p.status = "picking_card";
+    this.playerIds.forEach((pid) => {
+      if (pid !== playerId) {
+        this.playerState.get(pid).status = "picking_card";
       }
     });
     this.story = story;
@@ -122,19 +161,20 @@ export class Room {
 
   public submitStoryCard(playerId: string, cardId: number) {
     this._cardsOnTable.push({ cardId: cardId, from: playerId });
-    this.players.get(playerId).status = "submitted_card";
+    this.playerState.get(playerId).status = "submitted_card";
     this.removeCardFromPlayer(cardId, playerId);
 
-    const players = Array.from(this.players.values()).filter(
-      (p) => p.id !== this.storyPlayerId
-    );
+    const allSubmitedCard =
+      Array.from(this.playerState.values()).filter(
+        (playerStatus) => playerStatus.status === "submitted_card"
+      ).length ===
+      this.playerIds.length - 1;
 
-    const allSubmitedCard = players.every((p) => p.status === "submitted_card");
     if (allSubmitedCard) {
       // Tell players they will now vote
-      this.players.forEach((p) => {
-        if (p.id !== this.storyPlayerId) {
-          p.status = "voting";
+      this.playerIds.forEach((pid) => {
+        if (pid !== this.storyPlayerId) {
+          this.playerState.get(pid).status = "voting";
         }
       });
       // Voting state
@@ -168,16 +208,20 @@ export class Room {
       return;
     }
 
-    this.players.get(playerId).status = "vote_submitted";
+    this.playerState.get(playerId).status = "vote_submitted";
     this.votes.set(playerId, votedFor);
 
-    const players = Array.from(this.players.values()).filter(
-      (p) => p.id !== this.storyPlayerId
-    );
-    const allVoted = players.every((p) => p.status === "vote_submitted");
+    const allVoted =
+      Array.from(this.playerState.values()).filter(
+        (playerStatus) => playerStatus.status === "vote_submitted"
+      ).length ===
+      this.playerIds.length - 1;
+
     if (allVoted) {
       this.turnState = "finished";
-      this.players.forEach((p) => (p.status = "finished"));
+      this.playerIds.forEach((pid) => {
+        this.playerState.get(pid).status = "finished";
+      });
       this.scoreRound();
     }
     this.updateRoomState();
@@ -200,8 +244,7 @@ export class Room {
       return votedFor !== this.storyPlayerId;
     });
 
-    for (const playerId of this.players.keys()) {
-      const player = this.players.get(playerId);
+    for (const playerId of this.playerIds) {
       const isStoryTeller = this.storyPlayerId === playerId;
       const guessedStoryteller =
         !isStoryTeller && this.votes.get(playerId) === this.storyPlayerId;
@@ -239,13 +282,13 @@ export class Room {
       }
 
       logger.info("Scoring round", {
-        player: player.name,
+        playerId: playerId,
         pointsToAdd: pointsToAdd,
         isAllRight: allRight,
         isAllWrong: allWrong,
       });
 
-      player.points += pointsToAdd;
+      this.playerState.get(playerId).points += pointsToAdd;
 
       roundScore[playerId] = {
         turn: this.currentTurn,
@@ -262,7 +305,6 @@ export class Room {
   }
 
   updateRoomState() {
-    const players = Array.from(this.players.values());
     this.game.sendAll(this.id, (p) => {
       const isStoryTeller = this.storyPlayerId === p.id;
       const cardsToShow = [];
@@ -315,22 +357,27 @@ export class Room {
             turnNumber: this.currentTurn,
             turnResult:
               this.turnState === "finished"
-                ? votesForStoryCard.length == players.values.length - 1
+                ? votesForStoryCard.length == this.playerIds.values.length - 1
                   ? "everyone_guessed"
                   : votesForStoryCard.length === 0
                     ? "nobody_guessed"
                     : "story_guessed"
                 : null,
             story: this.story,
-            cardsDealt: p.cardsDealt,
-            players: players.map((p) => ({
-              name: p.name,
-              id: p.id,
-              ready: p.ready,
-              points: p.points,
-              status: p.status,
-              inactive: p.inactive,
-            })),
+            cardsDealt: this.playerState.get(p.id).cardsDealt,
+            players: this.playerIds.map((pid) => {
+              const state = this.playerState.get(pid);
+              return {
+                id: pid,
+                name: state.name,
+                ready: state.ready,
+                points: state.points,
+                status: state.status ?? "unknown",
+                inactive:
+                  Date.now() - state.lastSeen.getDate() >
+                    SECONDS_INACTIVE * 1000 || p.roomId !== this.id,
+              };
+            }),
             scores: this.scores,
             cardsSubmitted: cardsToShow,
             submittedCard: cardFromPlayer ? { cardId: cardFromPlayer } : null,
@@ -345,14 +392,17 @@ export class Room {
 
   // Remove card from players hand
   private removeCardFromPlayer(cardId: number, playerId: string) {
-    const player = this.players.get(playerId);
-    player.removeCard(cardId);
+    const cards = this.playerState.get(playerId).cardsDealt;
+    const index = cards.findIndex((c) => c.cardId === cardId);
+    if (index !== -1) {
+      cards.splice(index, 1);
+    }
   }
 }
 
 function shuffleNewDeck(): Card[] {
   const cards: number[] = [];
-  for (let i = 0; i < cardsTotal; i++) {
+  for (let i = 0; i < CARDS_TOTAL; i++) {
     cards[i] = i;
   }
 
@@ -362,8 +412,8 @@ function shuffleNewDeck(): Card[] {
     arr[j] = tmp;
   };
 
-  for (let i = 0; i < cardsTotal; i++) {
-    const j = Math.floor(Math.random() * cardsTotal);
+  for (let i = 0; i < CARDS_TOTAL; i++) {
+    const j = Math.floor(Math.random() * CARDS_TOTAL);
     swap(cards, i, j);
   }
   return cards.map((id) => ({ cardId: id }));

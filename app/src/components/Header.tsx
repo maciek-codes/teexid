@@ -1,6 +1,6 @@
 import { Box, Flex, Heading, Link, Text } from "@chakra-ui/react";
 import React from "react";
-import { Link as RouterLink } from "react-router-dom";
+import { useLocation, Link as RouterLink } from "react-router-dom";
 import { shallow } from "zustand/shallow";
 
 import { useGameStore } from "../stores/GameStore";
@@ -11,6 +11,8 @@ const Header: React.FC = () => {
     (s) => [s.playerName, s.roomName],
     shallow
   );
+  const location = useLocation();
+  const isRoomPath = location.pathname.indexOf("room/") !== -1;
   return (
     <Heading size="xl" pt="10px" background="#ac4fc2" px="0.5em" py="0.25em">
       <Flex
@@ -37,7 +39,7 @@ const Header: React.FC = () => {
           flexDirection="row"
         >
           {playerName !== "" && <PlayerName />}
-          {roomName !== "" && (
+          {isRoomPath && roomName !== "" && (
             <Text fontSize="md" color="white" ml="20px">
               Room: {roomName}
             </Text>

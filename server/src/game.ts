@@ -44,6 +44,9 @@ export class Game {
   public handleMessage(msg: GameMessage, client: Client) {
     const playerId = client.playerId;
     const player = this.players.get(playerId);
+    const room = this.roomsByRoomId.get(player.roomId)
+      ? this.roomsByRoomId.get(player.roomId)
+      : null;
     switch (msg.type) {
       case "update_name": {
         this.updatePlayerName(playerId, msg.payload.newName);
@@ -51,35 +54,47 @@ export class Game {
         return;
       }
       case "join_room":
+        logger.info("Join room", {
+          playerId: playerId,
+          roomName: msg.payload.roomName,
+        });
         player.name = msg.payload.playerName;
         this.joinRoom(msg.payload, client);
         return;
       case "mark_ready":
-        player.ready = true;
+        room.markReady(playerId);
         this.updatePlayerRoomState(player);
         return;
       case "start_game": {
-        logger.info("Starting game", player);
-        const room = this.findRoom(playerId);
-        room.startTurn();
+        logger.info("Starting game", { playerId: playerId, roomId: room.id });
+        room?.startTurn();
         return;
       }
       case "submit_story": {
-        logger.info("Got story game", player, msg.payload);
-        const room = this.findRoom(playerId);
-        room.submitStory(playerId, msg.payload.story, msg.payload.cardId);
+        logger.info("Got story", {
+          playerId: player.id,
+          roomId: room.id,
+          story: msg.payload.story,
+        });
+        room?.submitStory(playerId, msg.payload.story, msg.payload.cardId);
         return;
       }
       case "submit_story_card": {
-        logger.info("Got story card", player, msg.payload);
-        const room = this.findRoom(playerId);
-        room.submitStoryCard(playerId, msg.payload.cardId);
+        logger.info("Got story card", {
+          playerId: player.id,
+          roomId: room.id,
+          cardId: msg.payload.cardId,
+        });
+        room?.submitStoryCard(playerId, msg.payload.cardId);
         return;
       }
       case "vote": {
-        logger.info("Got vote", player, msg.payload);
-        const room = this.findRoom(playerId);
-        room.vote(playerId, msg.payload.cardId);
+        logger.info("Got vote", {
+          playerId: player.id,
+          roomId: room.id,
+          voteFor: msg.payload.cardId,
+        });
+        room?.vote(playerId, msg.payload.cardId);
         return;
       }
       default:
@@ -109,7 +124,10 @@ export class Game {
 
     // Find the player
     const player = this.players.get(client.playerId);
-    if (room.gameState !== "waiting" && !room.players.has(player.id)) {
+    if (
+      room.gameState !== "waiting" &&
+      !room.playerIds.find((pid) => pid === player.id)
+    ) {
       logger.info("New player can't join the room - game started", {
         playerId: player.id,
         roomId: room.id,
@@ -119,7 +137,11 @@ export class Game {
         payload: { ...payload, success: false },
       });
       return;
-    } else if (room.gameState !== "waiting" && room.players.has(player.id)) {
+    } else if (
+      room.gameState !== "waiting" &&
+      room.playerIds.find((pid) => pid === player.id)
+    ) {
+      player.roomId = room.id;
       // Player re-joining the room, send the current state
       logger.info("Player re-joining the room", {
         playerId: player.id,
@@ -138,7 +160,8 @@ export class Game {
       });
       // Add player to room, wait for others
       player.roomId = room.id;
-      if (!room.players.has(player.id)) {
+      player.ready = false;
+      if (!room.playerIds.find((pid) => pid === player.id)) {
         room.addPlayer(player);
       }
       client.send({
@@ -158,29 +181,26 @@ export class Game {
     }
   }
 
-  public sendAll(roomId: string, msgFn: (player: Player) => GameMessage) {
+  public sendAll(
+    roomId: string,
+    msgFn: (player: Player) => GameMessage | null
+  ) {
     // TODO: Better roomId filter O(n) -> O(1)
     for (const playerId of this.players.keys()) {
       const player = this.players.get(playerId);
       if (roomId === player.roomId) {
-        this.send(playerId, msgFn(player));
+        const message = msgFn(player);
+        if (message) {
+          this.send(playerId, message);
+        }
       }
     }
-  }
-
-  private findRoom(playerId: string): Room {
-    // TOOD: O(n) -> O(1)
-    for (const room of this.roomsByRoomId.values()) {
-      if (room.players.has(playerId)) {
-        return room;
-      }
-    }
-    logger.error("Player not in any room", { playerId: playerId });
-    throw new Error("Player not in any room");
   }
 
   private updatePlayerName(playerId: string, newName: string) {
     this.players.get(playerId).name = newName;
+    const room = this.roomsByRoomId.get(this.players.get(playerId).roomId);
+    room?.updatePlayerName(playerId, newName);
     this.send(playerId, {
       type: "on_name_updated",
       payload: { name: this.players.get(playerId).name },
@@ -190,11 +210,10 @@ export class Game {
   public updatePlayerLastSeen(playerId: string) {
     const player = this.players.get(playerId);
     if (player) {
-      player.lastSeen = Date.now();
-      logger.verbose("Player seen", {
-        playerId: playerId,
-        lastSeen: player.lastSeen,
-      });
+      const room = this.roomsByRoomId.get(player.roomId);
+      if (room) {
+        room.updateLastSeen(playerId);
+      }
     }
   }
 

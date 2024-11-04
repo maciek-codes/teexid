@@ -1,0 +1,24 @@
+name: Deploy
+
+on: [push]
+
+jobs:
+  deployment:
+
+    runs-on: ubuntu-latest
+    environment: prod
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - name: Deploy using ssh
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ vars.SSH_HOST }}
+        username: ${{ vars.SSH_USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ vars.SSH_PORT }}
+        script: |
+          cd ~/home/maciek/apps/dixit
+          git pull origin main
+          git status
+          npm install --only=prod
+          pm2 restart server

@@ -26,6 +26,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ vars.SSH_PORT }}
           script: |
+            source /home/maciek/.bashrc
             cd /home/maciek/apps/dixit
             # Launch server
             cd server

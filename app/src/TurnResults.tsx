@@ -14,12 +14,7 @@ export const TurnResults = (): JSX.Element => {
         <Text fontSize="lg" fontWeight={400} textAlign="center">
           Story:
         </Text>
-        <Text
-          fontSize="xl"
-          fontWeight={600}
-          textAlign="center"
-          fontFamily="cursive"
-        >
+        <Text fontSize="xl" fontWeight={600} textAlign="center">
           {story}
         </Text>
         {turnResult === "nobody_guessed" && (

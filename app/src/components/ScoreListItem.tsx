@@ -56,16 +56,14 @@ export const ScoreListItem = ({
         {}
 
         {playersVotedFrom.length > 0 && (
-          <Flex gap="5px">
-            <Text>Voted for this card:</Text>
-            <Box overflowWrap="break-word">
-              {playersVotedFrom.map((name, idx) => (
-                <Text key={idx} fontWeight={800} mx="1px">
-                  {name}
-                </Text>
-              ))}
-            </Box>
-          </Flex>
+          <Box display="inline-block" overflowWrap="break-word">
+            {playersVotedFrom.map((name) => (
+              <Text key={name} fontWeight={800} mx="1px">
+                {name}
+              </Text>
+            ))}
+            <Text> voted for this card:</Text>
+          </Box>
         )}
         <Flex gap="5px">
           <Text>Total score:</Text>

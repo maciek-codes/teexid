@@ -49,7 +49,7 @@ export const ScoresList = ({
 
   return (
     <Box bgColor="#ebd9ff" borderRadius="12px" p={6}>
-      <Text textAlign="center" fontSize="larger" fontFamily="cursive">
+      <Text textAlign="center" fontSize="larger">
         Round #{round} scores:
       </Text>
       <Text>

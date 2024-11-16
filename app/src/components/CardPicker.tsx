@@ -31,12 +31,7 @@ export const CardPicker: React.FC<CardPickerProps> = ({
           Story:
         </Text>
       )}
-      <Text
-        fontSize="xl"
-        fontWeight={600}
-        textAlign="center"
-        fontFamily="cursive"
-      >
+      <Text fontSize="xl" fontWeight={600} textAlign="center">
         {story}
       </Text>
       <Text>{promptText}</Text>

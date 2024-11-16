@@ -36,7 +36,7 @@ const GameRoom: React.FC = () => {
     return (
       <Box backgroundColor="#ac4fc2" color="#F2F3ED">
         <CircularProgress isIndeterminate={true} />
-        <Text> Connecting...</Text>
+        <Text>Connecting...</Text>
       </Box>
     );
   }
@@ -45,7 +45,7 @@ const GameRoom: React.FC = () => {
     return (
       <Box backgroundColor="#ac4fc2" color="#F2F3ED">
         <CircularProgress isIndeterminate={true} />
-        <Text> Joining the room {roomName}</Text>
+        <Text>Joining the room {roomName}</Text>
       </Box>
     );
   }

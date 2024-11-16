@@ -14,9 +14,11 @@ const PlayerScores = ({ playersList }: PlayerScoresProps) => {
     })
     .map((player, idx) => {
       return (
-        <Text key={idx} fontSize="m">
-          {player.name}: {player.points}
-        </Text>
+        <Box key={idx} mt="2">
+          <Text fontSize="m">
+            {player.name}: {player.points} points
+          </Text>
+        </Box>
       );
     });
   if (scoreItems.length === 0) {

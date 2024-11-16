@@ -137,7 +137,7 @@ export class Game {
   public joinRoom(payload: JoinRoom["payload"], client: Client) {
     // TODO: O(n) -> O(1)
     let room: Room = Array.from(this.roomsByRoomId.values()).find(
-      (r) => r.name === payload.roomName,
+      (r) => r.name === payload.roomName
     );
 
     if (room) {
@@ -184,7 +184,7 @@ export class Game {
         payload: { ...payload, success: true },
       });
       player.roomId = room.id;
-      room.updateRoomState();
+      room.broadcastRoomState();
     } else {
       logger.info("Player joining the room", {
         playerId: player.id,
@@ -200,7 +200,7 @@ export class Game {
         type: "on_join_room",
         payload: { ...payload, success: true },
       });
-      room.updateRoomState();
+      room.broadcastRoomState();
     }
   }
 
@@ -215,7 +215,7 @@ export class Game {
 
   public sendAll(
     roomId: string,
-    msgFn: (player: Player) => GameMessage | null,
+    msgFn: (player: Player) => GameMessage | null
   ) {
     // TODO: Better roomId filter O(n) -> O(1)
     for (const playerId of this.players.keys()) {
@@ -258,6 +258,6 @@ export class Game {
         playerRoomId: player.roomId,
       });
     }
-    room?.updateRoomState();
+    room?.broadcastRoomState();
   }
 }

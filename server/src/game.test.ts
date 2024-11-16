@@ -19,7 +19,7 @@ describe("Game", () => {
     });
     it("should add a player client", () => {
       const ws = jest.mocked(
-        new WebSocket("ws://localhost:8080/ws", { timeout: 3000 }),
+        new WebSocket("ws://localhost:8080/ws", { timeout: 3000 })
       );
       const client = new Client(ws, game);
       client.handleMessage({ type: "identify", payload: { playerId: "1" } });
@@ -33,7 +33,7 @@ describe("Game", () => {
       expect(game.clients.size).toBe(2);
     });
 
-    it("should add a player client only wonce", () => {
+    it("should add a player client only once", () => {
       const ws = jest.mocked(new WebSocket("ws://localhost:8080/ws"));
       const client = new Client(ws, game);
 

@@ -55,7 +55,7 @@ export class Room {
 
     const votes = Array.from(this.votes.values());
     const votesForStoryCard = votes.filter(
-      (voteFor) => voteFor === this.storyPlayerId,
+      (voteFor) => voteFor === this.storyPlayerId
     );
 
     logger.info("Turn result", {
@@ -109,7 +109,7 @@ export class Room {
       cardsDealt: [],
     });
 
-    this.updateRoomState();
+    this.broadcastRoomState();
     return player;
   }
 
@@ -119,7 +119,7 @@ export class Room {
 
   updateLastSeen(playerId: string) {
     const inactiveCountPre = Array.from(this.playerState.values()).filter(
-      (state) => state.inactive,
+      (state) => state.inactive
     ).length;
 
     this.playerState.get(playerId).lastSeen = new Date();
@@ -131,11 +131,11 @@ export class Room {
     }
 
     const inactiveCountAfter = Array.from(this.playerState.values()).filter(
-      (state) => state.inactive,
+      (state) => state.inactive
     ).length;
 
     if (inactiveCountAfter !== inactiveCountPre) {
-      this.updateRoomState();
+      this.broadcastRoomState();
     }
   }
 
@@ -168,7 +168,7 @@ export class Room {
       cardsDealt.push(...newCards);
     }
 
-    this.updateRoomState();
+    this.broadcastRoomState();
   }
 
   restartTurn() {
@@ -189,7 +189,7 @@ export class Room {
     // Restart the cards
     this._deck = shuffleNewDeck();
 
-    this.updateRoomState();
+    this.broadcastRoomState();
   }
 
   pickNextStoryTeller() {
@@ -203,7 +203,7 @@ export class Room {
   public submitStory(
     playerId: string,
     story: string,
-    actualStoryCardId: number,
+    actualStoryCardId: number
   ) {
     if (playerId !== this.storyPlayerId) {
       this.game.send(playerId, {
@@ -232,7 +232,7 @@ export class Room {
 
     // Add story card to the deck
     this._cardsOnTable.push({ cardId: actualStoryCardId, from: playerId });
-    this.updateRoomState();
+    this.broadcastRoomState();
   }
 
   public submitStoryCard(playerId: string, cardId: number) {
@@ -242,7 +242,7 @@ export class Room {
 
     const allSubmitedCard =
       Array.from(this.playerState.values()).filter(
-        (playerStatus) => playerStatus.status === "submitted_card",
+        (playerStatus) => playerStatus.status === "submitted_card"
       ).length ===
       this.playerIds.length - 1;
 
@@ -257,7 +257,7 @@ export class Room {
       this.turnState = "voting";
     }
 
-    this.updateRoomState();
+    this.broadcastRoomState();
   }
 
   public vote(playerId: string, voteCardId: number) {
@@ -291,7 +291,7 @@ export class Room {
 
     const allVoted =
       Array.from(this.playerState.values()).filter(
-        (playerStatus) => playerStatus.status === "vote_submitted",
+        (playerStatus) => playerStatus.status === "vote_submitted"
       ).length ===
       this.playerIds.length - 1;
 
@@ -302,7 +302,7 @@ export class Room {
       });
       this.scoreRound();
     }
-    this.updateRoomState();
+    this.broadcastRoomState();
   }
 
   private scoreRound() {
@@ -336,7 +336,7 @@ export class Room {
         (acc, curr) => {
           return curr[1] === playerId ? [curr[0], ...acc] : acc;
         },
-        [],
+        []
       );
 
       const votesByThisPlayer = this.votes.has(playerId)
@@ -386,7 +386,7 @@ export class Room {
     this.scores.push(roundScore);
   }
 
-  updateRoomState() {
+  broadcastRoomState() {
     this.game.sendAll(this.id, (p) => {
       const isStoryTeller = this.storyPlayerId === p.id;
       const cardsToShow = [];
@@ -405,7 +405,7 @@ export class Room {
             .filter((card) => card.cardId !== this.storyCardId)
             .map((c) => ({
               cardId: c.cardId,
-            })),
+            }))
         );
       } else if (this.turnState === "voting") {
         cardsToShow.push(
@@ -414,7 +414,7 @@ export class Room {
             .filter((card) => card.cardId !== cardFromPlayer)
             .map((c) => ({
               cardId: c.cardId,
-            })),
+            }))
         );
       }
 

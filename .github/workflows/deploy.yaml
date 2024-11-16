@@ -26,13 +26,19 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ vars.SSH_PORT }}
           script: |
-            source /home/maciek/.bashrc
+            set NVM_DIR=/home/maciek/.nvm
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+            set PATH=${PATH}:/home/maciek/.local/share/pnpm
+            nvm use
+            pnpm --version
+            node --version
             cd /home/maciek/apps/dixit
             # Launch server
             cd server
-            npm install
-            pm2 start --name "server" npm -- start
+            pnpm install
+            pm2 start --name "server" pnpm -- start
             # Launch Vite app
             cd ../app
-            npm install
-            pm2 start --name "frontend" npm -- run dev
+            pnpm install
+            pm2 start --name "frontend" pnpm -- run dev

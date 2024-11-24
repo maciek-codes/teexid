@@ -9,15 +9,16 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       - uses: actions/checkout@v3
-      - name: copy file via ssh password
-        uses: appleboy/scp-action@v0.1.7
+      - name: copy files with rsync over SSH
+        uses: burnett01/rsync-deployments@7.0.1
         with:
-          host: ${{ vars.SSH_HOST }}
-          username: ${{ vars.SSH_USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ vars.SSH_PORT }}
-          source: "./"
-          target: /home/maciek/apps/dixit
+          switches: -avzr --delete
+          path: ./
+          remote_path: /home/maciek/apps/dixit
+          remote_host: ${{ vars.SSH_HOST }}
+          remote_user: ${{ vars.SSH_USERNAME }}
+          remote_key: ${{ secrets.SSH_KEY }}
+          remote_port: ${{ vars.SSH_PORT }}
       - name: Deploy using ssh
         uses: appleboy/ssh-action@master
         with:
@@ -30,6 +31,7 @@ jobs:
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
             set PATH=${PATH}:/home/maciek/.local/share/pnpm
+            source /home/maciek/.bashrc
             nvm use
             pnpm --version
             node --version

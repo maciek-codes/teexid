@@ -38,7 +38,12 @@ jobs:
             nvm use 21
             echo $(pnpm --version)
             echo $(node --version)
+            # Install dependencies
+            echo "Install dependencies..."
+            pnpm install -g pm2
+            # Navigate to project directory
             cd /home/maciek/apps/dixit
+            nvm use
             # Launch server
             echo "Launch Server..."
             cd server

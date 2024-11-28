@@ -34,8 +34,8 @@ jobs:
             export PATH=${PATH}:/home/maciek/.local/share/pnpm
             source /home/maciek/.bashrc
             echo $PATH
-            nvm install 21
-            nvm use 21
+            nvm install 20
+            nvm use 20
             export PNPM_HOME=/home/maciek/.local/share/pnpm
             echo $(pnpm --version)
             echo $(node --version)
@@ -47,7 +47,9 @@ jobs:
             nvm use
             # Launch server
             echo "Launch Server..."
-            cd server
+            cd /home/maciek/apps/dixit/server
             pnpm install
-            cd ..
+            cd /home/maciek/apps/dixit/app
+            pnpm install
+            cd /home/maciek/apps/dixit
             pm2 restart ecosystem.config.js

@@ -49,6 +49,7 @@ jobs:
             echo "Launch Server..."
             cd server
             pnpm install
+            export NODE_ENV=production
             pm2 start --name "server" pnpm -- start
             # Launch Vite app
             echo "Launch App..."

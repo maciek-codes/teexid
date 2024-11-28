@@ -36,6 +36,7 @@ jobs:
             echo $PATH
             nvm install 21
             nvm use 21
+            export PNPM_HOME=/home/maciek/.local/share/pnpm
             echo $(pnpm --version)
             echo $(node --version)
             # Install dependencies

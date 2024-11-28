@@ -9,6 +9,7 @@ module.exports = {
       args: "run dev",
       cwd: "./app",
       watch: true,
+      watch_delay: 10000,
       ignore_watch: ["node_modules"],
       env_production: {
         NODE_ENV: "production",
@@ -23,6 +24,7 @@ module.exports = {
       args: "start",
       cwd: "./server",
       watch: true,
+      watch_delay: 10000,
       ignore_watch: ["node_modules"],
       env_production: {
         NODE_ENV: "production",
